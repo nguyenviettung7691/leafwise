@@ -6,9 +6,10 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Progress } from '@/components/ui/progress';
 
-const ANIMATION_TARGET_PROGRESS = 85; // Progress to reach and hold
-const ANIMATION_DURATION_MS = 2000; // Time to reach target progress (e.g., 2 seconds)
-const FINISH_ANIMATION_DURATION_MS = 300; // Time to show 100% before hiding
+const INITIAL_PROGRESS = 10; // Start with a small visible progress
+const ANIMATION_TARGET_PROGRESS = 90; // Animate up to this value during navigation
+const ANIMATION_DURATION_MS = 2500; // Time to reach target progress (approx)
+const FINISH_ANIMATION_DURATION_MS = 200; // Time to show 100% before hiding
 
 export function PageProgressBar() {
   const pathname = usePathname();
@@ -17,13 +18,15 @@ export function PageProgressBar() {
   const [isVisible, setIsVisible] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs for managing timers
+  const animationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const finishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const clearTimers = () => {
-    if (progressIntervalRef.current) {
-      clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
+  // Helper to clear all timers
+  const clearAllTimers = () => {
+    if (animationIntervalRef.current) {
+      clearInterval(animationIntervalRef.current);
+      animationIntervalRef.current = null;
     }
     if (finishTimeoutRef.current) {
       clearTimeout(finishTimeoutRef.current);
@@ -31,65 +34,56 @@ export function PageProgressBar() {
     }
   };
 
-  const startLoadingAnimation = () => {
-    clearTimers();
+  useEffect(() => {
+    // This effect runs when pathname or searchParams change, indicating a navigation.
+
+    // 1. Clear any ongoing animations or finish timeouts from previous navigations.
+    // This is important if the user navigates again quickly.
+    clearAllTimers();
+
+    // 2. Immediately show the progress bar and set initial progress.
+    // This should make the bar appear as soon as the navigation intent is registered.
     setIsVisible(true);
-    setProgress(0); // Reset progress
+    setProgress(INITIAL_PROGRESS);
 
-    // Short delay to ensure reset is painted, then start animation
-    setTimeout(() => {
-      if (!isVisible && progress === 0) { // Check if still relevant to start
-         setProgress(10); // Initial small jump
-      } else {
-         setProgress(10);
-      }
+    // 3. Start animating the progress towards the target.
+    let currentProgress = INITIAL_PROGRESS;
+    // Calculate increment based on updating roughly every 100ms
+    const updateInterval = 100;
+    const steps = Math.max(1, ANIMATION_DURATION_MS / updateInterval);
+    const increment = (ANIMATION_TARGET_PROGRESS - INITIAL_PROGRESS) / steps;
 
-      let currentProgress = 10;
-      const steps = ANIMATION_DURATION_MS / 100; // Number of steps if interval is 100ms
-      const increment = (ANIMATION_TARGET_PROGRESS - 10) / steps;
-
-      progressIntervalRef.current = setInterval(() => {
-        currentProgress += increment;
-        if (currentProgress >= ANIMATION_TARGET_PROGRESS) {
-          setProgress(ANIMATION_TARGET_PROGRESS);
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-            progressIntervalRef.current = null;
-          }
-        } else {
-          setProgress(currentProgress);
+    animationIntervalRef.current = setInterval(() => {
+      currentProgress += increment;
+      if (currentProgress >= ANIMATION_TARGET_PROGRESS) {
+        setProgress(ANIMATION_TARGET_PROGRESS);
+        if (animationIntervalRef.current) {
+          clearInterval(animationIntervalRef.current);
+          animationIntervalRef.current = null;
         }
-      }, 100);
-    }, 10); // Small delay before starting the animation
-  };
+      } else {
+        setProgress(currentProgress);
+      }
+    }, updateInterval);
 
-  const finishLoadingAnimation = () => {
-    clearTimers();
+    // 4. The cleanup function will handle finishing the animation for THIS navigation.
+    // This runs when the component unmounts OR before this effect runs again
+    // for a new navigation (i.e., when navigating away from the current page).
+    return () => {
+      clearAllTimers(); // Clear the animation interval first
 
-    // Only run finish animation if it was actually visible/loading
-    if (isVisible || progress > 0) {
-      setProgress(100);
+      // Animate to 100% and then hide
+      // Check isVisible because this cleanup might run even if the bar wasn't made visible
+      // (e.g. initial load if we decided not to show it then)
+      // However, with the current logic, it *will* be visible.
+      setProgress(100); 
       finishTimeoutRef.current = setTimeout(() => {
         setIsVisible(false);
-        setProgress(0); // Reset for the next load
+        setProgress(0); // Reset for the next navigation
       }, FINISH_ANIMATION_DURATION_MS);
-    } else {
-      // If not visible, just ensure state is clean
-      setIsVisible(false);
-      setProgress(0);
-    }
-  };
-
-  useEffect(() => {
-    // Start loading animation when path changes
-    startLoadingAnimation();
-
-    // Finish loading animation when the component unmounts or path changes again (cleanup)
-    return () => {
-      finishLoadingAnimation();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, searchParams]); // Effect dependencies
+  }, [pathname, searchParams]); // Key dependencies: re-run on any navigation
 
   if (!isVisible) {
     return null;
@@ -99,7 +93,7 @@ export function PageProgressBar() {
     <div className="fixed top-0 left-0 w-full h-1 z-[9999]">
       <Progress
         value={progress}
-        className="w-full h-full rounded-none bg-transparent"
+        className="w-full h-full rounded-none bg-transparent" // Background is transparent, indicator uses primary
       />
     </div>
   );
