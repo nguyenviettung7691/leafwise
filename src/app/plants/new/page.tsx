@@ -8,10 +8,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Leaf } from 'lucide-react';
+import { Leaf, Loader2 } from 'lucide-react'; // Added Loader2
+import { useState } from 'react'; // Added useState
 
-// This is a placeholder form. Full form implementation with react-hook-form and zod is more involved.
 export default function NewPlantPage() {
+  const [isAddingPlant, setIsAddingPlant] = useState(false);
+
+  const handleAddPlant = async () => {
+    setIsAddingPlant(true);
+    // Simulate API call or form submission
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsAddingPlant(false);
+    // Here you would typically handle the actual form submission logic,
+    // redirect, or show a success toast.
+    alert("Plant adding simulated!"); // Placeholder
+  };
+
   return (
     <AppLayout navItems={NAV_ITEMS}>
       <div className="max-w-2xl mx-auto">
@@ -68,8 +80,15 @@ export default function NewPlantPage() {
               <Label htmlFor="customNotes">Custom Notes (Optional)</Label>
               <Textarea id="customNotes" placeholder="e.g., Water when top inch is dry, loves humidity." />
             </div>
-            <Button className="w-full">
-              Add Plant (Coming Soon)
+            <Button className="w-full" onClick={handleAddPlant} disabled={isAddingPlant}>
+              {isAddingPlant ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding Plant...
+                </>
+              ) : (
+                'Add Plant'
+              )}
             </Button>
           </CardContent>
         </Card>

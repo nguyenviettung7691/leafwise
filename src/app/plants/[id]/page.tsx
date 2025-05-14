@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf } from 'lucide-react';
+import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2 } from 'lucide-react'; // Added Loader2
 import { useEffect, useState } from 'react';
 
 const healthConditionStyles = {
@@ -26,6 +26,8 @@ export default function PlantDetailPage() {
   
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null); // For pause/resume task
+  const [isAddingPhoto, setIsAddingPhoto] = useState(false); // For add photo button
 
   useEffect(() => {
     if (id) {
@@ -33,12 +35,39 @@ export default function PlantDetailPage() {
       if (foundPlant) {
         setPlant(foundPlant);
       } else {
-        // In a real app, you'd handle not found differently, maybe redirect or show a 404 component
         console.error("Plant not found"); 
       }
     }
     setIsLoading(false);
   }, [id]);
+
+  const handleToggleTaskPause = async (taskId: string) => {
+    setLoadingTaskId(taskId);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  
+    setPlant(prevPlant => {
+      if (!prevPlant) return null;
+      return {
+        ...prevPlant,
+        careTasks: prevPlant.careTasks.map(t =>
+          t.id === taskId ? { ...t, isPaused: !t.isPaused } : t
+        ),
+      };
+    });
+  
+    setLoadingTaskId(null);
+  };
+
+  const handleAddPhoto = async () => {
+    setIsAddingPhoto(true);
+    // Simulate API call or file dialog
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsAddingPhoto(false);
+    // In a real app, you'd open a file dialog or handle photo upload
+    alert("Add photo functionality (simulated)");
+  };
+
 
   if (isLoading) {
     return (
@@ -51,9 +80,8 @@ export default function PlantDetailPage() {
   }
 
   if (!plant) {
-     // This will be caught by Next.js error boundary or a custom not-found component if set up
     notFound();
-    return null; // Should not be reached if notFound() works as expected.
+    return null;
   }
   
   const formatDate = (dateString?: string) => {
@@ -144,9 +172,20 @@ export default function PlantDetailPage() {
                           {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}`}
                         </p>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => alert(`Pause/Resume ${task.name} (UI Stub)`)}>
-                        {task.isPaused ? <PlayCircle className="h-4 w-4 mr-1" /> : <PauseCircle className="h-4 w-4 mr-1" />}
-                        {task.isPaused ? 'Resume' : 'Pause'}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleToggleTaskPause(task.id)}
+                        disabled={loadingTaskId === task.id}
+                      >
+                        {loadingTaskId === task.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            {task.isPaused ? <PlayCircle className="h-4 w-4 mr-1" /> : <PauseCircle className="h-4 w-4 mr-1" />}
+                            {task.isPaused ? 'Resume' : 'Pause'}
+                          </>
+                        )}
                       </Button>
                     </CardContent>
                   </Card>
@@ -160,7 +199,18 @@ export default function PlantDetailPage() {
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-semibold text-lg">Photo Journal</h3>
-                <Button variant="outline" size="sm"><ImagePlus className="h-4 w-4 mr-2" /> Add Photo</Button>
+                <Button variant="outline" size="sm" onClick={handleAddPhoto} disabled={isAddingPhoto}>
+                  {isAddingPhoto ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <ImagePlus className="h-4 w-4 mr-2" /> Add Photo
+                    </>
+                  )}
+                </Button>
               </div>
               {plant.photos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
