@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { PageProgressBar } from '@/components/layout/PageProgressBar'; // Added import
+// Removed: import { PageProgressBar } from '@/components/layout/PageProgressBar';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
-        <PageProgressBar /> {/* Added progress bar */}
+        {/* Removed: <PageProgressBar /> */}
         {children}
         <Toaster />
       </body>
