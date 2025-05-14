@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { NavItem } from '@/types';
@@ -15,7 +16,8 @@ import { SidebarNav } from './SidebarNav';
 import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Added missing import
+import { cn } from '@/lib/utils';
+import { PageProgressBar } from './PageProgressBar'; // Added import
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -47,6 +49,7 @@ function LayoutContent({ children, navItems }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
+        <PageProgressBar /> {/* Added PageProgressBar here */}
         <Navbar />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
           {children}
