@@ -1,3 +1,4 @@
+
 // src/components/layout/PageProgressBar.tsx
 'use client';
 
@@ -5,70 +6,92 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Progress } from '@/components/ui/progress';
 
+const ANIMATION_TARGET_PROGRESS = 85; // Progress to reach and hold
+const ANIMATION_DURATION_MS = 2000; // Time to reach target progress (e.g., 2 seconds)
+const FINISH_ANIMATION_DURATION_MS = 300; // Time to show 100% before hiding
+
 export function PageProgressBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [isVisible, setIsVisible] = useState(false);
   const [progress, setProgress] = useState(0);
-  const previousPathRef = useRef<string | null>(null);
+
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const finishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearTimers = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    if (finishTimeoutRef.current) {
+      clearTimeout(finishTimeoutRef.current);
+      finishTimeoutRef.current = null;
+    }
+  };
+
+  const startLoadingAnimation = () => {
+    clearTimers();
+    setIsVisible(true);
+    setProgress(0); // Reset progress
+
+    // Short delay to ensure reset is painted, then start animation
+    setTimeout(() => {
+      if (!isVisible && progress === 0) { // Check if still relevant to start
+         setProgress(10); // Initial small jump
+      } else {
+         setProgress(10);
+      }
+
+      let currentProgress = 10;
+      const steps = ANIMATION_DURATION_MS / 100; // Number of steps if interval is 100ms
+      const increment = (ANIMATION_TARGET_PROGRESS - 10) / steps;
+
+      progressIntervalRef.current = setInterval(() => {
+        currentProgress += increment;
+        if (currentProgress >= ANIMATION_TARGET_PROGRESS) {
+          setProgress(ANIMATION_TARGET_PROGRESS);
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = null;
+          }
+        } else {
+          setProgress(currentProgress);
+        }
+      }, 100);
+    }, 10); // Small delay before starting the animation
+  };
+
+  const finishLoadingAnimation = () => {
+    clearTimers();
+
+    // Only run finish animation if it was actually visible/loading
+    if (isVisible || progress > 0) {
+      setProgress(100);
+      finishTimeoutRef.current = setTimeout(() => {
+        setIsVisible(false);
+        setProgress(0); // Reset for the next load
+      }, FINISH_ANIMATION_DURATION_MS);
+    } else {
+      // If not visible, just ensure state is clean
+      setIsVisible(false);
+      setProgress(0);
+    }
+  };
 
   useEffect(() => {
-    let progressInterval: NodeJS.Timeout | undefined;
-    let finishTimeout: NodeJS.Timeout | undefined;
-    let hideTimeout: NodeJS.Timeout | undefined;
+    // Start loading animation when path changes
+    startLoadingAnimation();
 
-    const startLoading = () => {
-      // Clear any pending timeouts from previous animations
-      if (progressInterval) clearInterval(progressInterval);
-      if (finishTimeout) clearTimeout(finishTimeout);
-      if (hideTimeout) clearTimeout(hideTimeout);
-      
-      setIsLoading(true);
-      setProgress(10); // Start with a small amount of progress
-      
-      let currentProgress = 10;
-      progressInterval = setInterval(() => {
-        currentProgress += Math.random() * 10 + 5; // Increment randomly
-        if (currentProgress >= 90) {
-          currentProgress = 90; // Cap at 90% until completion
-          if (progressInterval) clearInterval(progressInterval);
-          // Automatically trigger finishLoading after it reaches 90%
-          finishTimeout = setTimeout(finishLoading, 200); // Short delay before completing to 100%
-        }
-        setProgress(currentProgress);
-      }, 250); // Adjust interval for desired speed
-    };
-
-    const finishLoading = () => {
-      if (progressInterval) clearInterval(progressInterval); // Ensure interval is cleared
-      setProgress(100); // Complete the progress
-      
-      // Hide the progress bar after a short delay
-      hideTimeout = setTimeout(() => {
-        setIsLoading(false);
-        setProgress(0); // Reset for next navigation
-      }, 500); // Delay to show completion
-    };
-
-    const currentPath = `${pathname}?${searchParams.toString()}`;
-
-    // Trigger on path change, but not on initial render of the component itself.
-    // Only trigger if the actual path string has changed.
-    if (previousPathRef.current !== null && previousPathRef.current !== currentPath) {
-      startLoading();
-    }
-    
-    previousPathRef.current = currentPath; // Update the previous path with the current one
-
+    // Finish loading animation when the component unmounts or path changes again (cleanup)
     return () => {
-      // Cleanup timeouts and intervals when the component unmounts or dependencies change
-      if (progressInterval) clearInterval(progressInterval);
-      if (finishTimeout) clearTimeout(finishTimeout);
-      if (hideTimeout) clearTimeout(hideTimeout);
+      finishLoadingAnimation();
     };
-  }, [pathname, searchParams]); // Listen to pathname and searchParams to detect navigation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, searchParams]); // Effect dependencies
 
-  if (!isLoading) {
+  if (!isVisible) {
     return null;
   }
 
