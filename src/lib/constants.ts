@@ -19,15 +19,16 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
     href: '/calendar',
     icon: CalendarDays,
   },
-  {
-    titleKey: 'nav.profile',
-    href: '/profile',
-    icon: UserCircle,
-  },
-  {
-    titleKey: 'nav.settings',
-    href: '/settings',
-    icon: Settings2,
-    disabled: false,
-  },
+  // { // Removed Profile from sidebar
+  //   titleKey: 'nav.profile',
+  //   href: '/profile',
+  //   icon: UserCircle,
+  // },
+  // { // Removed Settings from sidebar
+  //   titleKey: 'nav.settings',
+  //   href: '/settings',
+  //   icon: Settings2,
+  //   disabled: false,
+  // },
 ];
+
