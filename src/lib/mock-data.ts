@@ -1,4 +1,4 @@
-import type { Plant } from '@/types';
+import type { Plant, User } from '@/types'; // Added User
 
 export const mockPlants: Plant[] = [
   {
@@ -57,3 +57,14 @@ export const mockPlants: Plant[] = [
     ],
   },
 ];
+
+// Mock User Data
+export const mockUser: User = {
+  id: 'user123',
+  name: 'Alex GreenThumb',
+  email: 'alex.gt@example.com',
+  avatarUrl: 'https://placehold.co/100x100.png', // Placeholder avatar
+  preferences: {
+    emailNotifications: true,
+  },
+};

@@ -42,3 +42,14 @@ export interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
+
+// New User type
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string;
+  preferences?: {
+    emailNotifications?: boolean;
+  };
+}
