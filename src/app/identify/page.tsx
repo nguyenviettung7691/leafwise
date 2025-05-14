@@ -1,12 +1,13 @@
+
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { IdentifyPlantClient } from '@/components/plants/IdentifyPlantClient';
-import { NAV_ITEMS } from '@/lib/constants';
+import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
 
 export default function IdentifyPage() {
   return (
-    <AppLayout navItems={NAV_ITEMS}>
+    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
       <div className="max-w-2xl mx-auto">
         <IdentifyPlantClient />
       </div>

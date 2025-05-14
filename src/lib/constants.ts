@@ -1,30 +1,31 @@
 
-import type { NavItem } from '@/types';
-import { Sprout, ScanSearch, CalendarDays, Settings2, UserCircle } from 'lucide-react'; // Added UserCircle
+import type { NavItemConfig } from '@/types';
+import { Sprout, ScanSearch, CalendarDays, Settings2, UserCircle } from 'lucide-react';
 
-export const NAV_ITEMS: NavItem[] = [
+// NAV_ITEMS is now APP_NAV_CONFIG and uses titleKey for translation
+export const APP_NAV_CONFIG: NavItemConfig[] = [
   {
-    title: 'My Plants',
+    titleKey: 'nav.myPlants',
     href: '/',
     icon: Sprout,
   },
   {
-    title: 'Identify Plant',
+    titleKey: 'nav.identifyPlant',
     href: '/identify',
     icon: ScanSearch,
   },
   {
-    title: 'Care Calendar',
+    titleKey: 'nav.careCalendar',
     href: '/calendar',
     icon: CalendarDays,
   },
   {
-    title: 'Profile', // Added Profile link
+    titleKey: 'nav.profile',
     href: '/profile',
-    icon: UserCircle, 
+    icon: UserCircle,
   },
   {
-    title: 'Settings',
+    titleKey: 'nav.settings',
     href: '/settings',
     icon: Settings2,
     disabled: false,

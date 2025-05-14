@@ -1,7 +1,8 @@
 
 'use client';
 
-import type { NavItem } from '@/types';
+import type { NavItem, NavItemConfig } from '@/types'; // Updated types
+import React from 'react'; // Added React for useMemo
 import {
   SidebarProvider,
   Sidebar,
@@ -17,16 +18,25 @@ import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// Removed: import { PageProgressBar } from './PageProgressBar'; 
+import { useLanguage } from '@/context/LanguageContext'; // Added useLanguage
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  navItems: NavItem[];
+  navItemsConfig: NavItemConfig[]; // Changed from navItems to navItemsConfig
 }
 
-function LayoutContent({ children, navItems }: AppLayoutProps) {
+function LayoutContent({ children, navItemsConfig }: AppLayoutProps) { // Changed prop name
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
+  const { t } = useLanguage(); // Get translation function
+
+  // Translate navigation items
+  const navItems: NavItem[] = React.useMemo(() => {
+    return navItemsConfig.map(item => ({
+      ...item,
+      title: t(item.titleKey), // Translate titleKey to title
+    }));
+  }, [navItemsConfig, t]);
 
   return (
     <>
@@ -39,7 +49,7 @@ function LayoutContent({ children, navItems }: AppLayoutProps) {
           )}
         </SidebarHeader>
         <SidebarContent>
-          <SidebarNav navItems={navItems} isCollapsed={isCollapsed} />
+          <SidebarNav navItems={navItems} isCollapsed={isCollapsed} /> {/* Pass translated navItems */}
         </SidebarContent>
         <SidebarFooter>
           <Button variant="ghost" className={cn("w-full", isCollapsed ? "justify-center" : "justify-start")}>
@@ -49,7 +59,6 @@ function LayoutContent({ children, navItems }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        {/* Removed: <PageProgressBar /> */}
         <Navbar />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
           {children}
@@ -60,10 +69,10 @@ function LayoutContent({ children, navItems }: AppLayoutProps) {
 }
 
 
-export function AppLayout({ children, navItems }: AppLayoutProps) {
+export function AppLayout({ children, navItemsConfig }: AppLayoutProps) { // Changed prop name
   return (
     <SidebarProvider defaultOpen={true}>
-      <LayoutContent navItems={navItems}>
+      <LayoutContent navItemsConfig={navItemsConfig}> {/* Changed prop name */}
         {children}
       </LayoutContent>
     </SidebarProvider>

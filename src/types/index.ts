@@ -1,4 +1,5 @@
 
+
 export interface PlantPhoto {
   id: string;
   url: string;
@@ -36,6 +37,15 @@ export interface Plant {
   careTasks: CareTask[];
 }
 
+// Configuration for NavItems before translation
+export interface NavItemConfig {
+  titleKey: string; // Key for translation
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
+}
+
+// NavItem structure after translation, used by UI components
 export interface NavItem {
   title: string;
   href: string;

@@ -1,7 +1,8 @@
+
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { NAV_ITEMS } from '@/lib/constants';
+import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant } from '@/types';
 import { useParams, notFound } from 'next/navigation';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2 } from 'lucide-react'; // Added Loader2
+import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const healthConditionStyles = {
@@ -26,8 +27,8 @@ export default function PlantDetailPage() {
   
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null); // For pause/resume task
-  const [isAddingPhoto, setIsAddingPhoto] = useState(false); // For add photo button
+  const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+  const [isAddingPhoto, setIsAddingPhoto] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -43,7 +44,6 @@ export default function PlantDetailPage() {
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
   
     setPlant(prevPlant => {
@@ -61,17 +61,15 @@ export default function PlantDetailPage() {
 
   const handleAddPhoto = async () => {
     setIsAddingPhoto(true);
-    // Simulate API call or file dialog
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsAddingPhoto(false);
-    // In a real app, you'd open a file dialog or handle photo upload
     alert("Add photo functionality (simulated)");
   };
 
 
   if (isLoading) {
     return (
-      <AppLayout navItems={NAV_ITEMS}>
+      <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
         <div className="flex justify-center items-center h-full">
           <Leaf className="h-12 w-12 animate-spin text-primary"/>
         </div>
@@ -90,7 +88,7 @@ export default function PlantDetailPage() {
   };
 
   return (
-    <AppLayout navItems={NAV_ITEMS}>
+    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden shadow-xl">
           <CardHeader className="relative p-0">
@@ -216,7 +214,7 @@ export default function PlantDetailPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {plant.photos.map(photo => (
                     <div key={photo.id} className="group relative">
-                      <Image src={photo.url} alt={`Plant photo from ${formatDate(photo.dateTaken)}`} width={200} height={200} className="rounded-md object-cover aspect-square shadow-sm" data-ai-hint="plant growth" />
+                      <Image src={photo.url} alt={`Plant photo from ${formatDate(photo.dateTaken)}`} width={200} height={200} className="rounded-md object-cover aspect-square shadow-sm" data-ai-hint="plant growth"/>
                       <div className="absolute bottom-0 left-0 w-full bg-black/50 text-white text-xs p-1 rounded-b-md opacity-0 group-hover:opacity-100 transition-opacity">
                         {formatDate(photo.dateTaken)}
                         {photo.notes && <p className="truncate text-white/80">{photo.notes}</p>}

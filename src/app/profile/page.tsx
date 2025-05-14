@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { NAV_ITEMS } from '@/lib/constants';
+import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
 import { mockUser } from '@/lib/mock-data';
 import type { User } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,19 +10,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { UserCircle, Edit3, Bell, Palette } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/context/LanguageContext'; // Import useLanguage
 
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { t } = useLanguage(); // Get translation function
 
   useEffect(() => {
-    // Simulate fetching user data
     setUser(mockUser);
     setIsLoading(false);
   }, []);
@@ -44,7 +44,6 @@ export default function ProfilePage() {
           [preferenceKey]: value,
         },
       };
-      // In a real app, you would save this to a backend
       console.log(`Preference ${preferenceKey} changed to ${value}`);
       toast({
         title: "Preference Updated",
@@ -56,7 +55,7 @@ export default function ProfilePage() {
 
   if (isLoading || !user) {
     return (
-      <AppLayout navItems={NAV_ITEMS}>
+      <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
         <div className="flex justify-center items-center h-full">
           <UserCircle className="h-12 w-12 animate-pulse text-primary" />
         </div>
@@ -65,10 +64,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <AppLayout navItems={NAV_ITEMS}>
+    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">User Profile</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t('nav.profile')}</h1> {/* Example translation */}
           <Button variant="outline" onClick={handleEditProfile}>
             <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
           </Button>
@@ -78,7 +77,7 @@ export default function ProfilePage() {
           <CardHeader className="pb-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20 border-2 border-primary shadow-sm">
-                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person avatar" />
+                <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="person avatar"/>
                 <AvatarFallback className="text-2xl bg-muted">
                   {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                 </AvatarFallback>
@@ -90,7 +89,6 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            {/* Placeholder for more profile details if needed */}
           </CardContent>
         </Card>
 
@@ -119,7 +117,7 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="themePreference"
-                disabled // Placeholder for theme switch
+                disabled 
                 aria-label="Toggle dark mode"
               />
             </div>

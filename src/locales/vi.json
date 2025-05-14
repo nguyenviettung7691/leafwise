@@ -1,0 +1,20 @@
+
+{
+  "settings": {
+    "title": "Cài đặt",
+    "description": "Cài đặt ứng dụng",
+    "language": "Ngôn ngữ",
+    "featureInProgress": "Trang cài đặt đang được xây dựng. <br /> Tùy chỉnh tùy chọn ứng dụng của bạn tại đây sớm!"
+  },
+  "nav": {
+    "myPlants": "Cây của tôi",
+    "identifyPlant": "Nhận dạng cây",
+    "careCalendar": "Lịch chăm sóc",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt"
+  },
+  "common": {
+    "english": "Tiếng Anh",
+    "vietnamese": "Tiếng Việt"
+  }
+}

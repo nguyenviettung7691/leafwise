@@ -1,0 +1,20 @@
+
+{
+  "settings": {
+    "title": "Settings",
+    "description": "Application Settings",
+    "language": "Language",
+    "featureInProgress": "Settings page is under construction. <br /> Customize your app preferences here soon!"
+  },
+  "nav": {
+    "myPlants": "My Plants",
+    "identifyPlant": "Identify Plant",
+    "careCalendar": "Care Calendar",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "common": {
+    "english": "English",
+    "vietnamese": "Vietnamese"
+  }
+}

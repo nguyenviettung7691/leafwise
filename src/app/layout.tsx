@@ -1,7 +1,9 @@
+
 import type {Metadata, Viewport} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
+import { LanguageProvider } from '@/context/LanguageContext'; // Added LanguageProvider
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,8 +39,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
-        {children}
-        <Toaster />
+        <LanguageProvider> {/* Added LanguageProvider */}
+          {children}
+          <Toaster />
+        </LanguageProvider>
       </body>
     </html>
   );

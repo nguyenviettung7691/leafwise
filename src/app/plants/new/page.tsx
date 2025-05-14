@@ -1,31 +1,29 @@
+
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { NAV_ITEMS } from '@/lib/constants';
+import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Leaf, Loader2 } from 'lucide-react'; // Added Loader2
-import { useState } from 'react'; // Added useState
+import { Leaf, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 export default function NewPlantPage() {
   const [isAddingPlant, setIsAddingPlant] = useState(false);
 
   const handleAddPlant = async () => {
     setIsAddingPlant(true);
-    // Simulate API call or form submission
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsAddingPlant(false);
-    // Here you would typically handle the actual form submission logic,
-    // redirect, or show a success toast.
-    alert("Plant adding simulated!"); // Placeholder
+    alert("Plant adding simulated!");
   };
 
   return (
-    <AppLayout navItems={NAV_ITEMS}>
+    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
       <div className="max-w-2xl mx-auto">
         <Card className="shadow-lg">
           <CardHeader>
