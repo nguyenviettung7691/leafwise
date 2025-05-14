@@ -17,7 +17,7 @@ import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PageProgressBar } from './PageProgressBar'; // Added import
+// Removed: import { PageProgressBar } from './PageProgressBar'; 
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -49,7 +49,7 @@ function LayoutContent({ children, navItems }: AppLayoutProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
-        <PageProgressBar /> {/* Added PageProgressBar here */}
+        {/* Removed: <PageProgressBar /> */}
         <Navbar />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
           {children}
