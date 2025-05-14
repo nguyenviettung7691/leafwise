@@ -1,3 +1,5 @@
+'use client';
+
 import { AppLayout } from '@/components/layout/AppLayout';
 import { IdentifyPlantClient } from '@/components/plants/IdentifyPlantClient';
 import { NAV_ITEMS } from '@/lib/constants';
