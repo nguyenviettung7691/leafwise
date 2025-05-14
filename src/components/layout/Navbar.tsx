@@ -19,9 +19,11 @@ export function Navbar() {
             <Logo iconSize={24} textSize="text-xl" />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" aria-label="User Account">
-            <UserCircle className="h-6 w-6" />
-          </Button>
+          <Link href="/profile" passHref>
+            <Button variant="ghost" size="icon" aria-label="User Account">
+              <UserCircle className="h-6 w-6" />
+            </Button>
+          </Link>
           <Link href="/settings" passHref>
             <Button variant="ghost" size="icon" aria-label="Settings">
               <Settings className="h-6 w-6" />
