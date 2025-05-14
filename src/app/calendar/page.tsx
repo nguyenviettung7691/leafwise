@@ -1,3 +1,6 @@
+
+'use client';
+
 import { AppLayout } from '@/components/layout/AppLayout';
 import { NAV_ITEMS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
