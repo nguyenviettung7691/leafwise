@@ -1,3 +1,5 @@
+
+import Link from 'next/link';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { UserCircle, Settings } from 'lucide-react';
@@ -20,9 +22,11 @@ export function Navbar() {
           <Button variant="ghost" size="icon" aria-label="User Account">
             <UserCircle className="h-6 w-6" />
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Settings">
-            <Settings className="h-6 w-6" />
-          </Button>
+          <Link href="/settings" passHref>
+            <Button variant="ghost" size="icon" aria-label="Settings">
+              <Settings className="h-6 w-6" />
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
