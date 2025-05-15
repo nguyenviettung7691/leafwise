@@ -4,7 +4,8 @@ import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/LanguageContext';
-import { AuthProvider } from '@/contexts/AuthContext'; // Added AuthProvider
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from 'next-themes'; // Added ThemeProvider
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -24,7 +25,10 @@ export const metadata: Metadata = {
 
 // Add viewport configuration for PWA theme color and other properties
 export const viewport: Viewport = {
-  themeColor: '#32CD32', // Matches the primary color
+  themeColor: [ // Provide light and dark theme colors
+    { media: '(prefers-color-scheme: light)', color: '#32CD32' }, // Lime Green for light
+    { media: '(prefers-color-scheme: dark)', color: '#1A202C' }, // Example dark theme color, adjust as needed
+  ],
 };
 
 
@@ -34,18 +38,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning> {/* Added suppressHydrationWarning for next-themes */}
       <head>
         {/* Recommended for PWA: Apple touch icon */}
         <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
-        <AuthProvider> {/* Added AuthProvider */}
-          <LanguageProvider>
-            {children}
-            <Toaster />
-          </LanguageProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <LanguageProvider>
+              {children}
+              <Toaster />
+            </LanguageProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

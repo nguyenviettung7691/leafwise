@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTheme } from 'next-themes'; // Added useTheme
 
 export default function ProfilePage() {
   const { user:authUser, updateUser, isLoading: authLoading } = useAuth();
@@ -27,6 +28,7 @@ export default function ProfilePage() {
 
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { theme, setTheme } = useTheme(); // Added theme hooks
 
   useEffect(() => {
     if (authUser) {
@@ -207,12 +209,14 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
                <div className='flex items-center gap-3'>
                 <Palette className="h-5 w-5 text-primary" />
-                <Label htmlFor="themePreference" className="text-base">Dark Mode (Coming Soon)</Label>
+                <Label htmlFor="themePreference" className="text-base">Dark Mode</Label>
               </div>
               <Switch
                 id="themePreference"
-                disabled 
+                checked={theme === 'dark'}
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                 aria-label="Toggle dark mode"
+                disabled={authLoading}
               />
             </div>
           </CardContent>
