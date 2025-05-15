@@ -34,7 +34,7 @@ export default function DiagnosePlantPage() {
   const [isSavingPlant, setIsSavingPlant] = useState(false);
   const [plantSaved, setPlantSaved] = useState(false);
 
-  const [showCarePlanGenerator, setShowCarePlanGenerator] = useState(false);
+  const [showCarePlanGeneratorSection, setShowCarePlanGeneratorSection] = useState(false);
   const [carePlanMode, setCarePlanMode] = useState<'basic' | 'advanced'>('basic');
   const [locationClimate, setLocationClimate] = useState('');
   const [isLoadingCarePlan, setIsLoadingCarePlan] = useState(false);
@@ -45,7 +45,6 @@ export default function DiagnosePlantPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Resets the entire diagnosis form and state, including file selection and description
   const fullResetDiagnosisForm = () => {
     setFile(null);
     setPreviewUrl(null);
@@ -54,7 +53,7 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setShowCarePlanGenerator(false);
+    setShowCarePlanGeneratorSection(false);
     setCarePlanResult(null);
     setCarePlanError(null);
     setLocationClimate('');
@@ -63,14 +62,12 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // When a new file is selected, reset previous results and related UI states,
-    // but keep the description field as the user might have typed it already.
     setDiagnosisResult(null);
     setCarePlanResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setShowCarePlanGenerator(false);
+    setShowCarePlanGeneratorSection(false);
     setCarePlanError(null);
 
     const selectedFile = event.target.files?.[0];
@@ -82,10 +79,10 @@ export default function DiagnosePlantPage() {
           title: 'Image Too Large',
           description: 'Please select an image file smaller than 4MB.',
         });
-        setFile(null); // Clear file state
-        setPreviewUrl(null); // Clear preview
+        setFile(null); 
+        setPreviewUrl(null); 
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''; // Reset the input field so user can select again
+          fileInputRef.current.value = ''; 
         }
         return;
       }
@@ -96,7 +93,6 @@ export default function DiagnosePlantPage() {
       };
       reader.readAsDataURL(selectedFile);
     } else {
-      // No file selected (e.g., user clicked "cancel" in the file dialog)
       setFile(null);
       setPreviewUrl(null);
     }
@@ -111,11 +107,10 @@ export default function DiagnosePlantPage() {
     }
 
     setIsLoadingDiagnosis(true);
-    // Clear results from any previous attempt before starting new diagnosis
     setDiagnosisError(null);
     setDiagnosisResult(null);
     setCarePlanResult(null);
-    setShowCarePlanGenerator(false);
+    setShowCarePlanGeneratorSection(false);
     setShowSavePlantForm(false);
     setPlantSaved(false);
 
@@ -140,11 +135,8 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
         action: <CheckCircle className="text-green-500 h-5 w-5" />,
       });
-       // Show save plant options if plant is identified, otherwise show care plan directly
-      if (result.identification.isPlant && result.identification.commonName) {
-        // Button will control SavePlantForm visibility
-      } else {
-        setShowCarePlanGenerator(true);
+      if (!result.identification.isPlant || !result.identification.commonName) {
+        setShowCarePlanGeneratorSection(true);
       }
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
@@ -158,7 +150,6 @@ export default function DiagnosePlantPage() {
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
     console.log("Saving plant data (simulated):", data);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
       title: "Plant Saved!",
@@ -166,13 +157,13 @@ export default function DiagnosePlantPage() {
     });
     setPlantSaved(true);
     setShowSavePlantForm(false); 
-    setShowCarePlanGenerator(true); 
+    setShowCarePlanGeneratorSection(true); 
     setIsSavingPlant(false);
   };
 
   const handleGenerateCarePlan = async (event: FormEvent) => {
     event.preventDefault();
-    if (!diagnosisResult || !diagnosisResult.identification.commonName) {
+    if (!diagnosisResult || (!diagnosisResult.identification.commonName && diagnosisResult.identification.isPlant) ) {
       setCarePlanError('Cannot generate care plan without a plant identification from diagnosis.');
       toast({ title: "Missing Information", description: "Plant identification is needed to generate a care plan.", variant: "destructive" });
       return;
@@ -184,7 +175,7 @@ export default function DiagnosePlantPage() {
 
     try {
       const input: GenerateDetailedCarePlanInput = {
-        plantCommonName: diagnosisResult.identification.commonName,
+        plantCommonName: diagnosisResult.identification.commonName || "Unidentified Plant",
         plantScientificName: diagnosisResult.identification.scientificName,
         diagnosisNotes: diagnosisResult.healthAssessment.diagnosis,
         carePlanMode: carePlanMode,
@@ -350,20 +341,27 @@ export default function DiagnosePlantPage() {
                 </div>
               )}
               
-              {!plantSaved && diagnosisResult.identification.isPlant && diagnosisResult.identification.commonName && (
+              {!plantSaved && diagnosisResult.identification.isPlant && diagnosisResult.identification.commonName && !showSavePlantForm && (
                  <div className="pt-4 border-t mt-6">
-                    {!showSavePlantForm ? (
-                        <Button 
-                            onClick={() => setShowSavePlantForm(true)} 
-                            className="w-full"
-                            variant="outline"
-                        >
-                            <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
-                        </Button>
-                    ) : null }
+                    <Button 
+                        onClick={() => setShowSavePlantForm(true)} 
+                        className="w-full"
+                        variant="outline"
+                    >
+                        <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
+                    </Button>
                 </div>
               )}
 
+              {plantSaved && (
+                <Alert variant="default" className="mt-4 bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
+                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <AlertTitle>Plant Saved!</AlertTitle>
+                    <AlertDescription>
+                    {diagnosisResult?.identification.commonName || 'This plant'} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.
+                    </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
             <CardFooter>
                 <p className="text-xs text-muted-foreground">AI-powered diagnosis. Always cross-reference with other sources if unsure.</p>
@@ -375,13 +373,18 @@ export default function DiagnosePlantPage() {
           <SavePlantForm
             initialData={initialPlantFormData}
             onSave={handleSavePlant}
-            onCancel={() => setShowSavePlantForm(false)}
+            onCancel={() => {
+              setShowSavePlantForm(false);
+              // If cancelling save, and plant was identifiable, still show care plan option
+              if(diagnosisResult?.identification.isPlant && diagnosisResult?.identification.commonName) {
+                setShowCarePlanGeneratorSection(true);
+              }
+            }}
             isLoading={isSavingPlant}
           />
         )}
         
-        {/* Show care plan generator if plant is saved, OR if diagnosis did not identify a plant (so save isn't an option), OR if plant was identified but had no common name (so save wasn't shown) */}
-        { (plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) ) && (
+        { (plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) || (showCarePlanGeneratorSection && !showSavePlantForm) ) && (
           <Card className="shadow-xl animate-in fade-in-50 mt-6">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -389,7 +392,7 @@ export default function DiagnosePlantPage() {
                   Generate Detailed Care Plan
               </CardTitle>
               { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
-               { diagnosisResult && !diagnosisResult.identification.isPlant && <CardDescription>No plant identified, generic tips might be provided.</CardDescription>}
+              { diagnosisResult && !diagnosisResult.identification.isPlant && <CardDescription>No plant identified, generic tips might be provided.</CardDescription>}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateCarePlan} className="space-y-6">
@@ -417,7 +420,7 @@ export default function DiagnosePlantPage() {
                     </div>
                   </RadioGroup>
                 </div>
-                <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName)} className="w-full text-base py-2.5">
+                <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName && !diagnosisResult)} className="w-full text-base py-2.5">
                   {isLoadingCarePlan ? (
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Plan...</>
                   ) : (
@@ -425,77 +428,83 @@ export default function DiagnosePlantPage() {
                   )}
                 </Button>
               </form>
+
+              {isLoadingCarePlan && (
+                <div className="mt-6 flex justify-center items-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="ml-2">Generating your care plan...</p>
+                </div>
+              )}
+
+              {carePlanError && (
+                  <Alert variant="destructive" className="mt-6">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Care Plan Error</AlertTitle>
+                      <AlertDescription>{carePlanError}</AlertDescription>
+                  </Alert>
+              )}
+
+              {carePlanResult && !isLoadingCarePlan && (
+                  <div className="mt-6 pt-6 border-t">
+                      <CardHeader className="p-0 mb-4">
+                          <CardTitle className="text-xl flex items-center">
+                              <CheckCircle className="text-primary mr-2 h-6 w-6" />
+                              Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
+                          </CardTitle>
+                          <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
+                      </CardHeader>
+                      <div className="space-y-4 text-sm">
+                          <div>
+                              <h3 className="font-bold text-lg text-primary mb-3">Basic Care Details</h3>
+                              <CarePlanDetailItem title="Watering" data={carePlanResult.watering} />
+                              <CarePlanDetailItem title="Lighting" data={carePlanResult.lighting} />
+                              <div className="mb-3">
+                                  <h4 className="font-semibold text-md mb-1">Basic Maintenance</h4>
+                                  <p className="text-sm text-foreground/90 whitespace-pre-wrap">{carePlanResult.basicMaintenance}</p>
+                              </div>
+                          </div>
+
+                          {carePlanMode === 'advanced' && (
+                              <>
+                                  <Separator className="my-4"/>
+                                  <div>
+                                      <h3 className="font-bold text-lg text-primary mb-3">Advanced Care Details</h3>
+                                      <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
+                                      <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
+                                      <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
+                                  </div>
+                              </>
+                          )}
+                          
+                          <Separator className="my-4"/>
+                          <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
+                          <div className="space-y-3 text-xs text-muted-foreground">
+                              <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
+                                  <CalendarPlus className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
+                                  <p>{carePlanResult.customizableSchedulesPlaceholder}</p>
+                              </div>
+                              <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
+                                  <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
+                                <p>{carePlanResult.pushNotificationsPlaceholder}</p>
+                              </div>
+                              <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
+                                  <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
+                                  <p>{carePlanResult.activityTrackingPlaceholder}</p>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
             </CardContent>
-          </Card>
-        )}
-
-
-        {carePlanError && (
-            <Alert variant="destructive" className="mt-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Care Plan Error</AlertTitle>
-                <AlertDescription>{carePlanError}</AlertDescription>
-            </Alert>
-        )}
-
-        {carePlanResult && (
-            <Card className="shadow-xl animate-in fade-in-50 mt-6">
-                <CardHeader>
-                    <CardTitle className="text-xl flex items-center">
-                        <CheckCircle className="text-primary mr-2 h-6 w-6" />
-                        Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
-                    </CardTitle>
-                    <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 text-sm">
-                    <div>
-                        <h3 className="font-bold text-lg text-primary mb-3">Basic Care Details</h3>
-                        <CarePlanDetailItem title="Watering" data={carePlanResult.watering} />
-                        <CarePlanDetailItem title="Lighting" data={carePlanResult.lighting} />
-                        <div className="mb-3">
-                            <h4 className="font-semibold text-md mb-1">Basic Maintenance</h4>
-                            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{carePlanResult.basicMaintenance}</p>
-                        </div>
-                    </div>
-
-                    {carePlanMode === 'advanced' && (
-                        <>
-                            <Separator className="my-4"/>
-                            <div>
-                                <h3 className="font-bold text-lg text-primary mb-3">Advanced Care Details</h3>
-                                <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
-                                <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
-                                <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
-                            </div>
-                        </>
-                    )}
-                    
-                    <Separator className="my-4"/>
-                    <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
-                     <div className="space-y-3 text-xs text-muted-foreground">
-                        <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                            <CalendarPlus className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
-                            <p>{carePlanResult.customizableSchedulesPlaceholder}</p>
-                        </div>
-                        <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                            <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
-                           <p>{carePlanResult.pushNotificationsPlaceholder}</p>
-                        </div>
-                         <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                            <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
-                            <p>{carePlanResult.activityTrackingPlaceholder}</p>
-                        </div>
-                    </div>
-                </CardContent>
-                 <CardFooter>
+            {carePlanResult && (
+                <CardFooter className="border-t pt-4 mt-4">
                     <p className="text-xs text-muted-foreground">This care plan is AI-generated. Adapt to your specific plant and environment.</p>
                 </CardFooter>
-            </Card>
+            )}
+          </Card>
         )}
       </div>
     </AppLayout>
   );
 }
-    
-
     
