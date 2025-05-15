@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { Leaf, UploadCloud, Save, Edit } from 'lucide-react'; // Added Edit icon
+import { Leaf, UploadCloud, Save, Edit } from 'lucide-react';
 
 // Conditionally define schema for primaryPhoto to handle FileList in browser vs. server
 const primaryPhotoSchema = typeof window !== 'undefined'
@@ -71,18 +71,15 @@ export function SavePlantForm({
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Effect to update preview if initialData changes or a new file is selected
   useEffect(() => {
-    const currentPhotoValue = form.getValues('primaryPhoto');
+    const currentPhotoValue = form.watch('primaryPhoto'); // Watch for changes to primaryPhoto field
     if (currentPhotoValue && currentPhotoValue[0]) {
-        // If a new file is selected, prioritize its preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(currentPhotoValue[0]);
     } else if (initialData?.diagnosedPhotoDataUrl) {
-        // Otherwise, use the initial data URL (e.g., existing plant image or diagnosed image)
         setImagePreview(initialData.diagnosedPhotoDataUrl);
     } else {
         setImagePreview(null);
@@ -94,14 +91,14 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        diagnosedPhotoDataUrl: imagePreview // ensure current preview (which might be the initial photo) is passed
+        diagnosedPhotoDataUrl: imagePreview 
     };
     await onSave(formDataToSave);
   };
 
   const currentFormTitle = formTitle || "Save to My Plants";
   const currentSubmitButtonText = submitButtonText || "Save Plant";
-  const FormIcon = formTitle === "Edit Plant" ? Edit : Leaf;
+  const FormIcon = currentFormTitle.toLowerCase().includes("edit") ? Edit : Leaf;
 
   return (
     <Card className="shadow-lg animate-in fade-in-50">
@@ -111,7 +108,7 @@ export function SavePlantForm({
           {currentFormTitle}
         </CardTitle>
         <CardDescription>
-          {currentFormTitle === "Edit Plant" 
+          {currentFormTitle.toLowerCase().includes("edit") 
             ? "Update the details for your plant."
             : "Confirm or update the details for this plant."
           }
@@ -135,9 +132,9 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => ( // Using value directly
+              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => (
                 <FormItem>
-                  <FormLabel>Plant Image {initialData?.diagnosedPhotoDataUrl && !fieldValue?.[0] ? "(Current)" : "(Optional: Upload New)"}</FormLabel>
+                  <FormLabel>Current Photo (Optional)</FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -200,7 +197,7 @@ export function SavePlantForm({
               name="scientificName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Scientific Name</FormLabel>
+                  <FormLabel>Scientific Name (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Monstera deliciosa" {...field} />
                   </FormControl>
@@ -226,7 +223,7 @@ export function SavePlantForm({
               name="ageEstimateYears"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Age (Years, Est.)</FormLabel>
+                  <FormLabel>Age (Years, Est.) (Optional)</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.1" placeholder="e.g., 2" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                   </FormControl>
@@ -262,7 +259,7 @@ export function SavePlantForm({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>Location (Optional)</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Living Room Window" {...field} />
                   </FormControl>
@@ -275,7 +272,7 @@ export function SavePlantForm({
               name="customNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Custom Notes</FormLabel>
+                  <FormLabel>Custom Notes (Optional)</FormLabel>
                   <FormControl>
                     <Textarea placeholder="e.g., Water when top inch is dry." {...field} rows={3}/>
                   </FormControl>
