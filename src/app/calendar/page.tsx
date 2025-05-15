@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
+// APP_NAV_CONFIG is no longer passed as a prop
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext'; // Import useLanguage
@@ -11,7 +11,7 @@ export default function CalendarPage() {
   const { t } = useLanguage(); // Get translation function
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.careCalendar')}</h1> {/* Example of translating page title */}
       </div>

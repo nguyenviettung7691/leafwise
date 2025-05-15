@@ -4,7 +4,7 @@
 import { useState, type FormEvent, useRef } from 'react';
 import Image from 'next/image';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants';
+// APP_NAV_CONFIG is no longer passed as a prop
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
 import { Button } from '@/components/ui/button';
@@ -225,7 +225,7 @@ export default function DiagnosePlantPage() {
                            !carePlanResult.fertilization?.details;
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="max-w-3xl mx-auto space-y-8">
         <Card className="shadow-xl">
           <CardHeader>

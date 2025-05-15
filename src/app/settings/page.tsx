@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
+// APP_NAV_CONFIG is no longer passed as a prop
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings as SettingsIcon, Languages } from 'lucide-react'; // Renamed Settings to SettingsIcon, added Languages
 import { Label } from '@/components/ui/label';
@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight">{t('settings.title')}</h1>
       </div>

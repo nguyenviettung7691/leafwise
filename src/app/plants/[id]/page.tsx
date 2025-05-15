@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants';
+// APP_NAV_CONFIG is no longer passed as a prop
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
@@ -16,15 +16,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check } from 'lucide-react';
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
-import { Input } from '@/components/ui/input';
-import { Alert, AlertTitle } from '@/components/ui/alert';
-import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
 
@@ -136,7 +136,7 @@ export default function PlantDetailPage() {
     setIsLoadingPage(false);
   }, [id]);
 
-  const handleToggleTaskPause = async (taskId: string) => {
+ const handleToggleTaskPause = async (taskId: string) => {
     let taskNameForToast = '';
     let wasPausedBeforeUpdate: boolean | undefined = undefined;
 
@@ -148,13 +148,13 @@ export default function PlantDetailPage() {
       }
     }
     
-    setLoadingTaskId(taskId); // Moved before the async operation
+    setLoadingTaskId(taskId); 
     await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
       const updatedTasks = prevPlant.careTasks.map(t =>
-        t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : undefined } : t // Reset resumeDate when resuming
+        t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : undefined } : t 
       );
       return { ...prevPlant, careTasks: updatedTasks };
     });
@@ -391,7 +391,7 @@ export default function PlantDetailPage() {
 
   if (isLoadingPage) {
     return (
-      <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+      <AppLayout> {/* navItemsConfig prop removed */}
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-12 w-12 animate-spin text-primary"/>
         </div>
@@ -410,7 +410,7 @@ export default function PlantDetailPage() {
   };
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden shadow-xl">
           <CardHeader className="relative p-0">
@@ -546,9 +546,9 @@ export default function PlantDetailPage() {
                             Frequency: {task.frequency}
                             {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
                             {task.isPaused ? (
-                              task.resumeDate ? ` | Paused (Resumes: ${formatDate(task.resumeDate)})` : ' | Paused'
+                                task.resumeDate ? ` | Paused (Resumes: ${formatDate(task.resumeDate)})` : ' | Paused'
                             ) : (
-                              task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}`
+                                task.nextDueDate ? ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}` : ''
                             )}
                           </p>
                         </div>

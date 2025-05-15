@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants';
+// APP_NAV_CONFIG is no longer passed as a prop
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import type { PlantFormData, Plant } from '@/types';
 import { useState } from 'react';
@@ -78,7 +78,7 @@ export default function NewPlantPage() {
   };
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="max-w-2xl mx-auto">
         {isSaving ? (
           <div className="flex justify-center items-center h-full min-h-[300px]">

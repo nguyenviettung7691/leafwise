@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants';
+// APP_NAV_CONFIG is no longer passed as a prop
 import type { User, UserPreferences } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -122,7 +122,7 @@ export default function ProfilePage() {
 
   if (authLoading || !user) {
     return (
-      <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+      <AppLayout> {/* navItemsConfig prop removed */}
         <div className="max-w-2xl mx-auto space-y-8">
           <div className="flex justify-between items-center">
             <Skeleton className="h-9 w-32" />
@@ -156,7 +156,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">{t('nav.profile')}</h1>
@@ -170,7 +170,8 @@ export default function ProfilePage() {
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
               <Button onClick={handleSaveChanges} disabled={authLoading}>
-                {authLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Changes</>}
+                {authLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />} 
+                {authLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           )}

@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants';
+// APP_NAV_CONFIG is no longer passed as a prop
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Leaf, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -79,7 +79,7 @@ export default function EditPlantPage() {
           ...mockPlants[plantIndex],
           commonName: data.commonName,
           scientificName: data.scientificName || undefined,
-          familyCategory: data.familyCategory,
+          familyCategory: data.familyCategory || '', // Ensure it's always a string
           ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
           healthCondition: data.healthCondition,
           location: data.location || undefined,
@@ -120,7 +120,7 @@ export default function EditPlantPage() {
 
   if (isLoadingPage || !initialFormData) {
     return (
-      <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+      <AppLayout> {/* navItemsConfig prop removed */}
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
@@ -133,7 +133,7 @@ export default function EditPlantPage() {
   }
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
+    <AppLayout> {/* navItemsConfig prop removed */}
       <div className="max-w-2xl mx-auto">
         <SavePlantForm
           initialData={initialFormData}
