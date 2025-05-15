@@ -62,6 +62,7 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear results from previous diagnosis when a new file is selected
     setDiagnosisResult(null);
     setCarePlanResult(null);
     setDiagnosisError(null);
@@ -69,6 +70,7 @@ export default function DiagnosePlantPage() {
     setPlantSaved(false);
     setShowCarePlanGeneratorSection(false);
     setCarePlanError(null);
+    // Note: We don't clear 'description' here, user might want to keep it.
 
     const selectedFile = event.target.files?.[0];
 
@@ -135,9 +137,8 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
         action: <CheckCircle className="text-green-500 h-5 w-5" />,
       });
-      if (!result.identification.isPlant || !result.identification.commonName) {
-        // If not a plant, or not identifiable, still show care plan section
-        // but it might generate very generic tips.
+      // Show care plan section if it's not a plant OR it is a plant but has no common name (can't be saved yet)
+      if (!result.identification.isPlant || (result.identification.isPlant && !result.identification.commonName) ) {
         setShowCarePlanGeneratorSection(true);
       }
     } catch (e: any) {
@@ -152,6 +153,8 @@ export default function DiagnosePlantPage() {
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
     console.log("Saving plant data (simulated):", data);
+    // Here you would typically call an API to save the plant
+    // For now, we simulate with a timeout and toast
     await new Promise(resolve => setTimeout(resolve, 1500));
     toast({
       title: "Plant Saved!",
@@ -159,7 +162,7 @@ export default function DiagnosePlantPage() {
     });
     setPlantSaved(true);
     setShowSavePlantForm(false); 
-    setShowCarePlanGeneratorSection(true); 
+    setShowCarePlanGeneratorSection(true); // Make sure care plan section is visible after saving
     setIsSavingPlant(false);
   };
 
@@ -213,7 +216,7 @@ export default function DiagnosePlantPage() {
       familyCategory: diagnosisResult.identification.familyCategory || '',
       ageEstimateYears: diagnosisResult.identification.ageEstimateYears,
       healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' as PlantFormData['healthCondition'],
-      diagnosedPhotoDataUrl: previewUrl,
+      diagnosedPhotoDataUrl: previewUrl, // This is the image uploaded by user for diagnosis
   } : undefined;
 
   const noAdvancedDetails = carePlanResult && carePlanMode === 'advanced' &&
@@ -381,14 +384,23 @@ export default function DiagnosePlantPage() {
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
+              // Show care plan section if plant was identifiable, even if not saved
               if(diagnosisResult?.identification.isPlant && diagnosisResult?.identification.commonName) {
                 setShowCarePlanGeneratorSection(true);
               }
             }}
             isLoading={isSavingPlant}
+            formTitle="Save to My Plants"
+            formDescription="Confirm or update the details from the diagnosis before saving."
           />
         )}
         
+        {/* Show Care Plan Generator if:
+            1. Plant has been saved
+            2. Diagnosis result exists AND it's not a plant (still allow generic plan)
+            3. Diagnosis result exists AND it IS a plant BUT has no common name (can't save, but allow generic plan) AND save form isn't showing
+            4. Care plan section explicitly shown (e.g., after cancelling save form for an identifiable plant) AND save form isn't showing
+        */}
         { (plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) || (showCarePlanGeneratorSection && !showSavePlantForm) ) && (
           <Card className="shadow-xl animate-in fade-in-50 mt-6">
             <CardHeader>
@@ -398,6 +410,7 @@ export default function DiagnosePlantPage() {
               </CardTitle>
               { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
               { diagnosisResult && !diagnosisResult.identification.isPlant && <CardDescription>No plant identified, generic tips might be provided.</CardDescription>}
+               { diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && <CardDescription>Plant not fully identified, generic tips might be provided.</CardDescription>}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateCarePlan} className="space-y-6">
@@ -433,8 +446,6 @@ export default function DiagnosePlantPage() {
                   )}
                 </Button>
               </form>
-
-              {/* Removed redundant loading indicator text block */}
 
               {carePlanError && (
                   <Alert variant="destructive" className="mt-6">
@@ -517,4 +528,3 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
-    

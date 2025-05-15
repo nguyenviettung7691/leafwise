@@ -16,10 +16,9 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Leaf, UploadCloud, Save, Edit } from 'lucide-react';
 
-// Conditionally define schema for primaryPhoto to handle FileList in browser vs. server
 const primaryPhotoSchema = typeof window !== 'undefined'
   ? z.instanceof(FileList).optional().nullable()
-  : z.any().optional().nullable(); // Fallback for non-browser environments
+  : z.any().optional().nullable();
 
 const plantFormSchema = z.object({
   commonName: z.string().min(1, { message: "Common name is required." }),
@@ -43,16 +42,18 @@ interface SavePlantFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   formTitle?: string;
+  formDescription?: string;
   submitButtonText?: string;
 }
 
-export function SavePlantForm({ 
-  initialData, 
-  onSave, 
-  onCancel, 
-  isLoading, 
+export function SavePlantForm({
+  initialData,
+  onSave,
+  onCancel,
+  isLoading,
   formTitle,
-  submitButtonText 
+  formDescription,
+  submitButtonText
 }: SavePlantFormProps) {
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
@@ -64,7 +65,7 @@ export function SavePlantForm({
       healthCondition: initialData?.healthCondition || 'unknown',
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
-      primaryPhoto: null, // react-hook-form will manage this FileList
+      primaryPhoto: null,
       diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
     },
   });
@@ -72,7 +73,7 @@ export function SavePlantForm({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const currentPhotoValue = form.watch('primaryPhoto'); // Watch for changes to primaryPhoto field
+    const currentPhotoValue = form.watch('primaryPhoto');
     if (currentPhotoValue && currentPhotoValue[0]) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -91,13 +92,15 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        diagnosedPhotoDataUrl: imagePreview 
+        // Use imagePreview as diagnosedPhotoDataUrl if no new photo is explicitly uploaded via primaryPhoto
+        // This helps retain the initially diagnosed photo if not changed.
+        diagnosedPhotoDataUrl: (data.primaryPhoto && data.primaryPhoto.length > 0) ? imagePreview : initialData?.diagnosedPhotoDataUrl || imagePreview
     };
     await onSave(formDataToSave);
   };
 
-  const currentFormTitle = formTitle || "Save to My Plants";
-  const currentSubmitButtonText = submitButtonText || "Save Plant";
+  const currentFormTitle = formTitle || "Save Plant Details";
+  const currentSubmitButtonText = submitButtonText || "Save";
   const FormIcon = currentFormTitle.toLowerCase().includes("edit") ? Edit : Leaf;
 
   return (
@@ -108,10 +111,7 @@ export function SavePlantForm({
           {currentFormTitle}
         </CardTitle>
         <CardDescription>
-          {currentFormTitle.toLowerCase().includes("edit") 
-            ? "Update the details for your plant."
-            : "Confirm or update the details for this plant."
-          }
+          {formDescription || 'Please fill in the details for your plant below.'}
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -159,13 +159,20 @@ export function SavePlantForm({
                                 onBlur={onBlur}
                                 onChange={(e) => {
                                     const files = e.target.files;
-                                    onChange(files); 
+                                    onChange(files);
                                     if (files && files[0]) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setImagePreview(reader.result as string);
-                                        };
-                                        reader.readAsDataURL(files[0]);
+                                        if (files[0].size > 4 * 1024 * 1024) { // 4MB limit
+                                            form.setError("primaryPhoto", { type: "manual", message: "Image too large, max 4MB."});
+                                            setImagePreview(initialData?.diagnosedPhotoDataUrl || null); // Revert to initial if new is too large
+                                            e.target.value = ''; // Clear file input
+                                        } else {
+                                            form.clearErrors("primaryPhoto");
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                                setImagePreview(reader.result as string);
+                                            };
+                                            reader.readAsDataURL(files[0]);
+                                        }
                                     } else {
                                         setImagePreview(initialData?.diagnosedPhotoDataUrl || null);
                                     }
