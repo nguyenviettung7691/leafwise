@@ -246,6 +246,8 @@ export default function DiagnosePlantPage() {
                   <CardContent className="space-y-1 text-sm">
                     <p><strong>Common Name:</strong> {diagnosisResult.identification.commonName || 'N/A'}</p>
                     <p><strong>Scientific Name:</strong> {diagnosisResult.identification.scientificName || 'N/A'}</p>
+                    <p><strong>Main Species Category:</strong> {diagnosisResult.identification.mainSpecies || 'N/A'}</p>
+                    <p><strong>Estimated Age:</strong> {diagnosisResult.identification.ageEstimateYears ? `${diagnosisResult.identification.ageEstimateYears} year(s)` : 'N/A'}</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-secondary/30">

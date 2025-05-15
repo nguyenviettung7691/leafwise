@@ -26,6 +26,8 @@ const DiagnosePlantHealthOutputSchema = z.object({
     isPlant: z.boolean().describe('Whether or not the input image likely contains a plant.'),
     commonName: z.string().optional().describe('The common name of the identified plant, if identifiable.'),
     scientificName: z.string().optional().describe('The scientific name of the identified plant, if identifiable.'),
+    mainSpecies: z.string().optional().describe('The main species category of the plant (e.g., Cactus, Fern, Herb, Tree, Succulent, Vine). Used for broad categorization and filtering.'),
+    ageEstimateYears: z.number().optional().describe("An estimated age of the plant in years, if discernible from the image and description. Provide a numeric value for years (e.g., 0.5 for 6 months, 1 for 1 year, 2 for 2 years)."),
   }),
   healthAssessment: z.object({
     isHealthy: z.boolean().describe('Whether or not the plant appears to be healthy.'),
@@ -51,7 +53,7 @@ const prompt = ai.definePrompt({
   output: {schema: DiagnosePlantHealthOutputSchema},
   prompt: `You are an expert botanist and plant pathologist.
 Analyze the provided plant image and optional user description to perform the following tasks:
-1.  **Identification**: Determine if the image contains a plant. If it does, identify its common and scientific names. If unsure, indicate that.
+1.  **Identification**: Determine if the image contains a plant. If it does, identify its common and scientific names. If possible, also determine a broad main species category (e.g., Cactus, Fern, Herb, Tree, Succulent, Vine) useful for general categorization, and estimate the plant's age in years (as a number, e.g., 0.5 for 6 months, 1, 2) if discernible. If unsure about any of these, indicate that.
 2.  **Health Assessment**: Assess the plant's health. Determine if it's healthy or if it shows signs of disease, pest infestation, nutrient deficiency, or other issues. Provide a diagnosis. State your confidence level (low, medium, high) for this assessment.
 3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps the user can take. These should be specific and helpful.
 
