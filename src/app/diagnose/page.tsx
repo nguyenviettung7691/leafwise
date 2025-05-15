@@ -99,10 +99,6 @@ export default function DiagnosePlantPage() {
       // No file selected (e.g., user clicked "cancel" in the file dialog)
       setFile(null);
       setPreviewUrl(null);
-      // Optionally clear the input value if the browser doesn't do it automatically on cancel
-      // if (fileInputRef.current) {
-      //   fileInputRef.current.value = '';
-      // }
     }
   };
 
@@ -452,21 +448,25 @@ export default function DiagnosePlantPage() {
                     <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
-                    <CarePlanDetailItem title="Watering" data={carePlanResult.watering} />
-                    <CarePlanDetailItem title="Lighting" data={carePlanResult.lighting} />
-                    
-                    <div className="mb-3">
-                        <h4 className="font-semibold text-md mb-1">Basic Maintenance</h4>
-                        <p className="text-sm text-foreground/90 whitespace-pre-wrap">{carePlanResult.basicMaintenance}</p>
+                    <div>
+                        <h3 className="font-bold text-lg text-primary mb-3">Basic Care Details</h3>
+                        <CarePlanDetailItem title="Watering" data={carePlanResult.watering} />
+                        <CarePlanDetailItem title="Lighting" data={carePlanResult.lighting} />
+                        <div className="mb-3">
+                            <h4 className="font-semibold text-md mb-1">Basic Maintenance</h4>
+                            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{carePlanResult.basicMaintenance}</p>
+                        </div>
                     </div>
 
                     {carePlanMode === 'advanced' && (
                         <>
                             <Separator className="my-4"/>
-                            <h3 className="font-bold text-lg text-primary">Advanced Care Details</h3>
-                            <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
-                            <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
-                            <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
+                            <div>
+                                <h3 className="font-bold text-lg text-primary mb-3">Advanced Care Details</h3>
+                                <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
+                                <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
+                                <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
+                            </div>
                         </>
                     )}
                     
@@ -496,5 +496,6 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
+    
 
     
