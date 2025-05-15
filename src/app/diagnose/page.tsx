@@ -434,12 +434,7 @@ export default function DiagnosePlantPage() {
                 </Button>
               </form>
 
-              {isLoadingCarePlan && (
-                <div className="mt-6 flex justify-center items-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="ml-2">Generating your care plan...</p>
-                </div>
-              )}
+              {/* Removed redundant loading indicator text block */}
 
               {carePlanError && (
                   <Alert variant="destructive" className="mt-6">
