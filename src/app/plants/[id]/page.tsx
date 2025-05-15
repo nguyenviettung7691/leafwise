@@ -4,23 +4,40 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { APP_NAV_CONFIG } from '@/lib/constants';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2, Users } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { useEffect, useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
+import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
-const healthConditionStyles = {
+
+const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
   needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-300 dark:border-yellow-500',
   sick: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-700/30 dark:text-red-300 dark:border-red-500',
   unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
+};
+
+const healthConditionRingStyles: Record<PlantHealthCondition, string> = {
+  healthy: 'ring-green-500',
+  needs_attention: 'ring-yellow-500',
+  sick: 'ring-red-500',
+  unknown: 'ring-gray-500',
 };
 
 export default function PlantDetailPage() {
@@ -30,28 +47,49 @@ export default function PlantDetailPage() {
   const id = params.id as string;
   
   const [plant, setPlant] = useState<Plant | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
-  const [isAddingPhoto, setIsAddingPhoto] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // For Growth Monitoring - "Add Photo & Diagnose"
+  const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
+  const growthPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
+    open: boolean;
+    newPhotoDiagnosisResult?: DiagnosePlantHealthOutput;
+    healthComparisonResult?: ComparePlantHealthOutput;
+    newPhotoPreviewUrl?: string;
+  }>({ open: false });
+
+
+  // For viewing a single photo from the grid
+  const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
+  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
+
 
   useEffect(() => {
     if (id) {
       const foundPlant = mockPlants.find(p => p.id === id);
       if (foundPlant) {
-        setPlant(foundPlant);
+        // Ensure photos have unique IDs if not already present
+        const plantWithPhotoIds = {
+            ...foundPlant,
+            photos: foundPlant.photos.map((photo, index) => ({
+                ...photo,
+                id: photo.id || `p-${foundPlant.id}-${index}-${Date.now()}` 
+            }))
+        };
+        setPlant(plantWithPhotoIds);
       } else {
-        // In a real app, you might redirect or show a more specific not found UI
-        // For now, Next.js's notFound will handle it based on the return below.
         console.error("Plant not found with id:", id); 
       }
     }
-    setIsLoading(false);
+    setIsLoadingPage(false);
   }, [id]);
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
   
     setPlant(prevPlant => {
       if (!prevPlant) return null;
@@ -62,15 +100,8 @@ export default function PlantDetailPage() {
         ),
       };
     });
-  
+    toast({ title: "Task Updated", description: `Task has been ${plant?.careTasks.find(t => t.id === taskId)?.isPaused ? "resumed" : "paused"}.`});
     setLoadingTaskId(null);
-  };
-
-  const handleAddPhoto = async () => {
-    setIsAddingPhoto(true);
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-    setIsAddingPhoto(false);
-    toast({ title: "Add Photo (Simulated)", description: "Photo journal update functionality is a future enhancement." });
   };
 
   const handleEditPlant = () => {
@@ -79,22 +110,116 @@ export default function PlantDetailPage() {
 
   const handleDeletePlant = async () => {
     setIsDeleting(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // In a real app, you would delete the plant from your backend and update global state.
-    // For this prototype, we just show a toast and navigate.
     toast({
       title: 'Plant Deleted!',
       description: `${plant?.commonName || 'The plant'} has been (simulated) deleted.`,
-      variant: 'default' 
     });
-    router.push('/'); // Navigate to My Plants page
-    // setIsDeleting(false); // Not strictly needed due to navigation
+    router.push('/'); 
+  };
+
+  const handleGrowthPhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !plant) return;
+
+    if (file.size > 4 * 1024 * 1024) { // 4MB limit
+        toast({
+          variant: 'destructive',
+          title: 'Image Too Large',
+          description: 'Please select an image file smaller than 4MB.',
+        });
+        if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
+        return;
+    }
+
+    setIsDiagnosingNewPhoto(true);
+    setNewPhotoDiagnosisDialogState({open: false}); // Close any previous dialog
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        if (!base64Image.startsWith('data:image/')) {
+            toast({ title: "Invalid File Type", description: "Please upload an image.", variant: "destructive"});
+            setIsDiagnosingNewPhoto(false);
+            return;
+        }
+
+        try {
+            const newPhotoDiagnosisResult = await diagnosePlantHealth({
+                photoDataUri: base64Image,
+                description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`
+            });
+
+            if (!newPhotoDiagnosisResult.identification.isPlant) {
+                toast({ title: "Not a Plant?", description: "AI could not identify a plant in the new photo.", variant: "default"});
+                // Optionally, still add the photo without AI data or open a simplified dialog
+                setIsDiagnosingNewPhoto(false);
+                return;
+            }
+            
+            const healthComparisonInput: ComparePlantHealthInput = {
+                currentPlantHealth: plant.healthCondition,
+                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
+                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' // Or map more granularly if schema changes
+            };
+            const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
+
+            setNewPhotoDiagnosisDialogState({
+                open: true,
+                newPhotoDiagnosisResult,
+                healthComparisonResult,
+                newPhotoPreviewUrl: base64Image
+            });
+
+        } catch (e: any) {
+            const errorMsg = e instanceof Error ? e.message : "An error occurred during diagnosis.";
+            toast({ title: "Diagnosis Error", description: errorMsg, variant: "destructive" });
+        } finally {
+            setIsDiagnosingNewPhoto(false);
+            if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
+        }
+    };
+  };
+  
+  const handleAcceptHealthUpdate = (newHealth: PlantHealthCondition) => {
+    if (!plant) return;
+    setPlant(prev => prev ? {...prev, healthCondition: newHealth} : null);
+    toast({ title: "Plant Health Updated", description: `Overall health status changed to ${newHealth.replace('_', ' ')}.`});
+    // Close dialog parts related to this choice if it's part of a larger dialog
+    // For now, the dialog will be closed entirely after any action.
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }})); // Mark as handled
+  };
+
+  const addPhotoToJournal = () => {
+    if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoPreviewUrl) return;
+
+    const newPhoto: PlantPhoto = {
+        id: `p-${plant.id}-photo-${Date.now()}`,
+        url: newPhotoDiagnosisDialogState.newPhotoPreviewUrl,
+        dateTaken: new Date().toISOString(),
+        healthCondition: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 
+                         (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention'),
+        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
+    };
+
+    setPlant(prev => prev ? {...prev, photos: [newPhoto, ...prev.photos]} : null);
+    toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
+    setNewPhotoDiagnosisDialogState({open: false}); // Close dialog
   };
 
 
-  if (isLoading) {
+  const openGridPhotoDialog = (photo: PlantPhoto) => {
+    setSelectedGridPhoto(photo);
+    setIsGridPhotoDialogValid(true); // Trigger Dialog open
+  };
+  const closeGridPhotoDialog = () => {
+    setIsGridPhotoDialogValid(false); // Trigger Dialog close
+    setTimeout(() => setSelectedGridPhoto(null), 300); // Delay clearing to allow fade-out
+  };
+
+
+  if (isLoadingPage) {
     return (
       <AppLayout navItemsConfig={APP_NAV_CONFIG}>
         <div className="flex justify-center items-center h-full">
@@ -105,8 +230,8 @@ export default function PlantDetailPage() {
   }
 
   if (!plant) {
-    notFound(); // This will render the nearest not-found.tsx or Next.js default 404 page
-    return null; // Ensure nothing else is rendered
+    notFound(); 
+    return null; 
   }
   
   const formatDate = (dateString?: string) => {
@@ -127,7 +252,7 @@ export default function PlantDetailPage() {
                 height={450}
                 className="object-cover w-full h-full"
                 data-ai-hint="plant detail"
-                priority // Prioritize loading this main image
+                priority 
               />
             </div>
             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
@@ -139,7 +264,7 @@ export default function PlantDetailPage() {
             <div className="flex justify-between items-start">
                 <div>
                     <Badge variant="outline" className={`capitalize mt-1 ${healthConditionStyles[plant.healthCondition]}`}>
-                        {plant.healthCondition.replace('_', ' ')}
+                        {plant.healthCondition.replace('_', ' ')} (Overall)
                     </Badge>
                 </div>
                 <div className="flex gap-2">
@@ -217,83 +342,207 @@ export default function PlantDetailPage() {
             <Separator />
 
             <div>
-              <h3 className="font-semibold text-lg mb-3">Care Plan</h3>
-              <div className="space-y-3">
-                {plant.careTasks.map(task => (
-                  <Card key={task.id} className="bg-secondary/30">
-                    <CardContent className="p-4 flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{task.name} <Badge variant="outline" className="ml-2 text-xs">{task.type}</Badge></p>
-                        <p className="text-xs text-muted-foreground">
-                          Frequency: {task.frequency || 'Ad-hoc'}
-                          {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}`}
-                        </p>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleToggleTaskPause(task.id)}
-                        disabled={loadingTaskId === task.id}
-                      >
-                        {loadingTaskId === task.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            {task.isPaused ? <PlayCircle className="h-4 w-4 mr-1" /> : <PauseCircle className="h-4 w-4 mr-1" />}
-                            {task.isPaused ? 'Resume' : 'Pause'}
-                          </>
-                        )}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-                 <Button variant="outline" className="w-full mt-2" disabled>Modify Care Plan (Coming Soon)</Button>
-              </div>
+              <h3 className="font-semibold text-lg mb-3">Care Plan Tasks</h3>
+              {plant.careTasks && plant.careTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {plant.careTasks.map(task => (
+                    <Card key={task.id} className="bg-secondary/30">
+                      <CardContent className="p-4 flex justify-between items-center">
+                        <div>
+                          <p className="font-medium">{task.name} <Badge variant="outline" className="ml-2 text-xs">{task.type}</Badge></p>
+                          <p className="text-xs text-muted-foreground">
+                            Frequency: {task.frequency || 'Ad-hoc'}
+                            {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}`}
+                          </p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleToggleTaskPause(task.id)}
+                          disabled={loadingTaskId === task.id}
+                        >
+                          {/* Content updated by useAuth effect or similar */}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <Button variant="outline" className="w-full mt-2" disabled>Modify Care Plan (Coming Soon)</Button>
+                </div>
+              ) : (
+                 <p className="text-muted-foreground text-sm">No care tasks defined yet.</p>
+              )}
             </div>
             
             <Separator />
 
+            {/* Growth Monitoring Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-lg">Photo Journal</h3>
-                <Button variant="outline" size="sm" onClick={handleAddPhoto} disabled={isAddingPhoto}>
-                  {isAddingPhoto ? (
+                <h3 className="font-semibold text-lg">Growth Monitoring</h3>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => growthPhotoInputRef.current?.click()}
+                    disabled={isDiagnosingNewPhoto}
+                >
+                  {isDiagnosingNewPhoto ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Adding...
+                      Diagnosing...
                     </>
                   ) : (
                     <>
-                      <ImagePlus className="h-4 w-4 mr-2" /> Add Photo
+                      <ImageUp className="h-4 w-4 mr-2" /> Add Photo & Diagnose
                     </>
                   )}
                 </Button>
+                <input 
+                  type="file" 
+                  ref={growthPhotoInputRef} 
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleGrowthPhotoFileChange}
+                />
               </div>
-              {plant.photos.length > 0 ? (
+              {plant.photos && plant.photos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {plant.photos.map(photo => (
-                    <div key={photo.id} className="group relative">
-                      <Image src={photo.url} alt={`Plant photo from ${formatDate(photo.dateTaken)}`} width={200} height={200} className="rounded-md object-cover aspect-square shadow-sm" data-ai-hint="plant growth"/>
-                      <div className="absolute bottom-0 left-0 w-full bg-black/50 text-white text-xs p-1 rounded-b-md opacity-0 group-hover:opacity-100 transition-opacity">
-                        {formatDate(photo.dateTaken)}
-                        {photo.notes && <p className="truncate text-white/80">{photo.notes}</p>}
+                  {plant.photos.map((photo) => (
+                    <button 
+                        key={photo.id} 
+                        className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        onClick={() => openGridPhotoDialog(photo)}
+                        aria-label={`View photo from ${formatDate(photo.dateTaken)}`}
+                    >
+                      <Image 
+                        src={photo.url} 
+                        alt={`Plant photo from ${formatDate(photo.dateTaken)}`} 
+                        width={200} height={200} 
+                        className={cn(
+                            "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200 group-hover:ring-2 group-hover:ring-offset-1",
+                            healthConditionRingStyles[photo.healthCondition]
+                         )}
+                        data-ai-hint="plant growth"
+                       />
+                      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md">
+                        <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
+                        <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100`}>
+                            {photo.healthCondition.replace('_', ' ')}
+                        </Badge>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4">No photos in the journal yet.</p>
+                <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
               )}
             </div>
-
           </CardContent>
           <CardFooter className="p-6 bg-muted/30 border-t">
              <p className="text-xs text-muted-foreground">Last updated: {formatDate(new Date().toISOString())}</p>
           </CardFooter>
         </Card>
+
+        {/* Dialog for New Photo Diagnosis and Comparison */}
+        <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                setNewPhotoDiagnosisDialogState({open: false}); // Reset on close
+            }
+        }}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>New Photo Analysis</DialogTitle>
+                    <DialogDescription>
+                        Review the latest diagnosis and health comparison for your {plant.commonName}.
+                    </DialogDescription>
+                </DialogHeader>
+                {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && newPhotoDiagnosisDialogState.healthComparisonResult && (
+                    <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                        {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
+                             <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt="New plant photo" width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
+                        )}
+                        <Card>
+                            <CardHeader><CardTitle className="text-lg">Latest Diagnosis</CardTitle></CardHeader>
+                            <CardContent className="text-sm space-y-1">
+                                <p><strong>Plant:</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.identification.commonName || plant.commonName}</p>
+                                <p><strong>Status:</strong> <Badge variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"} className={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500" : ""}>{newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "Healthy" : "Needs Attention"}</Badge></p>
+                                {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
+                            </CardContent>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader><CardTitle className="text-lg">Health Comparison</CardTitle></CardHeader>
+                            <CardContent className="text-sm space-y-2">
+                                <p>{newPhotoDiagnosisDialogState.healthComparisonResult.comparisonSummary}</p>
+                                {newPhotoDiagnosisDialogState.healthComparisonResult.shouldUpdateOverallHealth && newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth && (
+                                    <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
+                                        <MessageSquareWarning className="h-4 w-4 text-blue-500" />
+                                        <AlertTitle>Suggestion: Update Overall Health</AlertTitle>
+                                        <p>The AI suggests updating the plant's overall health status to <Badge variant="outline" className="capitalize">{newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth.replace('_', ' ')}</Badge>.</p>
+                                        <div className="mt-3 flex gap-2">
+                                            <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
+                                                <CheckCircle className="mr-1.5 h-4 w-4"/>Update Health
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={() => setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}))}>
+                                                Keep Current
+                                            </Button>
+                                        </div>
+                                    </Alert>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.careRecommendations.length > 0 && (
+                             <Card>
+                                <CardHeader><CardTitle className="text-lg">Updated Care Considerations</CardTitle></CardHeader>
+                                <CardContent className="text-sm space-y-1">
+                                     <p className="text-xs text-muted-foreground mb-2">Based on this latest diagnosis, consider the following for your care routine:</p>
+                                    <ul className="list-disc list-inside space-y-1">
+                                    {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.careRecommendations.map((rec, index) => (
+                                        <li key={index}><strong>{rec.action}</strong>: {rec.details}</li>
+                                    ))}
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                )}
+                <DialogFooter className="sm:justify-end">
+                     <DialogClose asChild>
+                        <Button type="button" variant="outline" onClick={() => setNewPhotoDiagnosisDialogState({open: false})}>
+                            Close
+                        </Button>
+                    </DialogClose>
+                    <Button type="button" onClick={addPhotoToJournal}>
+                        Add Photo to Journal
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Dialog for displaying selected photo from grid */}
+        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Photo Details - {selectedGridPhoto ? formatDate(selectedGridPhoto.dateTaken) : ''}</DialogTitle>
+                </DialogHeader>
+                {selectedGridPhoto && (
+                    <div className="space-y-3 py-3">
+                        <Image src={selectedGridPhoto.url} alt={`Photo from ${formatDate(selectedGridPhoto.dateTaken)}`} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
+                        <p><strong>Date:</strong> {formatDate(selectedGridPhoto.dateTaken)}</p>
+                        <p><strong>Health at Diagnosis:</strong> <Badge variant="outline" className={healthConditionStyles[selectedGridPhoto.healthCondition]}>{selectedGridPhoto.healthCondition.replace('_',' ')}</Badge></p>
+                        {selectedGridPhoto.diagnosisNotes && <p><strong>Diagnosis Notes:</strong> {selectedGridPhoto.diagnosisNotes}</p>}
+                        {selectedGridPhoto.notes && <p><strong>General Notes:</strong> {selectedGridPhoto.notes}</p>}
+                    </div>
+                )}
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">Close</Button>
+                    </DialogClose>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
       </div>
     </AppLayout>
   );
 }
-
-    

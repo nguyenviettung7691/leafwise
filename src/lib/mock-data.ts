@@ -1,21 +1,44 @@
 
-import type { Plant, User } from '@/types'; // Added User
+import type { Plant, User, PlantPhoto } from '@/types';
+
+const now = new Date();
+const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
 export const mockPlants: Plant[] = [
   {
     id: '1',
     commonName: 'Monstera Deliciosa',
     scientificName: 'Monstera deliciosa',
-    familyCategory: 'Araceae', // Changed from species
+    familyCategory: 'Araceae',
     ageEstimate: '2 years',
-    healthCondition: 'healthy',
+    healthCondition: 'healthy', // Overall health
     location: 'Living Room',
     plantingDate: new Date('2022-03-15').toISOString(),
     primaryPhotoUrl: 'https://placehold.co/600x400.png',
     customNotes: 'Loves bright, indirect light. Water when top 2 inches of soil are dry.',
     photos: [
-      { id: 'p1-1', url: 'https://placehold.co/600x400.png', dateTaken: new Date('2023-01-10').toISOString(), notes: 'New leaf unfurling' },
-      { id: 'p1-2', url: 'https://placehold.co/600x400.png', dateTaken: new Date('2023-06-22').toISOString(), notes: 'After repotting' },
+      { 
+        id: 'p1-initial', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: new Date('2022-03-15').toISOString(), 
+        healthCondition: 'healthy', 
+        diagnosisNotes: 'Plant was healthy upon acquisition.' 
+      },
+      { 
+        id: 'p1-1', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: oneMonthAgo.toISOString(), 
+        healthCondition: 'healthy', 
+        diagnosisNotes: 'New leaf unfurling, looking good.' 
+      },
+      { 
+        id: 'p1-2', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: oneWeekAgo.toISOString(), 
+        healthCondition: 'healthy', 
+        diagnosisNotes: 'Recently repotted, still vibrant.' 
+      },
     ],
     careTasks: [
       { id: 'ct1-1', plantId: '1', name: 'Watering', frequency: 'Weekly', nextDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, type: 'basic' },
@@ -26,15 +49,28 @@ export const mockPlants: Plant[] = [
     id: '2',
     commonName: 'Snake Plant',
     scientificName: 'Sansevieria trifasciata',
-    familyCategory: 'Asparagaceae', // Changed from species
+    familyCategory: 'Asparagaceae',
     ageEstimate: '1 year',
-    healthCondition: 'healthy',
+    healthCondition: 'needs_attention', // Overall health
     location: 'Bedroom',
     plantingDate: new Date('2023-01-20').toISOString(),
     primaryPhotoUrl: 'https://placehold.co/600x400.png',
-    customNotes: 'Very hardy, low light tolerant. Do not overwater.',
+    customNotes: 'Very hardy, low light tolerant. Some yellowing on one leaf.',
     photos: [
-      { id: 'p2-1', url: 'https://placehold.co/600x400.png', dateTaken: new Date('2023-02-15').toISOString() },
+      { 
+        id: 'p2-initial', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: new Date('2023-01-20').toISOString(), 
+        healthCondition: 'healthy', 
+        diagnosisNotes: 'Healthy when planted.'
+      },
+      { 
+        id: 'p2-1', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: oneWeekAgo.toISOString(), 
+        healthCondition: 'needs_attention', 
+        diagnosisNotes: 'Noticed slight yellowing on one leaf tip. Potentially overwatered last cycle.' 
+      },
     ],
     careTasks: [
       { id: 'ct2-1', plantId: '2', name: 'Watering', frequency: 'Every 2-3 weeks', nextDueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, type: 'basic' },
@@ -44,14 +80,36 @@ export const mockPlants: Plant[] = [
     id: '3',
     commonName: 'Fiddle Leaf Fig',
     scientificName: 'Ficus lyrata',
-    familyCategory: 'Moraceae', // Changed from species
+    familyCategory: 'Moraceae',
     ageEstimate: '3 years',
-    healthCondition: 'needs_attention',
+    healthCondition: 'sick', // Overall health
     location: 'Office',
     plantingDate: new Date('2021-07-01').toISOString(),
     primaryPhotoUrl: 'https://placehold.co/600x400.png',
-    customNotes: 'Prefers consistent conditions. Dropped a few leaves recently.',
-    photos: [],
+    customNotes: 'Prefers consistent conditions. Has been dropping leaves and has brown spots.',
+    photos: [
+       { 
+        id: 'p3-initial', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: new Date('2021-07-01').toISOString(), 
+        healthCondition: 'healthy', 
+        diagnosisNotes: 'Looked great when first bought.'
+      },
+      { 
+        id: 'p3-1', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: oneMonthAgo.toISOString(), 
+        healthCondition: 'needs_attention', 
+        diagnosisNotes: 'Started showing a few brown spots on lower leaves.' 
+      },
+       { 
+        id: 'p3-2', 
+        url: 'https://placehold.co/600x400.png', 
+        dateTaken: oneWeekAgo.toISOString(), 
+        healthCondition: 'sick', 
+        diagnosisNotes: 'Significant leaf drop and more brown spots. Suspect root rot or severe stress.' 
+      },
+    ],
     careTasks: [
       { id: 'ct3-1', plantId: '3', name: 'Watering', frequency: 'Weekly', nextDueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, type: 'basic' },
       { id: 'ct3-2', plantId: '3', name: 'Check for pests', frequency: 'Bi-weekly', nextDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), isPaused: true, resumeDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), type: 'advanced' },
@@ -64,9 +122,9 @@ export const mockUser: User = {
   id: 'user123',
   name: 'Alex GreenThumb',
   email: 'alex.gt@example.com',
-  avatarUrl: 'https://placehold.co/100x100.png', // Placeholder avatar
+  avatarUrl: 'https://placehold.co/100x100.png', 
   preferences: {
     emailNotifications: true,
-    pushNotifications: false, // Added pushNotifications
+    pushNotifications: false, 
   },
 };
