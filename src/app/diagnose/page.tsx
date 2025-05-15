@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, UploadCloud, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
@@ -24,7 +24,7 @@ export default function DiagnosePlantPage() {
   const [result, setResult] = useState<DiagnosePlantHealthOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const { t } = useLanguage(); // Assuming you might add translations for this page
+  const { t } = useLanguage();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +41,7 @@ export default function DiagnosePlantPage() {
         setFile(null);
         setPreviewUrl(null);
         if (fileInputRef.current) {
-          fileInputRef.current.value = ""; // Reset file input
+          fileInputRef.current.value = ""; 
         }
         return;
       }
@@ -72,46 +72,45 @@ export default function DiagnosePlantPage() {
     setError(null);
     setResult(null);
 
+    const readFileAsDataURL = (fileToRead: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (errorEvent) => reject(errorEvent); // Pass the error event
+        reader.readAsDataURL(fileToRead);
+      });
+    };
+
     try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Image = reader.result as string;
-        if (!base64Image.startsWith('data:image/')) {
-            setError('Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP).');
-            setIsLoading(false);
-            toast({
-                title: "Invalid File Type",
-                description: "Please upload an image (JPEG, PNG, GIF, WebP).",
-                variant: "destructive",
-            });
-            return;
-        }
-        const diagnosisResult = await diagnosePlantHealth({ photoDataUri: base64Image, description });
-        setResult(diagnosisResult);
-        toast({
-          title: "Diagnosis Complete!",
-          description: diagnosisResult.identification.commonName 
-            ? `Analyzed ${diagnosisResult.identification.commonName}.`
-            : "Analysis complete.",
-          action: <CheckCircle className="text-green-500" />,
-        });
-      };
-      reader.onerror = () => {
-        setError('Failed to read the file.');
-        toast({
-          title: "File Read Error",
-          description: "Could not read the selected file. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
+      const base64Image = await readFileAsDataURL(file);
+
+      if (!base64Image.startsWith('data:image/')) {
+          setError('Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP).');
+          toast({
+              title: "Invalid File Type",
+              description: "Please upload an image (JPEG, PNG, GIF, WebP).",
+              variant: "destructive",
+          });
+          setIsLoading(false); // Set loading to false before returning
+          return;
       }
+
+      const diagnosisResult = await diagnosePlantHealth({ photoDataUri: base64Image, description });
+      setResult(diagnosisResult);
+      toast({
+        title: "Diagnosis Complete!",
+        description: diagnosisResult.identification.commonName 
+          ? `Analyzed ${diagnosisResult.identification.commonName}.`
+          : "Analysis complete.",
+        action: <CheckCircle className="text-green-500 h-5 w-5" />,
+      });
     } catch (e: any) {
-      console.error(e);
-      setError(e.message || 'An unexpected error occurred during diagnosis.');
+      console.error("Diagnosis or file read error:", e);
+      const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred.');
+      setError(errorMessage);
       toast({
         title: "Diagnosis Error",
-        description: e.message || "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -126,23 +125,23 @@ export default function DiagnosePlantPage() {
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
                 <Stethoscope className="h-7 w-7 text-primary" />
-                Plant Health Diagnosis
+                {t('nav.diagnosePlant')} {/* Translated title */}
             </CardTitle>
             <CardDescription>Upload a photo of your plant and add any observations. Our AI will analyze it and provide a health assessment and care tips.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="plant-image-diagnose" className="block text-sm font-medium text-foreground mb-1">
+                <Label htmlFor="plant-image-diagnose" className="block text-sm font-medium text-foreground mb-1">
                   Plant Image (Max 4MB)
-                </label>
+                </Label>
                 <Input
                   id="plant-image-diagnose"
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handleFileChange}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                 />
               </div>
 
@@ -160,9 +159,9 @@ export default function DiagnosePlantPage() {
               )}
               
               <div>
-                <label htmlFor="plant-description" className="block text-sm font-medium text-foreground mb-1">
+                <Label htmlFor="plant-description" className="block text-sm font-medium text-foreground mb-1">
                   Optional Description
-                </label>
+                </Label>
                 <Textarea
                   id="plant-description"
                   placeholder="e.g., Yellowing leaves, brown spots, wilting..."
@@ -207,8 +206,8 @@ export default function DiagnosePlantPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {!result.identification.isPlant && (
-                <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700">
-                  <Info className="h-4 w-4 text-yellow-600" />
+                <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
+                  <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   <AlertTitle>Not a Plant?</AlertTitle>
                   <AlertDescription>The AI could not confidently identify a plant in the image. Results might be inaccurate.</AlertDescription>
                 </Alert>
@@ -226,7 +225,7 @@ export default function DiagnosePlantPage() {
                   <CardHeader><CardTitle className="text-lg">Health Assessment</CardTitle></CardHeader>
                   <CardContent className="space-y-1 text-sm">
                     <p><strong>Status:</strong> {result.healthAssessment.isHealthy ? 
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">Healthy</Badge> : 
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Healthy</Badge> : 
                       <Badge variant="destructive">Needs Attention</Badge>}
                     </p>
                     {result.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {result.healthAssessment.diagnosis}</p>}
