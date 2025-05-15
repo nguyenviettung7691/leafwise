@@ -20,7 +20,7 @@ export default function EditPlantPage() {
 
   const [plant, setPlant] = useState<Plant | null>(null);
   const [initialFormData, setInitialFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPage, setIsLoadingPage] = useState(true); // Renamed to avoid conflict with form's isLoading
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function EditPlantPage() {
         setInitialFormData({
           commonName: foundPlant.commonName,
           scientificName: foundPlant.scientificName || '',
-          familyCategory: foundPlant.familyCategory || '',
+          familyCategory: foundPlant.familyCategory || '', // Ensure this is populated
           ageEstimateYears: ageYears,
           healthCondition: foundPlant.healthCondition,
           location: foundPlant.location || '',
@@ -51,7 +51,7 @@ export default function EditPlantPage() {
         notFound();
       }
     }
-    setIsLoading(false);
+    setIsLoadingPage(false);
   }, [id]);
 
   const handleUpdatePlant = async (data: PlantFormData) => {
@@ -60,14 +60,30 @@ export default function EditPlantPage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // In a real app, you would update the plant data in your backend.
-    // For this prototype, we'll find the plant in mockPlants and update it (this won't persist across reloads).
     const plantIndex = mockPlants.findIndex(p => p.id === id);
     if (plantIndex !== -1 && plant) {
-        // This is a mock update. In a real app, this data would go to a backend.
-        // And the primaryPhoto (FileList) would need to be uploaded.
+        // This is a mock update.
         console.log('Updated plant data (simulated):', { id: plant.id, ...data });
         // To see changes locally in mock data for the current session (won't persist):
-        // mockPlants[plantIndex] = { ...mockPlants[plantIndex], ...data, primaryPhotoUrl: data.primaryPhoto ? URL.createObjectURL(data.primaryPhoto[0]) : plant.primaryPhotoUrl };
+        // This logic would actually be handled by your data layer / state management in a real app
+        // For now, we just simulate the save and redirect.
+        // If a new photo was uploaded (data.primaryPhoto is a FileList), update it.
+        // Otherwise, keep the existing (data.diagnosedPhotoDataUrl which was plant.primaryPhotoUrl).
+        const newPhotoUrl = data.primaryPhoto?.[0] 
+            ? URL.createObjectURL(data.primaryPhoto[0]) 
+            : data.diagnosedPhotoDataUrl; // which was initial plant.primaryPhotoUrl
+
+        // mockPlants[plantIndex] = { 
+        //     ...mockPlants[plantIndex], 
+        //     commonName: data.commonName,
+        //     scientificName: data.scientificName,
+        //     familyCategory: data.familyCategory,
+        //     ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : mockPlants[plantIndex].ageEstimate, // Reconstruct string for mock
+        //     healthCondition: data.healthCondition,
+        //     location: data.location,
+        //     customNotes: data.customNotes,
+        //     primaryPhotoUrl: newPhotoUrl || mockPlants[plantIndex].primaryPhotoUrl,
+        // };
     }
     
     toast({
@@ -75,10 +91,10 @@ export default function EditPlantPage() {
       description: `${data.commonName} has been (simulated) updated.`,
     });
     setIsSaving(false);
-    router.push(`/plants/${id}`); // Navigate back to the plant detail page
+    router.push(`/plants/${id}`); 
   };
 
-  if (isLoading || !initialFormData) {
+  if (isLoadingPage || !initialFormData) {
     return (
       <AppLayout navItemsConfig={APP_NAV_CONFIG}>
         <div className="flex justify-center items-center h-full">
@@ -88,7 +104,7 @@ export default function EditPlantPage() {
     );
   }
 
-  if (!plant) { // Should be caught by initialFormData check, but good for safety
+  if (!plant) { 
     return notFound();
   }
 
@@ -100,14 +116,9 @@ export default function EditPlantPage() {
           onSave={handleUpdatePlant}
           onCancel={() => router.push(`/plants/${id}`)}
           isLoading={isSaving}
+          formTitle="Edit Plant"
+          submitButtonText="Update Plant"
         />
-        {/* The SavePlantForm component now renders its own Card.
-            If we want a specific title for the edit page container Card,
-            we can wrap SavePlantForm in another Card here.
-            For now, SavePlantForm's internal Card will be used.
-            Its title is "Save to My Plants", which is generic enough for "Update" too.
-            Alternatively, we can pass a title prop to SavePlantForm.
-        */}
       </div>
     </AppLayout>
   );

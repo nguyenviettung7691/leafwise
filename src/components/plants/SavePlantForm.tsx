@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { Leaf, UploadCloud, Save } from 'lucide-react';
+import { Leaf, UploadCloud, Save, Edit } from 'lucide-react'; // Added Edit icon
 
 // Conditionally define schema for primaryPhoto to handle FileList in browser vs. server
 const primaryPhotoSchema = typeof window !== 'undefined'
@@ -42,9 +42,18 @@ interface SavePlantFormProps {
   onSave: (data: PlantFormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
+  formTitle?: string;
+  submitButtonText?: string;
 }
 
-export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: SavePlantFormProps) {
+export function SavePlantForm({ 
+  initialData, 
+  onSave, 
+  onCancel, 
+  isLoading, 
+  formTitle,
+  submitButtonText 
+}: SavePlantFormProps) {
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
     defaultValues: {
@@ -60,34 +69,52 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
     },
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.diagnosedPhotoDataUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Effect to update preview if initialData changes (e.g., user re-diagnoses)
+  // Effect to update preview if initialData changes or a new file is selected
   useEffect(() => {
-    if (initialData?.diagnosedPhotoDataUrl && !form.getValues('primaryPhoto')) { // Only update if no new file is selected
+    const currentPhotoValue = form.getValues('primaryPhoto');
+    if (currentPhotoValue && currentPhotoValue[0]) {
+        // If a new file is selected, prioritize its preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(currentPhotoValue[0]);
+    } else if (initialData?.diagnosedPhotoDataUrl) {
+        // Otherwise, use the initial data URL (e.g., existing plant image or diagnosed image)
         setImagePreview(initialData.diagnosedPhotoDataUrl);
+    } else {
+        setImagePreview(null);
     }
-  }, [initialData?.diagnosedPhotoDataUrl, form]);
+  }, [initialData?.diagnosedPhotoDataUrl, form.watch('primaryPhoto')]);
 
 
   const onSubmit = async (data: SavePlantFormValues) => {
-    // Ensure PlantFormData type is correctly passed, especially primaryPhoto
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
+        diagnosedPhotoDataUrl: imagePreview // ensure current preview (which might be the initial photo) is passed
     };
     await onSave(formDataToSave);
   };
+
+  const currentFormTitle = formTitle || "Save to My Plants";
+  const currentSubmitButtonText = submitButtonText || "Save Plant";
+  const FormIcon = formTitle === "Edit Plant" ? Edit : Leaf;
 
   return (
     <Card className="shadow-lg animate-in fade-in-50">
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
-          <Leaf className="h-6 w-6 text-primary" />
-          Save to My Plants
+          <FormIcon className="h-6 w-6 text-primary" />
+          {currentFormTitle}
         </CardTitle>
         <CardDescription>
-          Confirm or update the details for this plant.
+          {currentFormTitle === "Edit Plant" 
+            ? "Update the details for your plant."
+            : "Confirm or update the details for this plant."
+          }
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -108,9 +135,9 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => (
+              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => ( // Using value directly
                 <FormItem>
-                  <FormLabel>Plant Image</FormLabel>
+                  <FormLabel>Plant Image {initialData?.diagnosedPhotoDataUrl && !fieldValue?.[0] ? "(Current)" : "(Optional: Upload New)"}</FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -122,20 +149,20 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
                                 <p className="mb-1 text-sm text-muted-foreground">
                                     <span className="font-semibold">Click to upload</span> or drag and drop
                                 </p>
-                                <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (MAX. 4MB)</p>
+                                <p className="text-xs text-muted-foreground">PNG, JPG, GIF, WEBP (MAX. 4MB)</p>
                                 {fieldValue?.[0] && <p className="text-xs text-primary mt-1">{fieldValue[0].name}</p>}
                             </div>
                             <Input
                                 id="primaryPhoto-input"
                                 type="file"
                                 className="hidden"
-                                accept="image/*"
+                                accept="image/png, image/jpeg, image/gif, image/webp"
                                 name={name}
                                 ref={ref}
                                 onBlur={onBlur}
                                 onChange={(e) => {
                                     const files = e.target.files;
-                                    onChange(files); // Update react-hook-form state with FileList
+                                    onChange(files); 
                                     if (files && files[0]) {
                                         const reader = new FileReader();
                                         reader.onloadend = () => {
@@ -143,7 +170,6 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
                                         };
                                         reader.readAsDataURL(files[0]);
                                     } else {
-                                        // If no file selected, or selection cleared, revert preview
                                         setImagePreview(initialData?.diagnosedPhotoDataUrl || null);
                                     }
                                 }}
@@ -202,7 +228,7 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
                 <FormItem>
                   <FormLabel>Age (Years, Est.)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                    <Input type="number" step="0.1" placeholder="e.g., 2" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -262,8 +288,8 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !form.formState.isValid && form.formState.isSubmitted}>
-              {isLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Plant</>}
+            <Button type="submit" disabled={isLoading || (!form.formState.isValid && form.formState.isSubmitted)}>
+              {isLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> {currentSubmitButtonText}</>}
             </Button>
           </CardFooter>
         </form>
