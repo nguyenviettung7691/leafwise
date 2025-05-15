@@ -211,7 +211,7 @@ export default function MyPlantsPage() {
       </div>
 
       <Card className="mb-6 shadow-md">
-        <Accordion type="single" collapsible className="w-full" defaultValue="filter-sort-panel">
+        <Accordion type="single" collapsible className="w-full"> {/* Removed defaultValue */}
           <AccordionItem value="filter-sort-panel" className="border-b-0">
             <AccordionTrigger className="hover:no-underline px-6 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-t-lg">
               <div className="flex justify-between items-center w-full">
