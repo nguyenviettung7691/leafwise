@@ -11,12 +11,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause } from 'lucide-react';
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,7 @@ export default function PlantDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const id = params.id as string;
-  
+
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
@@ -76,12 +76,12 @@ export default function PlantDetailPage() {
             ...foundPlant,
             photos: foundPlant.photos.map((photo, index) => ({
                 ...photo,
-                id: photo.id || `p-${foundPlant.id}-${index}-${Date.now()}` 
+                id: photo.id || `p-${foundPlant.id}-${index}-${Date.now()}`
             }))
         };
         setPlant(plantWithPhotoIds);
       } else {
-        console.error("Plant not found with id:", id); 
+        console.error("Plant not found with id:", id);
       }
     }
     setIsLoadingPage(false);
@@ -89,18 +89,20 @@ export default function PlantDetailPage() {
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
-  
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     setPlant(prevPlant => {
       if (!prevPlant) return null;
+      const updatedTasks = prevPlant.careTasks.map(t =>
+        t.id === taskId ? { ...t, isPaused: !t.isPaused } : t
+      );
+      const taskToUpdate = updatedTasks.find(t => t.id === taskId);
+      toast({ title: "Task Updated", description: `Task "${taskToUpdate?.name}" has been ${taskToUpdate?.isPaused ? "paused" : "resumed"}.`});
       return {
         ...prevPlant,
-        careTasks: prevPlant.careTasks.map(t =>
-          t.id === taskId ? { ...t, isPaused: !t.isPaused } : t
-        ),
+        careTasks: updatedTasks,
       };
     });
-    toast({ title: "Task Updated", description: `Task has been ${plant?.careTasks.find(t => t.id === taskId)?.isPaused ? "resumed" : "paused"}.`});
     setLoadingTaskId(null);
   };
 
@@ -115,7 +117,7 @@ export default function PlantDetailPage() {
       title: 'Plant Deleted!',
       description: `${plant?.commonName || 'The plant'} has been (simulated) deleted.`,
     });
-    router.push('/'); 
+    router.push('/');
   };
 
   const handleGrowthPhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,11 +159,11 @@ export default function PlantDetailPage() {
                 setIsDiagnosingNewPhoto(false);
                 return;
             }
-            
+
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
-                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' // Or map more granularly if schema changes
+                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ? 'sick' : 'needs_attention')
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
@@ -181,14 +183,12 @@ export default function PlantDetailPage() {
         }
     };
   };
-  
+
   const handleAcceptHealthUpdate = (newHealth: PlantHealthCondition) => {
     if (!plant) return;
     setPlant(prev => prev ? {...prev, healthCondition: newHealth} : null);
     toast({ title: "Plant Health Updated", description: `Overall health status changed to ${newHealth.replace('_', ' ')}.`});
-    // Close dialog parts related to this choice if it's part of a larger dialog
-    // For now, the dialog will be closed entirely after any action.
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }})); // Mark as handled
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}));
   };
 
   const addPhotoToJournal = () => {
@@ -198,7 +198,7 @@ export default function PlantDetailPage() {
         id: `p-${plant.id}-photo-${Date.now()}`,
         url: newPhotoDiagnosisDialogState.newPhotoPreviewUrl,
         dateTaken: new Date().toISOString(),
-        healthCondition: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 
+        healthCondition: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' :
                          (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention'),
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
     };
@@ -230,10 +230,10 @@ export default function PlantDetailPage() {
   }
 
   if (!plant) {
-    notFound(); 
-    return null; 
+    notFound();
+    return null;
   }
-  
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
@@ -252,7 +252,7 @@ export default function PlantDetailPage() {
                 height={450}
                 className="object-cover w-full h-full"
                 data-ai-hint="plant detail"
-                priority 
+                priority
               />
             </div>
             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
@@ -331,7 +331,7 @@ export default function PlantDetailPage() {
                 </div>
               )}
             </div>
-            
+
             {plant.customNotes && (
               <div>
                 <h3 className="font-semibold text-lg mb-2">Notes</h3>
@@ -355,13 +355,24 @@ export default function PlantDetailPage() {
                             {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}`}
                           </p>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleToggleTaskPause(task.id)}
                           disabled={loadingTaskId === task.id}
+                          className="w-24"
                         >
-                          {/* Content updated by useAuth effect or similar */}
+                          {loadingTaskId === task.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : task.isPaused ? (
+                            <>
+                              <Play className="mr-2 h-4 w-4" /> Resume
+                            </>
+                          ) : (
+                            <>
+                              <Pause className="mr-2 h-4 w-4" /> Pause
+                            </>
+                          )}
                         </Button>
                       </CardContent>
                     </Card>
@@ -372,16 +383,16 @@ export default function PlantDetailPage() {
                  <p className="text-muted-foreground text-sm">No care tasks defined yet.</p>
               )}
             </div>
-            
+
             <Separator />
 
             {/* Growth Monitoring Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-semibold text-lg">Growth Monitoring</h3>
-                <Button 
-                    variant="outline" 
-                    size="sm" 
+                <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => growthPhotoInputRef.current?.click()}
                     disabled={isDiagnosingNewPhoto}
                 >
@@ -396,9 +407,9 @@ export default function PlantDetailPage() {
                     </>
                   )}
                 </Button>
-                <input 
-                  type="file" 
-                  ref={growthPhotoInputRef} 
+                <input
+                  type="file"
+                  ref={growthPhotoInputRef}
                   className="hidden"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handleGrowthPhotoFileChange}
@@ -407,16 +418,16 @@ export default function PlantDetailPage() {
               {plant.photos && plant.photos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {plant.photos.map((photo) => (
-                    <button 
-                        key={photo.id} 
+                    <button
+                        key={photo.id}
                         className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         onClick={() => openGridPhotoDialog(photo)}
                         aria-label={`View photo from ${formatDate(photo.dateTaken)}`}
                     >
-                      <Image 
-                        src={photo.url} 
-                        alt={`Plant photo from ${formatDate(photo.dateTaken)}`} 
-                        width={200} height={200} 
+                      <Image
+                        src={photo.url}
+                        alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
+                        width={200} height={200}
                         className={cn(
                             "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200 group-hover:ring-2 group-hover:ring-offset-1",
                             healthConditionRingStyles[photo.healthCondition]
@@ -464,11 +475,11 @@ export default function PlantDetailPage() {
                             <CardHeader><CardTitle className="text-lg">Latest Diagnosis</CardTitle></CardHeader>
                             <CardContent className="text-sm space-y-1">
                                 <p><strong>Plant:</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.identification.commonName || plant.commonName}</p>
-                                <p><strong>Status:</strong> <Badge variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"} className={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500" : ""}>{newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "Healthy" : "Needs Attention"}</Badge></p>
+                                <p><strong>Status:</strong> <Badge variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"} className={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500 hover:bg-green-600" : ""}>{newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "Healthy" : "Needs Attention"}</Badge></p>
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
                             </CardContent>
                         </Card>
-                        
+
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Health Comparison</CardTitle></CardHeader>
                             <CardContent className="text-sm space-y-2">
@@ -529,7 +540,7 @@ export default function PlantDetailPage() {
                     <div className="space-y-3 py-3">
                         <Image src={selectedGridPhoto.url} alt={`Photo from ${formatDate(selectedGridPhoto.dateTaken)}`} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
                         <p><strong>Date:</strong> {formatDate(selectedGridPhoto.dateTaken)}</p>
-                        <p><strong>Health at Diagnosis:</strong> <Badge variant="outline" className={healthConditionStyles[selectedGridPhoto.healthCondition]}>{selectedGridPhoto.healthCondition.replace('_',' ')}</Badge></p>
+                        <p><strong>Health at Diagnosis:</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{selectedGridPhoto.healthCondition.replace('_',' ')}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>Diagnosis Notes:</strong> {selectedGridPhoto.diagnosisNotes}</p>}
                         {selectedGridPhoto.notes && <p><strong>General Notes:</strong> {selectedGridPhoto.notes}</p>}
                     </div>
@@ -546,3 +557,5 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
