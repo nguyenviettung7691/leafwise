@@ -8,6 +8,7 @@ import { UserCircle, Settings, LogIn } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar imports
 
 export function Navbar() {
   const { user, isLoading } = useAuth();
@@ -24,18 +25,21 @@ export function Navbar() {
          <div className="md:hidden">
             <Logo iconSize={24} textSize="text-xl" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3"> {/* Increased gap slightly for avatar */}
           {isLoading ? (
             <>
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" /> {/* Adjusted skeleton size for avatar */}
+              <Skeleton className="h-9 w-9 rounded-full" />
             </>
           ) : user ? (
             <>
               <Link href="/profile" passHref>
-                <Button variant="ghost" size="icon" aria-label="User Account">
-                  <UserCircle className="h-6 w-6" />
-                </Button>
+                <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-primary transition-colors">
+                  <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name} data-ai-hint="person avatar" />
+                  <AvatarFallback className="text-sm bg-muted">
+                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               </Link>
               <Link href="/settings" passHref>
                 <Button variant="ghost" size="icon" aria-label="Settings">
