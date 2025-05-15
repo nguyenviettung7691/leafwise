@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Check, ChevronsUpDown, Edit2 } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from '@/lib/utils';
@@ -57,9 +57,12 @@ export type OnSaveTaskData = {
 };
 
 interface CarePlanTaskFormProps {
+  initialData?: CarePlanTaskFormData;
   onSave: (data: OnSaveTaskData) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  formTitle?: string;
+  submitButtonText?: string;
 }
 
 const predefinedTasks = [
@@ -74,25 +77,42 @@ const predefinedTasks = [
     { value: "rotate_pot", label: "Rotate Pot" },
 ];
 
-export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFormProps) {
+export function CarePlanTaskForm({ 
+  initialData, 
+  onSave, 
+  onCancel, 
+  isLoading,
+  formTitle = "Add New Care Plan Task",
+  submitButtonText 
+}: CarePlanTaskFormProps) {
   const form = useForm<CarePlanTaskFormData>({
     resolver: zodResolver(taskFormSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       name: '',
       frequencyMode: 'adhoc',
-      frequencyValue: undefined, // react-hook-form handles undefined correctly for optional numbers
+      frequencyValue: undefined,
       timeOfDayOption: 'all_day',
       specificTime: '',
       level: 'basic',
     },
   });
 
+  React.useEffect(() => {
+    if (initialData) {
+      form.reset(initialData);
+    }
+  }, [initialData, form]);
+
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
-  const [commandInputValue, setCommandInputValue] = React.useState('');
+  const [commandInputValue, setCommandInputValue] = React.useState(initialData?.name || '');
 
 
   const watchedFrequencyMode = form.watch('frequencyMode');
   const watchedTimeOfDayOption = form.watch('timeOfDayOption');
+
+  const actualSubmitButtonText = submitButtonText || (initialData ? "Update Task" : "Add Task");
+  const SubmitIcon = initialData ? Edit2 : PlusCircle;
+
 
   const onSubmit = (data: CarePlanTaskFormData) => {
     let frequencyString = '';
@@ -240,7 +260,7 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
                     type="number" 
                     placeholder="e.g., 3" 
                     {...field} 
-                    value={field.value ?? ''} // Ensure value is always defined (string or number)
+                    value={field.value ?? ''} 
                     onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} 
                   />
                 </FormControl>
@@ -324,10 +344,12 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
             Cancel
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : <><PlusCircle className="mr-2 h-4 w-4" /> Add Task</>}
+            {isLoading ? 'Saving...' : <><SubmitIcon className="mr-2 h-4 w-4" /> {actualSubmitButtonText}</>}
           </Button>
         </div>
       </form>
     </Form>
   );
 }
+
+    
