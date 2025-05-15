@@ -4,7 +4,6 @@
 import type { NavItemConfig } from '@/types'; // Keep for potential future use if pages need to customize something
 import React from 'react';
 import { Navbar } from './Navbar';
-// PageProgressBar is no longer used here
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -17,9 +16,9 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex flex-col min-h-svh">
-      {/* <PageProgressBar /> Removed */}
       <Navbar />
-      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background">
+      {/* Added max-w-7xl and mx-auto to center and constrain the main content width */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-background max-w-7xl mx-auto w-full">
         {children}
       </main>
     </div>
