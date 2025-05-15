@@ -1,5 +1,4 @@
 
-
 export interface PlantPhoto {
   id: string;
   url: string;
@@ -24,10 +23,12 @@ export type PlantHealthCondition = 'healthy' | 'needs_attention' | 'sick' | 'unk
 
 export interface Plant {
   id: string;
-  scientificName: string;
+  scientificName?: string; // Made optional to align with form
   commonName: string;
-  species?: string;
-  ageEstimate?: string; // e.g., "1 year", "6 months"
+  familyCategory?: string; // Made optional to align with form, though form will require it
+  species?: string; // Kept for broader classification if needed elsewhere
+  ageEstimate?: string; // e.g., "1 year", "6 months" - string representation
+  ageEstimateYears?: number; // Numerical representation for form
   healthCondition: PlantHealthCondition;
   location?: string; // e.g., "Living Room", "Balcony"
   plantingDate?: string; // ISO string
@@ -36,6 +37,21 @@ export interface Plant {
   photos: PlantPhoto[];
   careTasks: CareTask[];
 }
+
+// Form data type
+export interface PlantFormData {
+  commonName: string;
+  scientificName?: string;
+  familyCategory: string;
+  ageEstimateYears?: number;
+  healthCondition: PlantHealthCondition;
+  location?: string;
+  customNotes?: string;
+  primaryPhoto?: FileList | null;
+  // This will store the data URI of the diagnosed image if no new image is selected
+  diagnosedPhotoDataUrl?: string | null; 
+}
+
 
 // Configuration for NavItems before translation
 export interface NavItemConfig {

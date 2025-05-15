@@ -14,11 +14,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info, CalendarPlus, Zap, ListChecks } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info, CalendarPlus, Zap, ListChecks, Leaf, SaveIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Separator } from '@/components/ui/separator';
+import type { PlantFormData } from '@/types';
+import { SavePlantForm } from '@/components/plants/SavePlantForm'; // New Import
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -28,6 +30,10 @@ export default function DiagnosePlantPage() {
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosePlantHealthOutput | null>(null);
   const [diagnosisError, setDiagnosisError] = useState<string | null>(null);
   
+  const [showSavePlantForm, setShowSavePlantForm] = useState(false);
+  const [isSavingPlant, setIsSavingPlant] = useState(false);
+  const [plantSaved, setPlantSaved] = useState(false);
+
   const [showCarePlanGenerator, setShowCarePlanGenerator] = useState(false);
   const [carePlanMode, setCarePlanMode] = useState<'basic' | 'advanced'>('basic');
   const [locationClimate, setLocationClimate] = useState('');
@@ -39,10 +45,25 @@ export default function DiagnosePlantPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resetDiagnosisState = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setDescription('');
+    setDiagnosisResult(null);
+    setDiagnosisError(null);
+    setShowSavePlantForm(false);
+    setPlantSaved(false);
+    setShowCarePlanGenerator(false);
+    setCarePlanResult(null);
+    setCarePlanError(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    resetDiagnosisState(); // Reset everything if a new file is chosen
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      if (selectedFile.size > 4 * 1024 * 1024) {
+      if (selectedFile.size > 4 * 1024 * 1024) { // 4MB limit
         setDiagnosisError('File size exceeds 4MB limit. Please choose a smaller image.');
         toast({ title: "Image Too Large", description: "Please select an image file smaller than 4MB.", variant: "destructive" });
         setFile(null);
@@ -54,10 +75,6 @@ export default function DiagnosePlantPage() {
       const reader = new FileReader();
       reader.onloadend = () => setPreviewUrl(reader.result as string);
       reader.readAsDataURL(selectedFile);
-      setDiagnosisResult(null);
-      setDiagnosisError(null);
-      setCarePlanResult(null);
-      setShowCarePlanGenerator(false);
     }
   };
 
@@ -74,6 +91,8 @@ export default function DiagnosePlantPage() {
     setDiagnosisResult(null);
     setCarePlanResult(null);
     setShowCarePlanGenerator(false);
+    setShowSavePlantForm(false);
+    setPlantSaved(false);
 
     const readFileAsDataURL = (fileToRead: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -91,7 +110,7 @@ export default function DiagnosePlantPage() {
       }
       const result = await diagnosePlantHealth({ photoDataUri: base64Image, description });
       setDiagnosisResult(result);
-      setShowCarePlanGenerator(true); // Show care plan generator options
+      // Don't show care plan generator yet, show save plant button first
       toast({
         title: "Diagnosis Complete!",
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
@@ -104,6 +123,21 @@ export default function DiagnosePlantPage() {
     } finally {
       setIsLoadingDiagnosis(false);
     }
+  };
+
+  const handleSavePlant = async (data: PlantFormData) => {
+    setIsSavingPlant(true);
+    console.log("Saving plant data (simulated):", data);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    toast({
+      title: "Plant Saved!",
+      description: `${data.commonName} has been (simulated) saved to My Plants.`,
+    });
+    setPlantSaved(true);
+    setShowSavePlantForm(false); // Hide form after saving
+    setShowCarePlanGenerator(true); // Now show care plan options
+    setIsSavingPlant(false);
   };
 
   const handleGenerateCarePlan = async (event: FormEvent) => {
@@ -149,6 +183,15 @@ export default function DiagnosePlantPage() {
         </div>
     );
   };
+
+  const initialPlantFormData = diagnosisResult ? {
+      commonName: diagnosisResult.identification.commonName || '',
+      scientificName: diagnosisResult.identification.scientificName || '',
+      familyCategory: diagnosisResult.identification.familyCategory || '',
+      ageEstimateYears: diagnosisResult.identification.ageEstimateYears,
+      healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' as PlantFormData['healthCondition'],
+      diagnosedPhotoDataUrl: previewUrl,
+  } : undefined;
 
 
   return (
@@ -276,47 +319,80 @@ export default function DiagnosePlantPage() {
                   </ul>
                 </div>
               )}
-
-              {showCarePlanGenerator && diagnosisResult.identification.commonName && (
-                <form onSubmit={handleGenerateCarePlan} className="space-y-6 pt-4 border-t mt-6">
-                   <h3 className="font-semibold text-lg text-primary">Generate Detailed Care Plan</h3>
-                  <div>
-                    <Label htmlFor="locationClimate" className="block text-sm font-medium text-foreground mb-1">
-                      Your Location/Climate (Optional)
-                    </Label>
-                    <Input
-                      id="locationClimate"
-                      placeholder="e.g., Sunny balcony, Indoor office, Temperate zone"
-                      value={locationClimate}
-                      onChange={(e) => setLocationClimate(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="block text-sm font-medium text-foreground mb-2">Care Plan Mode</Label>
-                    <RadioGroup value={carePlanMode} onValueChange={(value) => setCarePlanMode(value as 'basic' | 'advanced')} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="basic" id="mode-basic" />
-                        <Label htmlFor="mode-basic">Basic</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="advanced" id="mode-advanced" />
-                        <Label htmlFor="mode-advanced">Advanced</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                  <Button type="submit" disabled={isLoadingCarePlan} className="w-full text-base py-2.5">
-                    {isLoadingCarePlan ? (
-                      <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Plan...</>
-                    ) : (
-                      'Get Plan'
-                    )}
+              
+              {!plantSaved && diagnosisResult.identification.isPlant && diagnosisResult.identification.commonName && (
+                <div className="pt-4 border-t mt-6">
+                  <Button 
+                    onClick={() => setShowSavePlantForm(true)} 
+                    className="w-full"
+                    variant="outline"
+                    disabled={showSavePlantForm}
+                  >
+                    <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
                   </Button>
-                </form>
+                </div>
               )}
+
             </CardContent>
             <CardFooter>
                 <p className="text-xs text-muted-foreground">AI-powered diagnosis. Always cross-reference with other sources if unsure.</p>
             </CardFooter>
+          </Card>
+        )}
+
+        {showSavePlantForm && diagnosisResult && initialPlantFormData && (
+          <SavePlantForm
+            initialData={initialPlantFormData}
+            onSave={handleSavePlant}
+            onCancel={() => setShowSavePlantForm(false)}
+            isLoading={isSavingPlant}
+          />
+        )}
+
+        {(plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && !diagnosisResult.identification.commonName && !showSavePlantForm)) && showCarePlanGenerator && (
+          <Card className="shadow-xl animate-in fade-in-50 mt-6">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                  <Leaf className="h-6 w-6 text-primary" />
+                  Generate Detailed Care Plan
+              </CardTitle>
+              { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleGenerateCarePlan} className="space-y-6">
+                <div>
+                  <Label htmlFor="locationClimate" className="block text-sm font-medium text-foreground mb-1">
+                    Your Location/Climate (Optional)
+                  </Label>
+                  <Input
+                    id="locationClimate"
+                    placeholder="e.g., Sunny balcony, Indoor office, Temperate zone"
+                    value={locationClimate}
+                    onChange={(e) => setLocationClimate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="block text-sm font-medium text-foreground mb-2">Care Plan Mode</Label>
+                  <RadioGroup value={carePlanMode} onValueChange={(value) => setCarePlanMode(value as 'basic' | 'advanced')} className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="basic" id="mode-basic" />
+                      <Label htmlFor="mode-basic">Basic</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="advanced" id="mode-advanced" />
+                      <Label htmlFor="mode-advanced">Advanced</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <Button type="submit" disabled={isLoadingCarePlan || !diagnosisResult?.identification.commonName} className="w-full text-base py-2.5">
+                  {isLoadingCarePlan ? (
+                    <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Plan...</>
+                  ) : (
+                    'Get Plan'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
           </Card>
         )}
 
