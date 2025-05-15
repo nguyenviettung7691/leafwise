@@ -2,7 +2,6 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-// APP_NAV_CONFIG is no longer passed as a prop
 import type { User, UserPreferences } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,40 +9,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Palette, Smartphone, Camera } from 'lucide-react';
+import { UserCircle, Edit3, Save, X, Bell, Palette, Smartphone, Camera, LogOut, Loader2 as AuthLoader } from 'lucide-react'; // Renamed Loader2 to AuthLoader
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from 'next-themes'; 
+import { useTheme } from 'next-themes';
+import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation'; // For redirecting after logout
 
 export default function ProfilePage() {
-  const { user: authUser, updateUser, isLoading: authLoading } = useAuth();
-  const [user, setUser] = useState<User | null>(null); 
-  
+  const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
-  
-  // State for avatar editing
+
   const [editedAvatarFile, setEditedAvatarFile] = useState<File | null>(null);
   const [editedAvatarPreviewUrl, setEditedAvatarPreviewUrl] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme(); 
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      // No need to set avatar URL here initially, as it's read directly from authUser or preview
     }
   }, [authUser]);
 
   const handleEditToggle = () => {
-    if (isEditing) { 
+    if (isEditing) {
       if (authUser) {
         setEditedName(authUser.name);
       }
@@ -90,12 +91,12 @@ export default function ProfilePage() {
     if (editedAvatarPreviewUrl) {
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
     }
-    
+
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
-      setEditedAvatarFile(null); // Clear pending file after save
-      setEditedAvatarPreviewUrl(null); // Clear preview after save
+      setEditedAvatarFile(null);
+      setEditedAvatarPreviewUrl(null);
     } catch (error) {
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     }
@@ -103,7 +104,7 @@ export default function ProfilePage() {
 
   const handlePreferenceChange = async (preferenceKey: keyof UserPreferences, value: boolean) => {
     if (!user) return;
-    
+
     const currentPreferences = user.preferences || {};
     const updatedPreferences: UserPreferences = {
       ...currentPreferences,
@@ -117,12 +118,20 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
+    // AuthContext's logout already handles navigation, but good to be explicit if needed.
+    // router.push('/login'); // This might be redundant if AuthContext handles it.
+    setIsLoggingOut(false);
+  };
+
   const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
 
 
   if (authLoading || !user) {
     return (
-      <AppLayout> {/* navItemsConfig prop removed */}
+      <AppLayout>
         <div className="max-w-2xl mx-auto space-y-8">
           <div className="flex justify-between items-center">
             <Skeleton className="h-9 w-32" />
@@ -156,7 +165,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <AppLayout> {/* navItemsConfig prop removed */}
+    <AppLayout>
       <div className="max-w-2xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold tracking-tight">{t('nav.profile')}</h1>
@@ -166,11 +175,11 @@ export default function ProfilePage() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEditToggle}>
+              <Button variant="outline" onClick={handleEditToggle} disabled={authLoading || isLoggingOut}>
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
-              <Button onClick={handleSaveChanges} disabled={authLoading}>
-                {authLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />} 
+              <Button onClick={handleSaveChanges} disabled={authLoading || isLoggingOut}>
+                {authLoading ? <AuthLoader className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                 {authLoading ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
@@ -181,7 +190,7 @@ export default function ProfilePage() {
           <CardHeader className="pb-4">
             <div className="flex items-center gap-4">
               <div className="relative group">
-                <Avatar 
+                <Avatar
                   className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
                   onClick={() => isEditing && avatarInputRef.current?.click()}
                 >
@@ -198,24 +207,24 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              <input 
+              <input
                 type="file"
                 ref={avatarInputRef}
                 className="hidden"
                 accept="image/png, image/jpeg, image/gif, image/webp"
                 onChange={handleAvatarFileChange}
-                disabled={!isEditing}
+                disabled={!isEditing || authLoading || isLoggingOut}
               />
               <div>
                 {isEditing ? (
                   <div className="space-y-2">
                     <Label htmlFor="profileName" className="sr-only">Name</Label>
-                    <Input 
-                      id="profileName" 
-                      value={editedName} 
-                      onChange={(e) => setEditedName(e.target.value)} 
+                    <Input
+                      id="profileName"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
                       className="text-2xl font-semibold p-1"
-                      disabled={authLoading}
+                      disabled={authLoading || isLoggingOut}
                     />
                      <p className="text-md text-muted-foreground">{user.email} (Email cannot be changed)</p>
                   </div>
@@ -249,7 +258,7 @@ export default function ProfilePage() {
                 checked={user.preferences?.emailNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('emailNotifications', checked)}
                 aria-label="Toggle email notifications"
-                disabled={authLoading}
+                disabled={authLoading || isLoggingOut}
               />
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
@@ -262,7 +271,7 @@ export default function ProfilePage() {
                 checked={user.preferences?.pushNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('pushNotifications', checked)}
                 aria-label="Toggle push notifications"
-                disabled={authLoading}
+                disabled={authLoading || isLoggingOut}
               />
             </div>
             <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
@@ -275,13 +284,32 @@ export default function ProfilePage() {
                 checked={theme === 'dark'}
                 onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                 aria-label="Toggle dark mode"
-                disabled={authLoading} // Theming isn't async, but keep consistent with other switches
+                disabled={authLoading || isLoggingOut}
               />
             </div>
           </CardContent>
            <CardFooter className="pt-6 border-t">
             <p className="text-xs text-muted-foreground">Profile changes and preferences are mock-saved to local storage.</p>
           </CardFooter>
+        </Card>
+
+        <Separator />
+
+        <Card className="shadow-xl">
+            <CardHeader>
+                <CardTitle className="text-xl">Account Actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Button
+                    variant="destructive"
+                    className="w-full sm:w-auto"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut || authLoading}
+                >
+                    {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+                    {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                </Button>
+            </CardContent>
         </Card>
 
       </div>

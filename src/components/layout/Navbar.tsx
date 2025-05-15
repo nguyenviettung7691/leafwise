@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, LogOut, Loader2, UserCircle } from 'lucide-react'; // Keep UserCircle for fallback if needed
+import { Settings, LogIn, LogOut, Loader2, UserCircle, Languages, Menu } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,17 @@ import { APP_NAV_CONFIG } from '@/lib/constants';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/lib/utils';
 import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 // Helper function to determine if a nav item should be active
 const isActive = (itemHref: string, currentPathname: string): boolean => {
@@ -26,11 +37,11 @@ const isActive = (itemHref: string, currentPathname: string): boolean => {
 };
 
 export function Navbar() {
-  const { user, logout, isLoading: authIsLoading } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const { user, isLoading: authIsLoading } = useAuth(); // Removed logout from here
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const navItems: NavItem[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
@@ -39,58 +50,67 @@ export function Navbar() {
     }));
   }, [t]);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    await logout();
-    setIsLoggingOut(false);
-    router.push('/login');
-  };
+  const NavLinks = ({isMobile = false}: {isMobile?: boolean}) => (
+    navItems.map((item) => (
+      <Button
+        key={item.href}
+        variant="ghost"
+        asChild
+        className={cn(
+          "transition-colors h-9 px-3 w-full justify-start md:w-auto md:justify-center",
+          isActive(item.href, pathname)
+            ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+        )}
+        disabled={item.disabled}
+        onClick={() => isMobile && setIsMobileMenuOpen(false)}
+      >
+        <Link href={item.disabled ? '#' : item.href}>
+          <item.icon className="h-4 w-4 mr-2" />
+          {item.title}
+        </Link>
+      </Button>
+    ))
+  );
+
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* 
-        Apply `container` for max-width, `mx-auto` for centering, 
-        and `px-*` for horizontal padding.
-        `justify-between` will then work within this padded, centered container.
-      */}
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left Group: Logo and Navigation Links */}
-        <div className="flex items-center gap-x-6"> 
+        <div className="flex items-center gap-x-2 sm:gap-x-6">
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Button
-                key={item.href}
-                variant="ghost"
-                asChild
-                className={cn(
-                  "transition-colors h-9 px-3",
-                  isActive(item.href, pathname)
-                    ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                )}
-                disabled={item.disabled}
-              >
-                <Link href={item.disabled ? '#' : item.href}>
-                  <item.icon className="h-4 w-4 mr-2" />
-                  {item.title}
-                </Link>
-              </Button>
-            ))}
+            <NavLinks />
           </nav>
         </div>
-        
-        {/* Mobile Nav Trigger (Placeholder for future dropdown/sheet menu) */}
+
+        {/* Mobile Nav Trigger (Hamburger Menu) */}
         <div className="md:hidden">
-           {/* Example: <SheetTrigger asChild><Button variant="ghost" size="icon"><Menu /></Button></SheetTrigger> */}
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-4">
+              <div className="flex flex-col gap-2">
+                <SheetClose asChild>
+                  <Logo iconSize={24} textSize="text-xl" className="mb-4"/>
+                </SheetClose>
+                <NavLinks isMobile={true} />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         {/* Right Group: User Actions */}
-        <div className="flex items-center gap-2"> 
+        <div className="flex items-center gap-2">
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
-              <Skeleton className="h-9 w-20" /> 
+              <Skeleton className="h-9 w-20" />
             </>
           ) : user ? (
             <>
@@ -102,30 +122,57 @@ export function Navbar() {
                   </AvatarFallback>
                 </Avatar>
               </Link>
-              <Link href="/settings" passHref>
-                <Button variant="ghost" size="icon" aria-label={t('nav.settings')}>
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </Link>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                aria-label="Log Out" 
-              >
-                {isLoggingOut ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <LogOut className="h-5 w-5" />
-                )}
-              </Button>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label={t('nav.settings')}>
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Settings className="h-6 w-6 text-primary" />
+                      {t('settings.title')}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {t('settings.description')}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Languages className="h-5 w-5 text-primary" />
+                        <Label htmlFor="language-select-dialog" className="text-base font-medium">
+                          {t('settings.language')}
+                        </Label>
+                      </div>
+                      <Select value={language} onValueChange={(value) => setLanguage(value as 'en' | 'vi')}>
+                        <SelectTrigger id="language-select-dialog" className="w-full">
+                          <SelectValue placeholder={t('settings.language')} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="en">{t('common.english')}</SelectItem>
+                          <SelectItem value="vi">{t('common.vietnamese')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="min-h-[100px] flex items-center justify-center border-2 border-dashed border-border rounded-md p-4">
+                      <p
+                        className="text-muted-foreground text-sm text-center"
+                        dangerouslySetInnerHTML={{ __html: t('settings.featureInProgress') }}
+                      />
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              {/* Logout button removed from here */}
             </>
           ) : (
             <Link href="/login" passHref>
               <Button variant="ghost">
                 <LogIn className="h-5 w-5 mr-2" />
-                Sign In 
+                Sign In
               </Button>
             </Link>
           )}
