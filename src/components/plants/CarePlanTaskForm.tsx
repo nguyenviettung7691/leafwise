@@ -81,12 +81,12 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
       name: '',
       frequencyMode: 'adhoc',
       timeOfDayOption: 'all_day',
+      specificTime: '', // Ensure specificTime has a default string value
       level: 'basic',
     },
   });
 
   const [comboboxOpen, setComboboxOpen] = React.useState(false);
-  // Use a separate state for the command input, sync with RHF value on select/commit
   const [commandInputValue, setCommandInputValue] = React.useState('');
 
 
@@ -139,14 +139,7 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
               <Popover open={comboboxOpen} onOpenChange={(isOpen) => {
                   setComboboxOpen(isOpen);
                   if (isOpen) {
-                    // When opening, sync command input with current form value
                     setCommandInputValue(field.value || '');
-                  } else {
-                    // When closing via clicking outside or Esc, if input is not empty and not a predefined one,
-                    // consider it a custom task. Enter key handles this too.
-                    // This logic can be tricky. Let's rely on Enter or selection for now for clarity.
-                    // If a user types and clicks away, the typed text might not be saved unless Enter was pressed.
-                    // A more robust solution might save on blur of CommandInput if open.
                   }
               }}>
                 <PopoverTrigger asChild>
@@ -172,7 +165,7 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
                           if (e.key === 'Enter') {
                               e.preventDefault();
                               if (commandInputValue.trim()) {
-                                  field.onChange(commandInputValue.trim());
+                                  form.setValue('name', commandInputValue.trim(), { shouldValidate: true });
                                   setComboboxOpen(false);
                               }
                           }
@@ -184,17 +177,17 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
                         {predefinedTasks.map((task) => (
                             <CommandItem
                             key={task.value}
-                            value={task.label} // CommandItem value for matching/selection
+                            value={task.label}
                             onSelect={() => {
-                                field.onChange(task.label);
-                                setCommandInputValue(task.label); // Sync input display
+                                form.setValue('name', task.label, { shouldValidate: true });
+                                setCommandInputValue(task.label); 
                                 setComboboxOpen(false);
                             }}
                             >
                             <Check
                                 className={cn(
                                 "mr-2 h-4 w-4",
-                                (field.value || '').toLowerCase() === task.label.toLowerCase() ? "opacity-100" : "opacity-0"
+                                (form.getValues('name') || '').toLowerCase() === task.label.toLowerCase() ? "opacity-100" : "opacity-0"
                                 )}
                             />
                             {task.label}
@@ -289,7 +282,7 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
                 <FormItem>
                     <FormLabel>Set Time (HH:MM) <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                        <Input type="time" placeholder="HH:MM" {...field} />
+                        <Input type="time" placeholder="HH:MM" {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
