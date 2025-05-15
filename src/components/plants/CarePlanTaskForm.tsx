@@ -2,7 +2,8 @@
 'use client';
 
 import type { CarePlanTaskFormData } from '@/types';
-import { useForm, Controller } from 'react-hook-form';
+import * as React from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from '@/lib/utils';
 
 const taskFormSchema = z.object({
   name: z.string().min(1, { message: "Task name is required." }),
@@ -58,6 +62,18 @@ interface CarePlanTaskFormProps {
   isLoading?: boolean;
 }
 
+const predefinedTasks = [
+    { value: "watering", label: "Watering" },
+    { value: "lighting_adjustment", label: "Lighting Adjustment" },
+    { value: "fertilizing", label: "Fertilizing" },
+    { value: "pruning", label: "Pruning" },
+    { value: "repotting", label: "Repotting" },
+    { value: "pest_check", label: "Pest Check" },
+    { value: "soil_aeration", label: "Soil Aeration" },
+    { value: "dusting_leaves", label: "Dusting Leaves" },
+    { value: "rotate_pot", label: "Rotate Pot" },
+];
+
 export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFormProps) {
   const form = useForm<CarePlanTaskFormData>({
     resolver: zodResolver(taskFormSchema),
@@ -68,6 +84,11 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
       level: 'basic',
     },
   });
+
+  const [comboboxOpen, setComboboxOpen] = React.useState(false);
+  // Use a separate state for the command input, sync with RHF value on select/commit
+  const [commandInputValue, setCommandInputValue] = React.useState('');
+
 
   const watchedFrequencyMode = form.watch('frequencyMode');
   const watchedTimeOfDayOption = form.watch('timeOfDayOption');
@@ -113,12 +134,78 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
           control={form.control}
           name="name"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Task Name <span className="text-destructive">*</span></FormLabel>
-              <FormControl>
-                <Input placeholder="e.g., Water, Check soil moisture, Rotate pot" {...field} />
-              </FormControl>
-              <FormDescription>What care task is this?</FormDescription>
+              <Popover open={comboboxOpen} onOpenChange={(isOpen) => {
+                  setComboboxOpen(isOpen);
+                  if (isOpen) {
+                    // When opening, sync command input with current form value
+                    setCommandInputValue(field.value || '');
+                  } else {
+                    // When closing via clicking outside or Esc, if input is not empty and not a predefined one,
+                    // consider it a custom task. Enter key handles this too.
+                    // This logic can be tricky. Let's rely on Enter or selection for now for clarity.
+                    // If a user types and clicks away, the typed text might not be saved unless Enter was pressed.
+                    // A more robust solution might save on blur of CommandInput if open.
+                  }
+              }}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={comboboxOpen}
+                      className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                    >
+                      {field.value ? predefinedTasks.find(task => task.label.toLowerCase() === field.value.toLowerCase())?.label || field.value : "Select or type task..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search or type custom..."
+                      value={commandInputValue}
+                      onValueChange={setCommandInputValue}
+                      onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (commandInputValue.trim()) {
+                                  field.onChange(commandInputValue.trim());
+                                  setComboboxOpen(false);
+                              }
+                          }
+                      }}
+                    />
+                    <CommandList>
+                        <CommandEmpty>No task found. Type custom name and press Enter.</CommandEmpty>
+                        <CommandGroup>
+                        {predefinedTasks.map((task) => (
+                            <CommandItem
+                            key={task.value}
+                            value={task.label} // CommandItem value for matching/selection
+                            onSelect={() => {
+                                field.onChange(task.label);
+                                setCommandInputValue(task.label); // Sync input display
+                                setComboboxOpen(false);
+                            }}
+                            >
+                            <Check
+                                className={cn(
+                                "mr-2 h-4 w-4",
+                                (field.value || '').toLowerCase() === task.label.toLowerCase() ? "opacity-100" : "opacity-0"
+                                )}
+                            />
+                            {task.label}
+                            </CommandItem>
+                        ))}
+                        </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <FormDescription>What care task is this? Type custom or select from list.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -244,3 +331,4 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
     </Form>
   );
 }
+
