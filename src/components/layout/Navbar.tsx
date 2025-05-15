@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Settings, LogIn, LogOut, Loader2, UserCircle } from 'lucide-react'; // Keep UserCircle for fallback if needed
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,11 +48,14 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* The container class handles max-width, centering, and its own padding.
-          justify-between pushes the immediate children (left group and right group) apart. */}
-      <div className="container flex h-16 items-center justify-between">
+      {/* 
+        Apply `container` for max-width, `mx-auto` for centering, 
+        and `px-*` for horizontal padding.
+        `justify-between` will then work within this padded, centered container.
+      */}
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Left Group: Logo and Navigation Links */}
-        <div className="flex items-center gap-x-6"> {/* Increased gap for visual separation */}
+        <div className="flex items-center gap-x-6"> 
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
@@ -62,7 +65,7 @@ export function Navbar() {
                 asChild
                 className={cn(
                   "transition-colors h-9 px-3",
-                  isActive(item.href, pathname) // Use the isActive helper
+                  isActive(item.href, pathname)
                     ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 )}
@@ -83,7 +86,7 @@ export function Navbar() {
         </div>
 
         {/* Right Group: User Actions */}
-        <div className="flex items-center gap-2"> {/* Slightly reduced gap for icon group compactness */}
+        <div className="flex items-center gap-2"> 
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
@@ -109,7 +112,7 @@ export function Navbar() {
                 size="icon"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                aria-label="Log Out" // Consider adding to locales if multi-language for this exact string is needed
+                aria-label="Log Out" 
               >
                 {isLoggingOut ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -122,7 +125,6 @@ export function Navbar() {
             <Link href="/login" passHref>
               <Button variant="ghost">
                 <LogIn className="h-5 w-5 mr-2" />
-                {/* Consider translating "Sign In" if it's in your locale files */}
                 Sign In 
               </Button>
             </Link>
