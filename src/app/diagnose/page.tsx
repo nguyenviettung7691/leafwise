@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info, CalendarPlus, Zap, ListChecks, Leaf, SaveIcon } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, Sparkles, Stethoscope, Info, CalendarPlus, Zap, ListChecks, Leaf, SaveIcon, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
@@ -136,6 +136,8 @@ export default function DiagnosePlantPage() {
         action: <CheckCircle className="text-green-500 h-5 w-5" />,
       });
       if (!result.identification.isPlant || !result.identification.commonName) {
+        // If not a plant, or not identifiable, still show care plan section
+        // but it might generate very generic tips.
         setShowCarePlanGeneratorSection(true);
       }
     } catch (e: any) {
@@ -214,6 +216,10 @@ export default function DiagnosePlantPage() {
       diagnosedPhotoDataUrl: previewUrl,
   } : undefined;
 
+  const noAdvancedDetails = carePlanResult && carePlanMode === 'advanced' &&
+                           !carePlanResult.soilManagement?.details &&
+                           !carePlanResult.pruning?.details &&
+                           !carePlanResult.fertilization?.details;
 
   return (
     <AppLayout navItemsConfig={APP_NAV_CONFIG}>
@@ -375,7 +381,6 @@ export default function DiagnosePlantPage() {
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
-              // If cancelling save, and plant was identifiable, still show care plan option
               if(diagnosisResult?.identification.isPlant && diagnosisResult?.identification.commonName) {
                 setShowCarePlanGeneratorSection(true);
               }
@@ -388,7 +393,7 @@ export default function DiagnosePlantPage() {
           <Card className="shadow-xl animate-in fade-in-50 mt-6">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
-                  <Leaf className="h-6 w-6 text-primary" />
+                  <ClipboardList className="h-6 w-6 text-primary" />
                   Generate Detailed Care Plan
               </CardTitle>
               { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
@@ -472,6 +477,9 @@ export default function DiagnosePlantPage() {
                                       <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
                                       <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
                                       <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
+                                      {noAdvancedDetails && (
+                                        <p className="text-sm text-muted-foreground mt-2">No specific advanced care details were generated for this plan.</p>
+                                      )}
                                   </div>
                               </>
                           )}
@@ -491,6 +499,13 @@ export default function DiagnosePlantPage() {
                                   <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
                                   <p>{carePlanResult.activityTrackingPlaceholder}</p>
                               </div>
+                          </div>
+
+                          <div className="mt-6">
+                              <Button variant="outline" className="w-full" disabled>
+                                  <SaveIcon className="mr-2 h-4 w-4" />
+                                  Save Care Plan (Coming Soon)
+                              </Button>
                           </div>
                       </div>
                   </div>
