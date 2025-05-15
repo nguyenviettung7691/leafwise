@@ -277,96 +277,95 @@ export default function MyPlantsPage() {
             )}
 
             <AccordionContent className="pt-0">
-              <CardContent className="p-6 space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Search</h3>
-                  <div className="relative">
-                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="search"
-                      placeholder="Search by name, location, family..."
-                      value={filters.searchTerm}
-                      onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                </div>
-                
-                <Separator />
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Filter By</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                    <div>
-                      <Label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</Label>
-                      <Select value={filters.ageRange} onValueChange={(value) => handleFilterChange('ageRange', value)}>
-                        <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
-                        <SelectContent>
-                          {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="healthCondition" className="block text-sm font-medium text-muted-foreground mb-1">Health Condition</Label>
-                      <Select value={filters.healthCondition} onValueChange={(value) => handleFilterChange('healthCondition', value as PlantHealthCondition | 'all')}>
-                        <SelectTrigger id="healthCondition"><SelectValue placeholder="Select health condition" /></SelectTrigger>
-                        <SelectContent>
-                          {healthConditionOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="locationFilter" className="block text-sm font-medium text-muted-foreground mb-1">Location</Label>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  <div> {/* Column 1: Search */}
+                    <h3 className="text-md font-semibold mb-2 text-foreground/90">Search</h3>
+                    <div className="relative">
+                      <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
-                        id="locationFilter"
-                        placeholder="Filter by location"
-                        value={filters.location}
-                        onChange={(e) => handleFilterChange('location', e.target.value)}
-                      />
-                    </div>
-                    <div className="lg:col-span-1"> {/* Ensure it doesn't stretch too much */}
-                      <Label htmlFor="familyCategoryFilter" className="block text-sm font-medium text-muted-foreground mb-1">Family Category</Label>
-                      <Input
-                        id="familyCategoryFilter"
-                        placeholder="Filter by family"
-                        value={filters.familyCategory}
-                        onChange={(e) => handleFilterChange('familyCategory', e.target.value)}
+                        id="search"
+                        placeholder="Name, location, family..."
+                        value={filters.searchTerm}
+                        onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                        className="pl-8"
                       />
                     </div>
                   </div>
-                </div>
-
-                <Separator />
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Sort By</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <Label htmlFor="sortKey" className="block text-sm font-medium text-muted-foreground mb-1">Sort Field</Label>
-                        <Select value={sortConfig.key} onValueChange={(value) => handleSortKeyChange(value as SortConfig['key'])}>
-                            <SelectTrigger id="sortKey"><SelectValue placeholder="Select sort key" /></SelectTrigger>
-                            <SelectContent>
-                            {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                            </SelectContent>
+                  
+                  <div> {/* Column 2: Filter By */}
+                    <h3 className="text-md font-semibold mb-2 text-foreground/90">Filter By</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</Label>
+                        <Select value={filters.ageRange} onValueChange={(value) => handleFilterChange('ageRange', value)}>
+                          <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
+                          <SelectContent>
+                            {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                          </SelectContent>
                         </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="healthCondition" className="block text-sm font-medium text-muted-foreground mb-1">Health Condition</Label>
+                        <Select value={filters.healthCondition} onValueChange={(value) => handleFilterChange('healthCondition', value as PlantHealthCondition | 'all')}>
+                          <SelectTrigger id="healthCondition"><SelectValue placeholder="Select health condition" /></SelectTrigger>
+                          <SelectContent>
+                            {healthConditionOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="locationFilter" className="block text-sm font-medium text-muted-foreground mb-1">Location</Label>
+                        <Input
+                          id="locationFilter"
+                          placeholder="Filter by location"
+                          value={filters.location}
+                          onChange={(e) => handleFilterChange('location', e.target.value)}
+                        />
+                      </div>
+                      <div> 
+                        <Label htmlFor="familyCategoryFilter" className="block text-sm font-medium text-muted-foreground mb-1">Family Category</Label>
+                        <Input
+                          id="familyCategoryFilter"
+                          placeholder="Filter by family"
+                          value={filters.familyCategory}
+                          onChange={(e) => handleFilterChange('familyCategory', e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div>
-                        <Label htmlFor="sortDirection" className="block text-sm font-medium text-muted-foreground mb-1">Direction</Label>
-                        <Select value={sortConfig.direction} onValueChange={(value) => handleSortDirectionChange(value as 'asc' | 'desc')}>
-                            <SelectTrigger id="sortDirection"><SelectValue placeholder="Select direction" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="asc">Ascending</SelectItem>
-                                <SelectItem value="desc">Descending</SelectItem>
-                            </SelectContent>
-                        </Select>
+                  </div>
+
+                  <div> {/* Column 3: Sort By */}
+                    <h3 className="text-md font-semibold mb-2 text-foreground/90">Sort By</h3>
+                    <div className="space-y-3">
+                      <div>
+                          <Label htmlFor="sortKey" className="block text-sm font-medium text-muted-foreground mb-1">Sort Field</Label>
+                          <Select value={sortConfig.key} onValueChange={(value) => handleSortKeyChange(value as SortConfig['key'])}>
+                              <SelectTrigger id="sortKey"><SelectValue placeholder="Select sort key" /></SelectTrigger>
+                              <SelectContent>
+                              {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div>
+                          <Label htmlFor="sortDirection" className="block text-sm font-medium text-muted-foreground mb-1">Direction</Label>
+                          <Select value={sortConfig.direction} onValueChange={(value) => handleSortDirectionChange(value as 'asc' | 'desc')}>
+                              <SelectTrigger id="sortDirection"><SelectValue placeholder="Select direction" /></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="asc">Ascending</SelectItem>
+                                  <SelectItem value="desc">Descending</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <Separator />
+                <Separator className="my-3" />
 
-                <div className="flex justify-end pt-2">
-                    <Button variant="outline" onClick={handleResetAll}>
+                <div className="flex justify-end pt-1">
+                    <Button variant="outline" onClick={handleResetAll} size="sm">
                         <RotateCcw className="mr-2 h-4 w-4" /> Reset All Filters
                     </Button>
                 </div>
