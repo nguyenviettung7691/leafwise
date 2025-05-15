@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/context/LanguageContext';
 import { Separator } from '@/components/ui/separator';
 import type { PlantFormData } from '@/types';
-import { SavePlantForm } from '@/components/plants/SavePlantForm'; // New Import
+import { SavePlantForm } from '@/components/plants/SavePlantForm';
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -45,7 +45,8 @@ export default function DiagnosePlantPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const resetDiagnosisState = () => {
+  // Resets the entire diagnosis form and state, including file selection and description
+  const fullResetDiagnosisForm = () => {
     setFile(null);
     setPreviewUrl(null);
     setDescription('');
@@ -56,25 +57,52 @@ export default function DiagnosePlantPage() {
     setShowCarePlanGenerator(false);
     setCarePlanResult(null);
     setCarePlanError(null);
+    setLocationClimate('');
+    setCarePlanMode('basic');
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    resetDiagnosisState(); // Reset everything if a new file is chosen
+    // When a new file is selected, reset previous results and related UI states,
+    // but keep the description field as the user might have typed it already.
+    setDiagnosisResult(null);
+    setCarePlanResult(null);
+    setDiagnosisError(null);
+    setShowSavePlantForm(false);
+    setPlantSaved(false);
+    setShowCarePlanGenerator(false);
+    setCarePlanError(null);
+
     const selectedFile = event.target.files?.[0];
+
     if (selectedFile) {
       if (selectedFile.size > 4 * 1024 * 1024) { // 4MB limit
-        setDiagnosisError('File size exceeds 4MB limit. Please choose a smaller image.');
-        toast({ title: "Image Too Large", description: "Please select an image file smaller than 4MB.", variant: "destructive" });
-        setFile(null);
-        setPreviewUrl(null);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+        toast({
+          variant: 'destructive',
+          title: 'Image Too Large',
+          description: 'Please select an image file smaller than 4MB.',
+        });
+        setFile(null); // Clear file state
+        setPreviewUrl(null); // Clear preview
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''; // Reset the input field so user can select again
+        }
         return;
       }
       setFile(selectedFile);
       const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
       reader.readAsDataURL(selectedFile);
+    } else {
+      // No file selected (e.g., user clicked "cancel" in the file dialog)
+      setFile(null);
+      setPreviewUrl(null);
+      // Optionally clear the input value if the browser doesn't do it automatically on cancel
+      // if (fileInputRef.current) {
+      //   fileInputRef.current.value = '';
+      // }
     }
   };
 
@@ -87,6 +115,7 @@ export default function DiagnosePlantPage() {
     }
 
     setIsLoadingDiagnosis(true);
+    // Clear results from any previous attempt before starting new diagnosis
     setDiagnosisError(null);
     setDiagnosisResult(null);
     setCarePlanResult(null);
@@ -110,12 +139,17 @@ export default function DiagnosePlantPage() {
       }
       const result = await diagnosePlantHealth({ photoDataUri: base64Image, description });
       setDiagnosisResult(result);
-      // Don't show care plan generator yet, show save plant button first
       toast({
         title: "Diagnosis Complete!",
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
         action: <CheckCircle className="text-green-500 h-5 w-5" />,
       });
+       // Show save plant options if plant is identified, otherwise show care plan directly
+      if (result.identification.isPlant && result.identification.commonName) {
+        // Button will control SavePlantForm visibility
+      } else {
+        setShowCarePlanGenerator(true);
+      }
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
       setDiagnosisError(errorMessage);
@@ -135,8 +169,8 @@ export default function DiagnosePlantPage() {
       description: `${data.commonName} has been (simulated) saved to My Plants.`,
     });
     setPlantSaved(true);
-    setShowSavePlantForm(false); // Hide form after saving
-    setShowCarePlanGenerator(true); // Now show care plan options
+    setShowSavePlantForm(false); 
+    setShowCarePlanGenerator(true); 
     setIsSavingPlant(false);
   };
 
@@ -297,7 +331,7 @@ export default function DiagnosePlantPage() {
                   <CardHeader><CardTitle className="text-lg">Health Assessment</CardTitle></CardHeader>
                   <CardContent className="space-y-1 text-sm">
                     <p><strong>Status:</strong> {diagnosisResult.healthAssessment.isHealthy ? 
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white">Healthy</Badge> : 
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700">Healthy</Badge> : 
                       <Badge variant="destructive">Needs Attention</Badge>}
                     </p>
                     {diagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
@@ -321,15 +355,16 @@ export default function DiagnosePlantPage() {
               )}
               
               {!plantSaved && diagnosisResult.identification.isPlant && diagnosisResult.identification.commonName && (
-                <div className="pt-4 border-t mt-6">
-                  <Button 
-                    onClick={() => setShowSavePlantForm(true)} 
-                    className="w-full"
-                    variant="outline"
-                    disabled={showSavePlantForm}
-                  >
-                    <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
-                  </Button>
+                 <div className="pt-4 border-t mt-6">
+                    {!showSavePlantForm ? (
+                        <Button 
+                            onClick={() => setShowSavePlantForm(true)} 
+                            className="w-full"
+                            variant="outline"
+                        >
+                            <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
+                        </Button>
+                    ) : null }
                 </div>
               )}
 
@@ -348,8 +383,9 @@ export default function DiagnosePlantPage() {
             isLoading={isSavingPlant}
           />
         )}
-
-        {(plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && !diagnosisResult.identification.commonName && !showSavePlantForm)) && showCarePlanGenerator && (
+        
+        {/* Show care plan generator if plant is saved, OR if diagnosis did not identify a plant (so save isn't an option), OR if plant was identified but had no common name (so save wasn't shown) */}
+        { (plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) ) && (
           <Card className="shadow-xl animate-in fade-in-50 mt-6">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -357,6 +393,7 @@ export default function DiagnosePlantPage() {
                   Generate Detailed Care Plan
               </CardTitle>
               { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
+               { diagnosisResult && !diagnosisResult.identification.isPlant && <CardDescription>No plant identified, generic tips might be provided.</CardDescription>}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateCarePlan} className="space-y-6">
@@ -384,7 +421,7 @@ export default function DiagnosePlantPage() {
                     </div>
                   </RadioGroup>
                 </div>
-                <Button type="submit" disabled={isLoadingCarePlan || !diagnosisResult?.identification.commonName} className="w-full text-base py-2.5">
+                <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName)} className="w-full text-base py-2.5">
                   {isLoadingCarePlan ? (
                     <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Plan...</>
                   ) : (
@@ -395,6 +432,7 @@ export default function DiagnosePlantPage() {
             </CardContent>
           </Card>
         )}
+
 
         {carePlanError && (
             <Alert variant="destructive" className="mt-6">
@@ -409,7 +447,7 @@ export default function DiagnosePlantPage() {
                 <CardHeader>
                     <CardTitle className="text-xl flex items-center">
                         <CheckCircle className="text-primary mr-2 h-6 w-6" />
-                        Generated Care Plan for {diagnosisResult?.identification.commonName}
+                        Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
                     </CardTitle>
                     <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
                 </CardHeader>
@@ -458,3 +496,5 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
+
+    
