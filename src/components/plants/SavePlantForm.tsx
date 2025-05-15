@@ -16,6 +16,11 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Leaf, UploadCloud, Save } from 'lucide-react';
 
+// Conditionally define schema for primaryPhoto to handle FileList in browser vs. server
+const primaryPhotoSchema = typeof window !== 'undefined'
+  ? z.instanceof(FileList).optional().nullable()
+  : z.any().optional().nullable(); // Fallback for non-browser environments
+
 const plantFormSchema = z.object({
   commonName: z.string().min(1, { message: "Common name is required." }),
   scientificName: z.string().optional(),
@@ -26,7 +31,7 @@ const plantFormSchema = z.object({
   }),
   location: z.string().optional(),
   customNotes: z.string().optional(),
-  primaryPhoto: z.instanceof(FileList).optional().nullable(),
+  primaryPhoto: primaryPhotoSchema,
   diagnosedPhotoDataUrl: z.string().optional().nullable(),
 });
 
