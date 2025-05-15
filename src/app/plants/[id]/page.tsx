@@ -137,7 +137,6 @@ export default function PlantDetailPage() {
   }, [id]);
 
   const handleToggleTaskPause = async (taskId: string) => {
-    setLoadingTaskId(taskId);
     let taskNameForToast = '';
     let wasPausedBeforeUpdate: boolean | undefined = undefined;
 
@@ -149,12 +148,13 @@ export default function PlantDetailPage() {
       }
     }
     
+    setLoadingTaskId(taskId); // Moved before the async operation
     await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
       const updatedTasks = prevPlant.careTasks.map(t =>
-        t.id === taskId ? { ...t, isPaused: !t.isPaused } : t
+        t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : undefined } : t // Reset resumeDate when resuming
       );
       return { ...prevPlant, careTasks: updatedTasks };
     });
@@ -533,11 +533,23 @@ export default function PlantDetailPage() {
                     <Card key={task.id} className="bg-secondary/30">
                       <CardContent className="p-4 flex justify-between items-center">
                         <div>
-                          <p className="font-medium">{task.name} <Badge variant="outline" className="ml-2 text-xs capitalize">{task.level}</Badge></p>
+                          <p className="font-medium flex items-center">
+                            {task.name}
+                            <Badge variant="outline" className="ml-2 text-xs capitalize">{task.level}</Badge>
+                            {task.isPaused && (
+                              <Badge variant="outline" className="ml-2 text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
+                                Paused
+                              </Badge>
+                            )}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             Frequency: {task.frequency}
                             {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
-                            {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}`}
+                            {task.isPaused ? (
+                              task.resumeDate ? ` | Paused (Resumes: ${formatDate(task.resumeDate)})` : ' | Paused'
+                            ) : (
+                              task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}`
+                            )}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -576,7 +588,9 @@ export default function PlantDetailPage() {
                   ))}
                 </div>
               ) : (
-                 <p className="text-muted-foreground text-sm text-center py-4">No care tasks defined yet. Click "Manage" then "Add Task" to get started.</p>
+                 <p className="text-muted-foreground text-sm text-center py-4">
+                    {isManagingCarePlan ? "No care tasks defined yet. Click 'Add Task' to get started." : "No care tasks defined yet. Click 'Manage' to add tasks."}
+                 </p>
               )}
             </div>
 
@@ -801,7 +815,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
-    
-
-    
