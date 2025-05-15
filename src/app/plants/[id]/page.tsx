@@ -89,20 +89,37 @@ export default function PlantDetailPage() {
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+    let taskNameForToast = '';
+    let wasPausedBeforeUpdate: boolean | undefined = undefined;
+
+    // Capture details for toast message based on current plant state
+    if (plant) {
+      const taskBeingToggled = plant.careTasks.find(t => t.id === taskId);
+      if (taskBeingToggled) {
+        taskNameForToast = taskBeingToggled.name;
+        wasPausedBeforeUpdate = taskBeingToggled.isPaused;
+      }
+    }
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
       const updatedTasks = prevPlant.careTasks.map(t =>
         t.id === taskId ? { ...t, isPaused: !t.isPaused } : t
       );
-      const taskToUpdate = updatedTasks.find(t => t.id === taskId);
-      toast({ title: "Task Updated", description: `Task "${taskToUpdate?.name}" has been ${taskToUpdate?.isPaused ? "paused" : "resumed"}.`});
       return {
         ...prevPlant,
         careTasks: updatedTasks,
       };
     });
+
+    // Call toast AFTER setPlant has been called and state is queued for update
+    if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
+      const isNowPaused = !wasPausedBeforeUpdate; // Determine the new state for the toast message
+      toast({ title: "Task Updated", description: `Task "${taskNameForToast}" has been ${isNowPaused ? "paused" : "resumed"}.`});
+    }
+    
     setLoadingTaskId(null);
   };
 
@@ -557,5 +574,7 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
 
     
