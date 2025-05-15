@@ -9,12 +9,12 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
     href: '/',
     icon: Sprout,
   },
-  {
-    titleKey: 'nav.identifyPlant',
-    href: '/identify',
-    icon: ScanSearch,
-  },
-  { // New Diagnose Plant item
+  // { // Removed Identify Plant
+  //   titleKey: 'nav.identifyPlant',
+  //   href: '/identify',
+  //   icon: ScanSearch,
+  // },
+  { 
     titleKey: 'nav.diagnosePlant', 
     href: '/diagnose',
     icon: Stethoscope,
