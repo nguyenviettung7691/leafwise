@@ -1,3 +1,4 @@
+
 import type { Plant, User } from '@/types'; // Added User
 
 export const mockPlants: Plant[] = [
@@ -66,5 +67,6 @@ export const mockUser: User = {
   avatarUrl: 'https://placehold.co/100x100.png', // Placeholder avatar
   preferences: {
     emailNotifications: true,
+    pushNotifications: false, // Added pushNotifications
   },
 };

@@ -54,12 +54,16 @@ export interface NavItem {
 }
 
 // New User type
+export interface UserPreferences {
+  emailNotifications?: boolean;
+  pushNotifications?: boolean; // Added pushNotifications
+  // themePreference?: 'light' | 'dark' | 'system'; // Example for theme
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   avatarUrl?: string;
-  preferences?: {
-    emailNotifications?: boolean;
-  };
+  preferences?: UserPreferences;
 }
