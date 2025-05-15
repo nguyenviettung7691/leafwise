@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning> {/* Added suppressHydrationWarning for next-themes */}
+    <html lang="en" className="h-full" suppressHydrationWarning>{/* Added suppressHydrationWarning for next-themes */}
       <head>
         {/* Recommended for PWA: Apple touch icon */}
         <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
