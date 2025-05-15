@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateDetailedCarePlanInputSchema = z.object({
+const GenerateDetailedCarePlanInputSchema = z.object({
   plantCommonName: z.string().describe('The common name of the plant.'),
   plantScientificName: z.string().optional().describe('The scientific name of the plant.'),
   diagnosisNotes: z.string().optional().describe('Any notes from the plant health diagnosis, to help tailor the plan.'),
@@ -26,7 +26,7 @@ const CareDetailSchema = z.object({
     details: z.string().describe('Specific instructions or notes for this care aspect.'),
 });
 
-export const GenerateDetailedCarePlanOutputSchema = z.object({
+const GenerateDetailedCarePlanOutputSchema = z.object({
   watering: CareDetailSchema.describe('Watering guidelines.'),
   lighting: CareDetailSchema.describe('Lighting requirements.'),
   basicMaintenance: z.string().describe('General basic maintenance tips.'),
@@ -100,3 +100,4 @@ const generateDetailedCarePlanFlow = ai.defineFlow(
     return output;
   }
 );
+
