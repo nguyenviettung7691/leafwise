@@ -55,37 +55,28 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
       healthCondition: initialData?.healthCondition || 'unknown',
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
-      primaryPhoto: null,
+      primaryPhoto: null, // react-hook-form will manage this FileList
       diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
     },
   });
 
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.diagnosedPhotoDataUrl || null);
 
+  // Effect to update preview if initialData changes (e.g., user re-diagnoses)
   useEffect(() => {
-    if (initialData?.diagnosedPhotoDataUrl) {
-      setImagePreview(initialData.diagnosedPhotoDataUrl);
+    if (initialData?.diagnosedPhotoDataUrl && !form.getValues('primaryPhoto')) { // Only update if no new file is selected
+        setImagePreview(initialData.diagnosedPhotoDataUrl);
     }
-  }, [initialData?.diagnosedPhotoDataUrl]);
+  }, [initialData?.diagnosedPhotoDataUrl, form]);
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      form.setValue('primaryPhoto', event.target.files);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      form.setValue('primaryPhoto', null);
-      // If user deselects, revert to diagnosed photo if available, else null
-      setImagePreview(initialData?.diagnosedPhotoDataUrl || null);
-    }
-  };
 
   const onSubmit = async (data: SavePlantFormValues) => {
-    await onSave(data);
+    // Ensure PlantFormData type is correctly passed, especially primaryPhoto
+    const formDataToSave: PlantFormData = {
+        ...data,
+        primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
+    };
+    await onSave(formDataToSave);
   };
 
   return (
@@ -117,7 +108,7 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field }) => (
+              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => (
                 <FormItem>
                   <FormLabel>Plant Image</FormLabel>
                   <FormControl>
@@ -132,14 +123,30 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
                                     <span className="font-semibold">Click to upload</span> or drag and drop
                                 </p>
                                 <p className="text-xs text-muted-foreground">SVG, PNG, JPG or GIF (MAX. 4MB)</p>
-                                {field.value?.[0] && <p className="text-xs text-primary mt-1">{field.value[0].name}</p>}
+                                {fieldValue?.[0] && <p className="text-xs text-primary mt-1">{fieldValue[0].name}</p>}
                             </div>
-                            <Input 
-                                id="primaryPhoto-input" 
-                                type="file" 
-                                className="hidden" 
+                            <Input
+                                id="primaryPhoto-input"
+                                type="file"
+                                className="hidden"
                                 accept="image/*"
-                                onChange={handlePhotoChange}
+                                name={name}
+                                ref={ref}
+                                onBlur={onBlur}
+                                onChange={(e) => {
+                                    const files = e.target.files;
+                                    onChange(files); // Update react-hook-form state with FileList
+                                    if (files && files[0]) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            setImagePreview(reader.result as string);
+                                        };
+                                        reader.readAsDataURL(files[0]);
+                                    } else {
+                                        // If no file selected, or selection cleared, revert preview
+                                        setImagePreview(initialData?.diagnosedPhotoDataUrl || null);
+                                    }
+                                }}
                             />
                         </label>
                     </div>
@@ -195,7 +202,7 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
                 <FormItem>
                   <FormLabel>Age (Years, Est.)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 2" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                    <Input type="number" placeholder="e.g., 2" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -255,7 +262,7 @@ export function SavePlantForm({ initialData, onSave, onCancel, isLoading }: Save
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !form.formState.isValid && form.formState.isSubmitted}>
               {isLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Plant</>}
             </Button>
           </CardFooter>
