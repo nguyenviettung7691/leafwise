@@ -80,8 +80,9 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
     defaultValues: {
       name: '',
       frequencyMode: 'adhoc',
+      frequencyValue: undefined, // react-hook-form handles undefined correctly for optional numbers
       timeOfDayOption: 'all_day',
-      specificTime: '', // Ensure specificTime has a default string value
+      specificTime: '',
       level: 'basic',
     },
   });
@@ -235,7 +236,13 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
               <FormItem>
                 <FormLabel>Every (Number) <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="e.g., 3" {...field} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                  <Input 
+                    type="number" 
+                    placeholder="e.g., 3" 
+                    {...field} 
+                    value={field.value ?? ''} // Ensure value is always defined (string or number)
+                    onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -324,4 +331,3 @@ export function CarePlanTaskForm({ onSave, onCancel, isLoading }: CarePlanTaskFo
     </Form>
   );
 }
-
