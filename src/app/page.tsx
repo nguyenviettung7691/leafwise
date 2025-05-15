@@ -6,14 +6,19 @@ import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantHealthCondition } from '@/types';
-import { PlusCircle, Loader2, Search as SearchIcon, Filter as FilterIcon, ArrowDownUp } from 'lucide-react';
+import { PlusCircle, Loader2, Search as SearchIcon, Filter as FilterIcon, X, RotateCcw } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { parseISO, compareAsc, compareDesc } from 'date-fns';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { parseISO, compareAsc } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 interface Filters {
   searchTerm: string;
@@ -28,12 +33,26 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+const initialFiltersState: Filters = {
+  searchTerm: '',
+  ageRange: 'all',
+  location: '',
+  familyCategory: '',
+  healthCondition: 'all',
+};
+
+const initialSortConfigState: SortConfig = {
+  key: 'commonName',
+  direction: 'asc',
+};
+
+
 const getNextCareTaskDate = (plant: Plant): Date | null => {
   if (!plant.careTasks || plant.careTasks.length === 0) return null;
   const upcomingTasks = plant.careTasks
     .filter(task => !task.isPaused && task.nextDueDate)
     .map(task => parseISO(task.nextDueDate!))
-    .filter(date => date >= new Date(new Date().setHours(0,0,0,0))) // Only today or future
+    .filter(date => date >= new Date(new Date().setHours(0,0,0,0))) 
     .sort((a, b) => a.getTime() - b.getTime());
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
@@ -46,18 +65,8 @@ export default function MyPlantsPage() {
   const router = useRouter();
   const { t } = useLanguage();
 
-  const [filters, setFilters] = useState<Filters>({
-    searchTerm: '',
-    ageRange: 'all',
-    location: '',
-    familyCategory: '',
-    healthCondition: 'all',
-  });
-
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'commonName',
-    direction: 'asc',
-  });
+  const [filters, setFilters] = useState<Filters>(initialFiltersState);
+  const [sortConfig, setSortConfig] = useState<SortConfig>(initialSortConfigState);
 
   useEffect(() => {
     setPlants(mockPlants);
@@ -73,7 +82,7 @@ export default function MyPlantsPage() {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
-  const handleSortChange = (key: SortConfig['key']) => {
+  const handleSortKeyChange = (key: SortConfig['key']) => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
@@ -82,6 +91,11 @@ export default function MyPlantsPage() {
   
   const handleSortDirectionChange = (direction: 'asc' | 'desc') => {
     setSortConfig(prev => ({ ...prev, direction }));
+  };
+
+  const handleResetAll = () => {
+    setFilters(initialFiltersState);
+    setSortConfig(initialSortConfigState);
   };
 
   const ageRanges: Record<string, (age: number | undefined) => boolean> = {
@@ -94,7 +108,6 @@ export default function MyPlantsPage() {
   const filteredAndSortedPlants = useMemo(() => {
     let processedPlants = [...plants];
 
-    // Filtering
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
       const matchesSearch =
@@ -111,7 +124,6 @@ export default function MyPlantsPage() {
       return matchesSearch && matchesAge && matchesLocation && matchesFamily && matchesHealth;
     });
 
-    // Sorting
     processedPlants.sort((a, b) => {
       let valA: any;
       let valB: any;
@@ -119,7 +131,6 @@ export default function MyPlantsPage() {
       if (sortConfig.key === 'nextCareDate') {
         valA = getNextCareTaskDate(a);
         valB = getNextCareTaskDate(b);
-        // Handle nulls: plants with no upcoming tasks go to the end
         if (valA === null && valB === null) return 0;
         if (valA === null) return 1;
         if (valB === null) return -1;
@@ -129,8 +140,8 @@ export default function MyPlantsPage() {
       }
       
       let comparison = 0;
-      if (valA === undefined || valA === null) comparison = 1; // undefined/nulls go last for asc
-      else if (valB === undefined || valB === null) comparison = -1; // undefined/nulls go first for asc
+      if (valA === undefined || valA === null) comparison = 1; 
+      else if (valB === undefined || valB === null) comparison = -1; 
       else if (typeof valA === 'number' && typeof valB === 'number') {
         comparison = valA - valB;
       } else if (valA instanceof Date && valB instanceof Date) {
@@ -176,6 +187,14 @@ export default function MyPlantsPage() {
     { value: '>3', label: 'Over 3 years' },
   ];
 
+  const hasActiveFilters = filters.searchTerm ||
+                           filters.ageRange !== 'all' ||
+                           filters.healthCondition !== 'all' ||
+                           filters.location ||
+                           filters.familyCategory;
+  
+  const isDefaultSort = sortConfig.key === initialSortConfigState.key && sortConfig.direction === initialSortConfigState.direction;
+
 
   return (
     <AppLayout>
@@ -192,91 +211,169 @@ export default function MyPlantsPage() {
       </div>
 
       <Card className="mb-6 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2">
-            <FilterIcon className="h-5 w-5 text-primary" />
-            Filter & Sort Plants
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-muted-foreground mb-1">Search</label>
-              <div className="relative">
-                <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search by name, location, family..."
-                  value={filters.searchTerm}
-                  onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                  className="pl-8"
-                />
+        <Accordion type="single" collapsible className="w-full" defaultValue="filter-sort-panel">
+          <AccordionItem value="filter-sort-panel" className="border-b-0">
+            <AccordionTrigger className="hover:no-underline px-6 py-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-t-lg">
+              <div className="flex justify-between items-center w-full">
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <FilterIcon className="h-5 w-5 text-primary" />
+                  Filter &amp; Sort Plants
+                </CardTitle>
+                {/* AccordionTrigger adds its own chevron */}
               </div>
-            </div>
+            </AccordionTrigger>
             
-            <div>
-              <label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</label>
-              <Select value={filters.ageRange} onValueChange={(value) => handleFilterChange('ageRange', value)}>
-                <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
-                <SelectContent>
-                  {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {(hasActiveFilters || !isDefaultSort) && (
+              <div className="flex flex-wrap gap-2 px-6 py-3 border-t border-b bg-muted/30">
+                {filters.searchTerm && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Search: "{filters.searchTerm}"
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleFilterChange('searchTerm', '')} aria-label="Clear search term">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.ageRange !== 'all' && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Age: {ageRangeOptions.find(o => o.value === filters.ageRange)?.label}
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleFilterChange('ageRange', 'all')} aria-label="Clear age filter">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.healthCondition !== 'all' && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Health: {healthConditionOptions.find(o => o.value === filters.healthCondition)?.label}
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleFilterChange('healthCondition', 'all')} aria-label="Clear health filter">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.location && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Location: "{filters.location}"
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleFilterChange('location', '')} aria-label="Clear location filter">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.familyCategory && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Family: "{filters.familyCategory}"
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => handleFilterChange('familyCategory', '')} aria-label="Clear family filter">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+                {!isDefaultSort && (
+                  <Badge variant="secondary" className="flex items-center gap-1 pr-1">
+                    Sort: {sortOptions.find(opt => opt.value === sortConfig.key)?.label} ({sortConfig.direction === 'asc' ? 'Asc' : 'Desc'})
+                    <Button variant="ghost" size="icon" className="h-5 w-5 p-0" onClick={() => setSortConfig(initialSortConfigState)} aria-label="Reset sort">
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </Badge>
+                )}
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="healthCondition" className="block text-sm font-medium text-muted-foreground mb-1">Health Condition</label>
-              <Select value={filters.healthCondition} onValueChange={(value) => handleFilterChange('healthCondition', value as PlantHealthCondition | 'all')}>
-                <SelectTrigger id="healthCondition"><SelectValue placeholder="Select health condition" /></SelectTrigger>
-                <SelectContent>
-                  {healthConditionOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label htmlFor="locationFilter" className="block text-sm font-medium text-muted-foreground mb-1">Location</label>
-              <Input
-                id="locationFilter"
-                placeholder="Filter by location"
-                value={filters.location}
-                onChange={(e) => handleFilterChange('location', e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="familyCategoryFilter" className="block text-sm font-medium text-muted-foreground mb-1">Family Category</label>
-              <Input
-                id="familyCategoryFilter"
-                placeholder="Filter by family"
-                value={filters.familyCategory}
-                onChange={(e) => handleFilterChange('familyCategory', e.target.value)}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-                 <div>
-                    <label htmlFor="sortKey" className="block text-sm font-medium text-muted-foreground mb-1">Sort By</label>
-                    <Select value={sortConfig.key} onValueChange={(value) => handleSortChange(value as SortConfig['key'])}>
-                        <SelectTrigger id="sortKey"><SelectValue placeholder="Select sort key" /></SelectTrigger>
-                        <SelectContent>
-                        {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+            <AccordionContent className="pt-0">
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Search</h3>
+                  <div className="relative">
+                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      placeholder="Search by name, location, family..."
+                      value={filters.searchTerm}
+                      onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
                 </div>
-                 <div>
-                    <label htmlFor="sortDirection" className="block text-sm font-medium text-muted-foreground mb-1">Direction</label>
-                    <Select value={sortConfig.direction} onValueChange={(value) => handleSortDirectionChange(value as 'asc' | 'desc')}>
-                        <SelectTrigger id="sortDirection"><SelectValue placeholder="Select direction" /></SelectTrigger>
+                
+                <Separator />
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Filter By</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                    <div>
+                      <Label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</Label>
+                      <Select value={filters.ageRange} onValueChange={(value) => handleFilterChange('ageRange', value)}>
+                        <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="asc">Ascending</SelectItem>
-                            <SelectItem value="desc">Descending</SelectItem>
+                          {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                         </SelectContent>
-                    </Select>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="healthCondition" className="block text-sm font-medium text-muted-foreground mb-1">Health Condition</Label>
+                      <Select value={filters.healthCondition} onValueChange={(value) => handleFilterChange('healthCondition', value as PlantHealthCondition | 'all')}>
+                        <SelectTrigger id="healthCondition"><SelectValue placeholder="Select health condition" /></SelectTrigger>
+                        <SelectContent>
+                          {healthConditionOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="locationFilter" className="block text-sm font-medium text-muted-foreground mb-1">Location</Label>
+                      <Input
+                        id="locationFilter"
+                        placeholder="Filter by location"
+                        value={filters.location}
+                        onChange={(e) => handleFilterChange('location', e.target.value)}
+                      />
+                    </div>
+                    <div className="lg:col-span-1"> {/* Ensure it doesn't stretch too much */}
+                      <Label htmlFor="familyCategoryFilter" className="block text-sm font-medium text-muted-foreground mb-1">Family Category</Label>
+                      <Input
+                        id="familyCategoryFilter"
+                        placeholder="Filter by family"
+                        value={filters.familyCategory}
+                        onChange={(e) => handleFilterChange('familyCategory', e.target.value)}
+                      />
+                    </div>
+                  </div>
                 </div>
-            </div>
-          </div>
-        </CardContent>
+
+                <Separator />
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-foreground/90">Sort By</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="sortKey" className="block text-sm font-medium text-muted-foreground mb-1">Sort Field</Label>
+                        <Select value={sortConfig.key} onValueChange={(value) => handleSortKeyChange(value as SortConfig['key'])}>
+                            <SelectTrigger id="sortKey"><SelectValue placeholder="Select sort key" /></SelectTrigger>
+                            <SelectContent>
+                            {sortOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="sortDirection" className="block text-sm font-medium text-muted-foreground mb-1">Direction</Label>
+                        <Select value={sortConfig.direction} onValueChange={(value) => handleSortDirectionChange(value as 'asc' | 'desc')}>
+                            <SelectTrigger id="sortDirection"><SelectValue placeholder="Select direction" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="asc">Ascending</SelectItem>
+                                <SelectItem value="desc">Descending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator />
+
+                <div className="flex justify-end pt-2">
+                    <Button variant="outline" onClick={handleResetAll}>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reset All Filters
+                    </Button>
+                </div>
+              </CardContent>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </Card>
 
       {isLoading ? (
@@ -290,3 +387,4 @@ export default function MyPlantsPage() {
     </AppLayout>
   );
 }
+
