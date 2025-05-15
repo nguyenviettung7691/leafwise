@@ -4,17 +4,13 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { APP_NAV_CONFIG } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Leaf, Loader2, Save } from 'lucide-react';
-import { useState, useEffect, type FormEvent } from 'react';
+import { Leaf, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantHealthCondition } from '@/types';
+import type { Plant, PlantFormData } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { SavePlantForm } from '@/components/plants/SavePlantForm'; // Import the reusable form
 
 export default function EditPlantPage() {
   const router = useRouter();
@@ -23,16 +19,7 @@ export default function EditPlantPage() {
   const { toast } = useToast();
 
   const [plant, setPlant] = useState<Plant | null>(null);
-  const [formData, setFormData] = useState({
-    commonName: '',
-    scientificName: '',
-    familyCategory: '',
-    ageEstimate: '',
-    healthCondition: 'unknown' as PlantHealthCondition,
-    location: '',
-    customNotes: '',
-    primaryPhotoUrl: '',
-  });
+  const [initialFormData, setInitialFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -41,15 +28,24 @@ export default function EditPlantPage() {
       const foundPlant = mockPlants.find(p => p.id === id);
       if (foundPlant) {
         setPlant(foundPlant);
-        setFormData({
+        
+        let ageYears: number | undefined = undefined;
+        if (foundPlant.ageEstimate) {
+          const match = foundPlant.ageEstimate.match(/(\d+(\.\d+)?)/);
+          if (match && match[1]) {
+            ageYears = parseFloat(match[1]);
+          }
+        }
+
+        setInitialFormData({
           commonName: foundPlant.commonName,
           scientificName: foundPlant.scientificName || '',
           familyCategory: foundPlant.familyCategory || '',
-          ageEstimate: foundPlant.ageEstimate || '',
+          ageEstimateYears: ageYears,
           healthCondition: foundPlant.healthCondition,
           location: foundPlant.location || '',
           customNotes: foundPlant.customNotes || '',
-          primaryPhotoUrl: foundPlant.primaryPhotoUrl || '',
+          diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, // Use existing photo as initial
         });
       } else {
         notFound();
@@ -58,35 +54,31 @@ export default function EditPlantPage() {
     setIsLoading(false);
   }, [id]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (value: string) => {
-    setFormData(prev => ({ ...prev, healthCondition: value as PlantHealthCondition }));
-  };
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleUpdatePlant = async (data: PlantFormData) => {
     setIsSaving(true);
-
-    // Simulate API call
+    // Simulate API call to update the plant
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     // In a real app, you would update the plant data in your backend.
-    // For this prototype, we'll just show a toast and navigate.
-    console.log('Updated plant data (simulated):', { ...plant, ...formData });
+    // For this prototype, we'll find the plant in mockPlants and update it (this won't persist across reloads).
+    const plantIndex = mockPlants.findIndex(p => p.id === id);
+    if (plantIndex !== -1 && plant) {
+        // This is a mock update. In a real app, this data would go to a backend.
+        // And the primaryPhoto (FileList) would need to be uploaded.
+        console.log('Updated plant data (simulated):', { id: plant.id, ...data });
+        // To see changes locally in mock data for the current session (won't persist):
+        // mockPlants[plantIndex] = { ...mockPlants[plantIndex], ...data, primaryPhotoUrl: data.primaryPhoto ? URL.createObjectURL(data.primaryPhoto[0]) : plant.primaryPhotoUrl };
+    }
     
     toast({
       title: 'Plant Updated!',
-      description: `${formData.commonName} has been (simulated) updated.`,
+      description: `${data.commonName} has been (simulated) updated.`,
     });
     setIsSaving(false);
-    router.push(`/plants/${id}`);
+    router.push(`/plants/${id}`); // Navigate back to the plant detail page
   };
 
-  if (isLoading) {
+  if (isLoading || !initialFormData) {
     return (
       <AppLayout navItemsConfig={APP_NAV_CONFIG}>
         <div className="flex justify-center items-center h-full">
@@ -96,151 +88,27 @@ export default function EditPlantPage() {
     );
   }
 
-  if (!plant) {
+  if (!plant) { // Should be caught by initialFormData check, but good for safety
     return notFound();
   }
 
   return (
     <AppLayout navItemsConfig={APP_NAV_CONFIG}>
       <div className="max-w-2xl mx-auto">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Leaf className="h-6 w-6 text-primary" />
-              Edit Plant: {plant.commonName}
-            </CardTitle>
-            <CardDescription>
-              Update the details for your plant.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="commonName">Common Name <span className="text-destructive">*</span></Label>
-                  <Input 
-                    id="commonName" 
-                    name="commonName"
-                    value={formData.commonName} 
-                    onChange={handleChange} 
-                    required 
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="scientificName">Scientific Name</Label>
-                  <Input 
-                    id="scientificName" 
-                    name="scientificName"
-                    value={formData.scientificName} 
-                    onChange={handleChange} 
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="familyCategory">Family Category <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="familyCategory" 
-                  name="familyCategory"
-                  value={formData.familyCategory} 
-                  onChange={handleChange} 
-                  required 
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Label htmlFor="ageEstimate">Age Estimate</Label>
-                  <Input 
-                    id="ageEstimate" 
-                    name="ageEstimate"
-                    value={formData.ageEstimate} 
-                    onChange={handleChange} 
-                    placeholder="e.g., 2 years"
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="healthCondition">Health Condition <span className="text-destructive">*</span></Label>
-                  <Select 
-                    value={formData.healthCondition} 
-                    onValueChange={handleSelectChange}
-                    required
-                    disabled={isSaving}
-                  >
-                    <SelectTrigger id="healthCondition">
-                      <SelectValue placeholder="Select health status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="healthy">Healthy</SelectItem>
-                      <SelectItem value="needs_attention">Needs Attention</SelectItem>
-                      <SelectItem value="sick">Sick</SelectItem>
-                      <SelectItem value="unknown">Unknown</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input 
-                  id="location" 
-                  name="location"
-                  value={formData.location} 
-                  onChange={handleChange} 
-                  placeholder="e.g., Living Room Window"
-                  disabled={isSaving}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="primaryPhotoUrl">Primary Photo URL</Label>
-                <Input 
-                  id="primaryPhotoUrl" 
-                  name="primaryPhotoUrl"
-                  type="url"
-                  value={formData.primaryPhotoUrl} 
-                  onChange={handleChange} 
-                  placeholder="https://example.com/image.png"
-                  disabled={isSaving}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="customNotes">Custom Notes</Label>
-                <Textarea 
-                  id="customNotes" 
-                  name="customNotes"
-                  value={formData.customNotes} 
-                  onChange={handleChange} 
-                  placeholder="e.g., Water when top inch is dry."
-                  rows={3} 
-                  disabled={isSaving}
-                />
-              </div>
-              
-              <Button type="submit" className="w-full" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating Plant...
-                  </>
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Update Plant
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <SavePlantForm
+          initialData={initialFormData}
+          onSave={handleUpdatePlant}
+          onCancel={() => router.push(`/plants/${id}`)}
+          isLoading={isSaving}
+        />
+        {/* The SavePlantForm component now renders its own Card.
+            If we want a specific title for the edit page container Card,
+            we can wrap SavePlantForm in another Card here.
+            For now, SavePlantForm's internal Card will be used.
+            Its title is "Save to My Plants", which is generic enough for "Update" too.
+            Alternatively, we can pass a title prop to SavePlantForm.
+        */}
       </div>
     </AppLayout>
   );
 }
-
-    
