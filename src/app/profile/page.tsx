@@ -10,42 +10,73 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Palette, Smartphone } from 'lucide-react';
-import { useState, useEffect, FormEvent } from 'react';
+import { UserCircle, Edit3, Save, X, Bell, Palette, Smartphone, Camera } from 'lucide-react';
+import { useState, useEffect, FormEvent, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from 'next-themes'; // Added useTheme
+import { useTheme } from 'next-themes'; 
 
 export default function ProfilePage() {
-  const { user:authUser, updateUser, isLoading: authLoading } = useAuth();
-  const [user, setUser] = useState<User | null>(null); // Local copy for editing
+  const { user: authUser, updateUser, isLoading: authLoading } = useAuth();
+  const [user, setUser] = useState<User | null>(null); 
   
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
-  const [editedAvatarUrl, setEditedAvatarUrl] = useState(''); // For future avatar editing
+  
+  // State for avatar editing
+  const [editedAvatarFile, setEditedAvatarFile] = useState<File | null>(null);
+  const [editedAvatarPreviewUrl, setEditedAvatarPreviewUrl] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme(); // Added theme hooks
+  const { theme, setTheme } = useTheme(); 
 
   useEffect(() => {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      setEditedAvatarUrl(authUser.avatarUrl || '');
+      // No need to set avatar URL here initially, as it's read directly from authUser or preview
     }
   }, [authUser]);
 
   const handleEditToggle = () => {
-    if (isEditing) { // Was editing, now cancelling
+    if (isEditing) { 
       if (authUser) {
         setEditedName(authUser.name);
-        setEditedAvatarUrl(authUser.avatarUrl || '');
       }
+      setEditedAvatarFile(null);
+      setEditedAvatarPreviewUrl(null);
     }
     setIsEditing(!isEditing);
+  };
+
+  const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit for avatar
+        toast({
+          variant: 'destructive',
+          title: 'Image Too Large',
+          description: 'Please select an image file smaller than 2MB for your avatar.',
+        });
+        setEditedAvatarFile(null);
+        setEditedAvatarPreviewUrl(null);
+        if (avatarInputRef.current) avatarInputRef.current.value = "";
+        return;
+      }
+      setEditedAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditedAvatarPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setEditedAvatarFile(null);
+      setEditedAvatarPreviewUrl(null);
+    }
   };
 
   const handleSaveChanges = async (event: FormEvent) => {
@@ -54,12 +85,17 @@ export default function ProfilePage() {
 
     const updatedUserData: Partial<Omit<User, 'id' | 'email'>> = {
       name: editedName,
-      // avatarUrl: editedAvatarUrl, // Add if avatar editing is implemented
     };
+
+    if (editedAvatarPreviewUrl) {
+      updatedUserData.avatarUrl = editedAvatarPreviewUrl;
+    }
     
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
+      setEditedAvatarFile(null); // Clear pending file after save
+      setEditedAvatarPreviewUrl(null); // Clear preview after save
     } catch (error) {
       toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
     }
@@ -76,11 +112,12 @@ export default function ProfilePage() {
 
     try {
       await updateUser({ preferences: updatedPreferences });
-       // Toast is handled by updateUser in AuthContext
     } catch (error) {
        toast({ title: "Error", description: `Failed to update ${preferenceKey}.`, variant: "destructive" });
     }
   };
+
+  const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
 
 
   if (authLoading || !user) {
@@ -132,8 +169,8 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={handleEditToggle}>
                 <X className="mr-2 h-4 w-4" /> Cancel
               </Button>
-              <Button onClick={handleSaveChanges}>
-                <Save className="mr-2 h-4 w-4" /> Save Changes
+              <Button onClick={handleSaveChanges} disabled={authLoading}>
+                {authLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> Save Changes</>}
               </Button>
             </div>
           )}
@@ -142,12 +179,32 @@ export default function ProfilePage() {
         <Card className="shadow-xl">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 border-2 border-primary shadow-sm">
-                <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name} data-ai-hint="person avatar"/>
-                <AvatarFallback className="text-2xl bg-muted">
-                  {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative group">
+                <Avatar 
+                  className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
+                  onClick={() => isEditing && avatarInputRef.current?.click()}
+                >
+                  <AvatarImage src={avatarSrc} alt={user.name} data-ai-hint="person avatar"/>
+                  <AvatarFallback className="text-2xl bg-muted">
+                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {isEditing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                       onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera className="h-6 w-6 text-white" />
+                  </div>
+                )}
+              </div>
+              <input 
+                type="file"
+                ref={avatarInputRef}
+                className="hidden"
+                accept="image/png, image/jpeg, image/gif, image/webp"
+                onChange={handleAvatarFileChange}
+                disabled={!isEditing}
+              />
               <div>
                 {isEditing ? (
                   <div className="space-y-2">
@@ -157,6 +214,7 @@ export default function ProfilePage() {
                       value={editedName} 
                       onChange={(e) => setEditedName(e.target.value)} 
                       className="text-2xl font-semibold p-1"
+                      disabled={authLoading}
                     />
                      <p className="text-md text-muted-foreground">{user.email} (Email cannot be changed)</p>
                   </div>
@@ -216,12 +274,12 @@ export default function ProfilePage() {
                 checked={theme === 'dark'}
                 onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                 aria-label="Toggle dark mode"
-                disabled={authLoading}
+                disabled={authLoading} // Theming isn't async, but keep consistent with other switches
               />
             </div>
           </CardContent>
            <CardFooter className="pt-6 border-t">
-            <p className="text-xs text-muted-foreground">Changes are saved automatically (mocked).</p>
+            <p className="text-xs text-muted-foreground">Profile changes and preferences are mock-saved to local storage.</p>
           </CardFooter>
         </Card>
 
