@@ -5,7 +5,7 @@ import type { Plant, CareTask } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Leaf, AlertTriangle, CheckCircle2, CalendarClock } from 'lucide-react';
+import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History } from 'lucide-react'; // Added History icon
 import { format, isToday, isTomorrow, differenceInDays, parseISO } from 'date-fns';
 
 interface PlantCardProps {
@@ -31,22 +31,32 @@ const getNextUpcomingTask = (tasks: CareTask[]): CareTask | null => {
 
   const upcomingTasks = tasks
     .filter(task => !task.isPaused && task.nextDueDate)
-    .sort((a, b) => new Date(a.nextDueDate!).getTime() - new Date(b.nextDueDate!).getTime());
-
+    .map(task => ({ ...task, nextDueDateObj: parseISO(task.nextDueDate!) }))
+    .filter(task => task.nextDueDateObj >= new Date(new Date().setHours(0,0,0,0)) ) // Only today or future
+    .sort((a, b) => a.nextDueDateObj.getTime() - b.nextDueDateObj.getTime());
+    
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
 
 const formatDueDate = (dueDate: string): string => {
   const date = parseISO(dueDate);
   const now = new Date();
+  const today = new Date(now.setHours(0,0,0,0));
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
 
-  if (isToday(date)) return 'Today';
-  if (isTomorrow(date)) return 'Tomorrow';
+  if (date.getTime() === today.getTime()) return 'Today';
+  if (date.getTime() === tomorrow.getTime()) return 'Tomorrow';
 
-  const diff = differenceInDays(date, now);
+  const diff = differenceInDays(date, today);
   if (diff > 0 && diff <= 7) return `In ${diff} day${diff > 1 ? 's' : ''}`;
   
   return format(date, 'MMM d');
+};
+
+const formatDateSimple = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return format(parseISO(dateString), 'MMM d, yyyy');
 };
 
 export function PlantCard({ plant }: PlantCardProps) {
@@ -72,7 +82,6 @@ export function PlantCard({ plant }: PlantCardProps) {
             {plant.commonName}
           </CardTitle>
           {plant.scientificName && <p className="text-sm text-muted-foreground italic mb-2">{plant.scientificName}</p>}
-          {/* Removed plant.species display as per previous change for familyCategory */}
           
           <div className="flex items-center gap-2 mt-2">
             {healthConditionIcons[plant.healthCondition]}
@@ -87,17 +96,22 @@ export function PlantCard({ plant }: PlantCardProps) {
             </Badge>
           </div>
         </CardContent>
-        <CardFooter className="p-4 border-t flex flex-col items-start gap-1">
-          {/* Removed Age Estimate Display */}
+        <CardFooter className="p-4 border-t flex flex-col items-start gap-1.5 text-xs text-muted-foreground">
           {nextUpcomingTask ? (
-            <div className="flex items-center text-xs text-muted-foreground gap-1">
-              <CalendarClock className="h-3.5 w-3.5 text-primary" />
+            <div className="flex items-center gap-1">
+              <CalendarClock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
               <span>Next: {nextUpcomingTask.name} - {formatDueDate(nextUpcomingTask.nextDueDate!)}</span>
             </div>
           ) : (
-            <div className="flex items-center text-xs text-muted-foreground gap-1">
-              <CalendarClock className="h-3.5 w-3.5" />
+            <div className="flex items-center gap-1">
+              <CalendarClock className="h-3.5 w-3.5 flex-shrink-0" />
               <span>No upcoming tasks</span>
+            </div>
+          )}
+          {plant.lastCaredDate && (
+            <div className="flex items-center gap-1">
+              <History className="h-3.5 w-3.5 flex-shrink-0" />
+              <span>Last Cared: {formatDateSimple(plant.lastCaredDate)}</span>
             </div>
           )}
         </CardFooter>

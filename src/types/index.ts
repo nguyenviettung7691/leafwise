@@ -19,7 +19,7 @@ export interface CareTask {
   nextDueDate?: string; // ISO string
   isPaused: boolean;
   resumeDate?: string | null; // ISO string, date to resume notifications/task visibility
-  level: 'basic' | 'advanced'; // Renamed from 'type'
+  level: 'basic' | 'advanced';
 }
 
 export type PlantHealthCondition = 'healthy' | 'needs_attention' | 'sick' | 'unknown';
@@ -31,16 +31,16 @@ export interface Plant {
   familyCategory?: string;
   ageEstimate?: string;
   ageEstimateYears?: number;
-  healthCondition: PlantHealthCondition; // Overall current health condition of the plant
+  healthCondition: PlantHealthCondition;
   location?: string;
-  plantingDate?: string; // ISO string - will be labeled as "Created Date"
+  plantingDate?: string;
   customNotes?: string;
   primaryPhotoUrl?: string;
-  photos: PlantPhoto[]; // Updated to store more detailed photo records for growth monitoring
+  photos: PlantPhoto[];
   careTasks: CareTask[];
+  lastCaredDate?: string; // New field
 }
 
-// Form data type for SavePlantForm
 export interface PlantFormData {
   commonName: string;
   scientificName?: string;
@@ -53,18 +53,15 @@ export interface PlantFormData {
   diagnosedPhotoDataUrl?: string | null;
 }
 
-// Form data type for CarePlanTaskForm
 export type CarePlanTaskFormData = {
   name: string;
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly';
-  frequencyValue?: number; // For "Every X ..."
+  frequencyValue?: number;
   timeOfDayOption: 'specific_time' | 'all_day';
-  specificTime?: string; // HH:MM format
+  specificTime?: string;
   level: 'basic' | 'advanced';
 };
 
-
-// Configuration for NavItems before translation
 export interface NavItemConfig {
   titleKey: string;
   href: string;
@@ -72,7 +69,6 @@ export interface NavItemConfig {
   disabled?: boolean;
 }
 
-// NavItem structure after translation, used by UI components
 export interface NavItem {
   title: string;
   href: string;
@@ -80,7 +76,6 @@ export interface NavItem {
   disabled?: boolean;
 }
 
-// New User type
 export interface UserPreferences {
   emailNotifications?: boolean;
   pushNotifications?: boolean;
@@ -94,11 +89,10 @@ export interface User {
   preferences?: UserPreferences;
 }
 
-// Types for the comparePlantHealth flow
 export interface ComparePlantHealthInput {
   currentPlantHealth: PlantHealthCondition;
-  newPhotoDiagnosisNotes?: string; // Notes from the new photo's diagnosis
-  newPhotoHealthStatus: PlantHealthCondition; // Health status from the new photo's diagnosis
+  newPhotoDiagnosisNotes?: string;
+  newPhotoHealthStatus: PlantHealthCondition;
 }
 
 export interface ComparePlantHealthOutput {

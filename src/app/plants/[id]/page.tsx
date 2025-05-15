@@ -2,7 +2,6 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-// APP_NAV_CONFIG is no longer passed as a prop
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
@@ -16,16 +15,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
-import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check } from 'lucide-react';
-import { useEffect, useState, useRef, FormEvent } from 'react';
+import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
-import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
 
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -42,14 +40,12 @@ const healthConditionRingStyles: Record<PlantHealthCondition, string> = {
   unknown: 'ring-gray-500',
 };
 
-// Helper function to transform CareTask to CarePlanTaskFormData for editing
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
   const formData: Partial<CarePlanTaskFormData> = {
     name: task.name,
     level: task.level,
   };
 
-  // Parse frequency
   if (task.frequency === 'Ad-hoc') formData.frequencyMode = 'adhoc';
   else if (task.frequency === 'Daily') formData.frequencyMode = 'daily';
   else if (task.frequency === 'Weekly') formData.frequencyMode = 'weekly';
@@ -63,23 +59,22 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
       else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
       else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
     } else {
-      formData.frequencyMode = 'adhoc'; // Default if parsing fails
+      formData.frequencyMode = 'adhoc';
     }
   }
 
-  // Parse timeOfDay
-  if (task.timeOfDay === 'All day') {
+  if (task.timeOfDay === 'All day' || !task.timeOfDay) {
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day'; // Default
+    formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   }
 
-  return formData as CarePlanTaskFormData; // Assume defaults in schema will handle missing optional fields
+  return formData as CarePlanTaskFormData;
 };
 
 
@@ -93,8 +88,6 @@ export default function PlantDetailPage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // For Growth Monitoring
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
@@ -106,8 +99,6 @@ export default function PlantDetailPage() {
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
   const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
-
-  // Care Plan Management
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -174,6 +165,10 @@ export default function PlantDetailPage() {
   const handleDeletePlant = async () => {
     setIsDeleting(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
+    const plantIndex = mockPlants.findIndex(p => p.id === id);
+    if (plantIndex > -1) {
+      mockPlants.splice(plantIndex, 1);
+    }
     toast({
       title: 'Plant Deleted!',
       description: `${plant?.commonName || 'The plant'} has been (simulated) deleted.`,
@@ -219,7 +214,7 @@ export default function PlantDetailPage() {
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
-                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ? 'sick' : 'needs_attention')
+                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention')
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
@@ -306,7 +301,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     setIsSavingTask(true);
 
-    if (taskToEdit) { // Editing existing task
+    if (taskToEdit) {
       const updatedTasks = plant.careTasks.map(t => 
         t.id === taskToEdit.id ? {
           ...t,
@@ -314,7 +309,7 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: calculateNextDueDate(taskData.frequency), // Recalculate next due date
+          nextDueDate: calculateNextDueDate(taskData.frequency),
         } : t
       );
       setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
@@ -325,7 +320,7 @@ export default function PlantDetailPage() {
       }
       toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
 
-    } else { // Adding new task
+    } else {
       const calculatedNextDueDate = calculateNextDueDate(taskData.frequency);
       const newTask: CareTask = {
           id: `ct-${plant.id}-${Date.now()}`,
@@ -354,7 +349,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); // Ensure form is cleared for adding new
+    setInitialTaskFormData(undefined);
     setIsTaskFormDialogOpen(true);
   };
 
@@ -388,10 +383,9 @@ export default function PlantDetailPage() {
     setTaskIdToDelete(null);
   };
 
-
   if (isLoadingPage) {
     return (
-      <AppLayout> {/* navItemsConfig prop removed */}
+      <AppLayout>
         <div className="flex justify-center items-center h-full">
           <Loader2 className="h-12 w-12 animate-spin text-primary"/>
         </div>
@@ -406,11 +400,27 @@ export default function PlantDetailPage() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    try {
+      const date = parseISO(dateString);
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error("Error parsing date:", dateString, error);
+      return 'Invalid Date';
+    }
+  };
+  
+  const formatDateTime = (dateString?: string, timeString?: string) => {
+    if (!dateString) return 'N/A';
+    let formattedString = formatDate(dateString);
+    if (timeString && timeString !== 'All day' && /^\d{2}:\d{2}$/.test(timeString)) {
+      formattedString += ` at ${timeString}`;
+    }
+    return formattedString;
   };
 
+
   return (
-    <AppLayout> {/* navItemsConfig prop removed */}
+    <AppLayout>
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden shadow-xl">
           <CardHeader className="relative p-0">
@@ -470,33 +480,42 @@ export default function PlantDetailPage() {
             <Separator />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3">
+                <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">Age Estimate</p>
                   <p className="text-muted-foreground">{plant.ageEstimate || 'Unknown'}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3">
+                <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">Created Date</p>
                   <p className="text-muted-foreground">{formatDate(plant.plantingDate)}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
+              <div className="flex items-start gap-3">
+                <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <div>
                   <p className="font-medium">Location</p>
                   <p className="text-muted-foreground">{plant.location || 'Unknown'}</p>
                 </div>
               </div>
               {plant.familyCategory && (
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
+                <div className="flex items-start gap-3">
+                  <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="font-medium">Family</p>
                     <p className="text-muted-foreground">{plant.familyCategory}</p>
+                  </div>
+                </div>
+              )}
+               {plant.lastCaredDate && (
+                <div className="flex items-start gap-3">
+                  <History className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Last Cared</p>
+                    <p className="text-muted-foreground">{formatDate(plant.lastCaredDate)}</p>
                   </div>
                 </div>
               )}
@@ -511,7 +530,6 @@ export default function PlantDetailPage() {
 
             <Separator />
 
-            {/* Care Plan Section */}
             <div>
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="font-semibold text-lg">Care Plan</h3>
@@ -530,7 +548,7 @@ export default function PlantDetailPage() {
                 {plant.careTasks && plant.careTasks.length > 0 ? (
                 <div className="space-y-3">
                   {plant.careTasks.map(task => (
-                    <Card key={task.id} className="bg-secondary/30">
+                    <Card key={task.id} className={cn("bg-secondary/30", task.isPaused ? "opacity-70" : "")}>
                       <CardContent className="p-4 flex justify-between items-center">
                         <div>
                           <p className="font-medium flex items-center">
@@ -546,9 +564,9 @@ export default function PlantDetailPage() {
                             Frequency: {task.frequency}
                             {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
                             {task.isPaused ? (
-                                task.resumeDate ? ` | Paused (Resumes: ${formatDate(task.resumeDate)})` : ' | Paused'
+                                task.resumeDate ? ` | Resumes: ${formatDate(task.resumeDate)}` : ''
                             ) : (
-                                task.nextDueDate ? ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}` : ''
+                                task.nextDueDate ? ` | Next: ${formatDateTime(task.nextDueDate, task.timeOfDay)}` : ''
                             )}
                           </p>
                         </div>
@@ -596,7 +614,6 @@ export default function PlantDetailPage() {
 
             <Separator />
 
-            {/* Growth Monitoring Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-semibold text-lg">Growth Monitoring</h3>
@@ -663,7 +680,6 @@ export default function PlantDetailPage() {
           </CardFooter>
         </Card>
 
-        {/* Dialog for New Photo Diagnosis and Comparison */}
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false}); 
@@ -740,7 +756,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for displaying selected photo from grid */}
         <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -763,7 +778,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for Add/Edit Care Plan Task */}
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
@@ -793,7 +807,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Alert Dialog for Delete Task Confirmation */}
         <AlertDialog open={showDeleteTaskDialog} onOpenChange={setShowDeleteTaskDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
