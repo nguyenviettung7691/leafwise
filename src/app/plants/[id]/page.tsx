@@ -11,14 +11,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2 } from 'lucide-react';
+import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2, Users } from 'lucide-react'; // Added Users for family category
 import { useEffect, useState } from 'react';
 
 const healthConditionStyles = {
-  healthy: 'bg-green-100 text-green-800 border-green-300',
-  needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  sick: 'bg-red-100 text-red-800 border-red-300',
-  unknown: 'bg-gray-100 text-gray-800 border-gray-300',
+  healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
+  needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-300 dark:border-yellow-500',
+  sick: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-700/30 dark:text-red-300 dark:border-red-500',
+  unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
 };
 
 export default function PlantDetailPage() {
@@ -105,13 +105,12 @@ export default function PlantDetailPage() {
             </div>
             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
               <CardTitle className="text-3xl font-bold text-white">{plant.commonName}</CardTitle>
-              <CardDescription className="text-lg text-gray-200 italic">{plant.scientificName}</CardDescription>
+              {plant.scientificName && <CardDescription className="text-lg text-gray-200 italic">{plant.scientificName}</CardDescription>}
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="flex justify-between items-start">
                 <div>
-                    {plant.species && <p className="text-sm text-muted-foreground">Species: {plant.species}</p>}
                     <Badge variant="outline" className={`capitalize mt-1 ${healthConditionStyles[plant.healthCondition]}`}>
                         {plant.healthCondition.replace('_', ' ')}
                     </Badge>
@@ -135,7 +134,7 @@ export default function PlantDetailPage() {
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="font-medium">Planting Date</p>
+                  <p className="font-medium">Created Date</p> {/* Changed label */}
                   <p className="text-muted-foreground">{formatDate(plant.plantingDate)}</p>
                 </div>
               </div>
@@ -146,6 +145,15 @@ export default function PlantDetailPage() {
                   <p className="text-muted-foreground">{plant.location || 'Unknown'}</p>
                 </div>
               </div>
+              {plant.familyCategory && (
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" /> {/* Using Users icon for Family Category */}
+                  <div>
+                    <p className="font-medium">Family</p>
+                    <p className="text-muted-foreground">{plant.familyCategory}</p>
+                  </div>
+                </div>
+              )}
             </div>
             
             {plant.customNotes && (

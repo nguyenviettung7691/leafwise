@@ -25,13 +25,13 @@ export interface Plant {
   id: string;
   scientificName?: string; // Made optional to align with form
   commonName: string;
-  familyCategory?: string; // Made optional to align with form, though form will require it
-  species?: string; // Kept for broader classification if needed elsewhere
+  familyCategory?: string; // This will store the family/main species category
+  // species?: string; // Removed as per request to replace with familyCategory
   ageEstimate?: string; // e.g., "1 year", "6 months" - string representation
   ageEstimateYears?: number; // Numerical representation for form
   healthCondition: PlantHealthCondition;
   location?: string; // e.g., "Living Room", "Balcony"
-  plantingDate?: string; // ISO string
+  plantingDate?: string; // ISO string - will be labeled as "Created Date"
   customNotes?: string;
   primaryPhotoUrl?: string; // URL to the main photo for the plant card
   photos: PlantPhoto[];

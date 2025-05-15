@@ -6,7 +6,7 @@ export const mockPlants: Plant[] = [
     id: '1',
     commonName: 'Monstera Deliciosa',
     scientificName: 'Monstera deliciosa',
-    species: 'Araceae',
+    familyCategory: 'Araceae', // Changed from species
     ageEstimate: '2 years',
     healthCondition: 'healthy',
     location: 'Living Room',
@@ -26,7 +26,7 @@ export const mockPlants: Plant[] = [
     id: '2',
     commonName: 'Snake Plant',
     scientificName: 'Sansevieria trifasciata',
-    species: 'Asparagaceae',
+    familyCategory: 'Asparagaceae', // Changed from species
     ageEstimate: '1 year',
     healthCondition: 'healthy',
     location: 'Bedroom',
@@ -44,7 +44,7 @@ export const mockPlants: Plant[] = [
     id: '3',
     commonName: 'Fiddle Leaf Fig',
     scientificName: 'Ficus lyrata',
-    species: 'Moraceae',
+    familyCategory: 'Moraceae', // Changed from species
     ageEstimate: '3 years',
     healthCondition: 'needs_attention',
     location: 'Office',
