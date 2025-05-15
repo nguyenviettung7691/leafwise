@@ -2,17 +2,19 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { APP_NAV_CONFIG } from '@/lib/constants'; // Updated import
+import { APP_NAV_CONFIG } from '@/lib/constants';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant } from '@/types';
-import { useParams, notFound } from 'next/navigation';
+import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2, Users } from 'lucide-react'; // Added Users for family category
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { CalendarDays, MapPin, Edit, Trash2, Droplets, Sun, Scissors, PauseCircle, PlayCircle, ImagePlus, Leaf, Loader2, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 const healthConditionStyles = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -23,12 +25,15 @@ const healthConditionStyles = {
 
 export default function PlantDetailPage() {
   const params = useParams();
+  const router = useRouter();
+  const { toast } = useToast();
   const id = params.id as string;
   
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
   const [isAddingPhoto, setIsAddingPhoto] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -36,7 +41,9 @@ export default function PlantDetailPage() {
       if (foundPlant) {
         setPlant(foundPlant);
       } else {
-        console.error("Plant not found"); 
+        // In a real app, you might redirect or show a more specific not found UI
+        // For now, Next.js's notFound will handle it based on the return below.
+        console.error("Plant not found with id:", id); 
       }
     }
     setIsLoading(false);
@@ -44,7 +51,7 @@ export default function PlantDetailPage() {
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
   
     setPlant(prevPlant => {
       if (!prevPlant) return null;
@@ -61,25 +68,45 @@ export default function PlantDetailPage() {
 
   const handleAddPhoto = async () => {
     setIsAddingPhoto(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
     setIsAddingPhoto(false);
-    alert("Add photo functionality (simulated)");
+    toast({ title: "Add Photo (Simulated)", description: "Photo journal update functionality is a future enhancement." });
+  };
+
+  const handleEditPlant = () => {
+    router.push(`/plants/${id}/edit`);
+  };
+
+  const handleDeletePlant = async () => {
+    setIsDeleting(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // In a real app, you would delete the plant from your backend and update global state.
+    // For this prototype, we just show a toast and navigate.
+    toast({
+      title: 'Plant Deleted!',
+      description: `${plant?.commonName || 'The plant'} has been (simulated) deleted.`,
+      variant: 'default' 
+    });
+    router.push('/'); // Navigate to My Plants page
+    // setIsDeleting(false); // Not strictly needed due to navigation
   };
 
 
   if (isLoading) {
     return (
-      <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
+      <AppLayout navItemsConfig={APP_NAV_CONFIG}>
         <div className="flex justify-center items-center h-full">
-          <Leaf className="h-12 w-12 animate-spin text-primary"/>
+          <Loader2 className="h-12 w-12 animate-spin text-primary"/>
         </div>
       </AppLayout>
     );
   }
 
   if (!plant) {
-    notFound();
-    return null;
+    notFound(); // This will render the nearest not-found.tsx or Next.js default 404 page
+    return null; // Ensure nothing else is rendered
   }
   
   const formatDate = (dateString?: string) => {
@@ -88,7 +115,7 @@ export default function PlantDetailPage() {
   };
 
   return (
-    <AppLayout navItemsConfig={APP_NAV_CONFIG}> {/* Updated prop */}
+    <AppLayout navItemsConfig={APP_NAV_CONFIG}>
       <div className="max-w-4xl mx-auto">
         <Card className="overflow-hidden shadow-xl">
           <CardHeader className="relative p-0">
@@ -100,7 +127,7 @@ export default function PlantDetailPage() {
                 height={450}
                 className="object-cover w-full h-full"
                 data-ai-hint="plant detail"
-                priority
+                priority // Prioritize loading this main image
               />
             </div>
             <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
@@ -116,8 +143,32 @@ export default function PlantDetailPage() {
                     </Badge>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="icon"><Edit className="h-4 w-4" /></Button>
-                    <Button variant="destructive" size="icon"><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" onClick={handleEditPlant} aria-label="Edit Plant">
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" aria-label="Delete Plant" disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently (simulate) delete your plant
+                            "{plant.commonName}".
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeletePlant} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
 
@@ -134,7 +185,7 @@ export default function PlantDetailPage() {
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
                 <div>
-                  <p className="font-medium">Created Date</p> {/* Changed label */}
+                  <p className="font-medium">Created Date</p>
                   <p className="text-muted-foreground">{formatDate(plant.plantingDate)}</p>
                 </div>
               </div>
@@ -147,7 +198,7 @@ export default function PlantDetailPage() {
               </div>
               {plant.familyCategory && (
                 <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" /> {/* Using Users icon for Family Category */}
+                  <Users className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">Family</p>
                     <p className="text-muted-foreground">{plant.familyCategory}</p>
@@ -196,7 +247,7 @@ export default function PlantDetailPage() {
                     </CardContent>
                   </Card>
                 ))}
-                 <Button variant="outline" className="w-full mt-2">Modify Care Plan (Coming Soon)</Button>
+                 <Button variant="outline" className="w-full mt-2" disabled>Modify Care Plan (Coming Soon)</Button>
               </div>
             </div>
             
@@ -244,3 +295,5 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
