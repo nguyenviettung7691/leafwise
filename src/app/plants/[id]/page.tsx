@@ -16,7 +16,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon } from 'lucide-react';
+import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check } from 'lucide-react';
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -517,10 +517,10 @@ export default function PlantDetailPage() {
                     <h3 className="font-semibold text-lg">Care Plan</h3>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsManagingCarePlan(!isManagingCarePlan)}>
-                            <ManageIcon className="h-4 w-4 mr-2" /> 
+                            {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
                             {isManagingCarePlan ? 'Done' : 'Manage'}
                         </Button>
-                        {!isManagingCarePlan && (
+                        {isManagingCarePlan && (
                            <Button variant="default" size="sm" onClick={openAddTaskDialog}>
                                 <PlusCircle className="h-4 w-4 mr-2" /> Add Task
                             </Button>
@@ -537,7 +537,7 @@ export default function PlantDetailPage() {
                           <p className="text-xs text-muted-foreground">
                             Frequency: {task.frequency}
                             {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
-                            {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}`}
+                            {task.nextDueDate && ` | Next: ${formatDate(task.nextDueDate)}${task.timeOfDay && task.timeOfDay !== 'All day' ? ` at ${task.timeOfDay}` : ''}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -576,7 +576,7 @@ export default function PlantDetailPage() {
                   ))}
                 </div>
               ) : (
-                 <p className="text-muted-foreground text-sm text-center py-4">No care tasks defined yet. Click "Add Task" to get started.</p>
+                 <p className="text-muted-foreground text-sm text-center py-4">No care tasks defined yet. Click "Manage" then "Add Task" to get started.</p>
               )}
             </div>
 
@@ -801,5 +801,7 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
 
     
