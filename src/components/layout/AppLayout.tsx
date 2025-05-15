@@ -1,8 +1,8 @@
 
 'use client';
 
-import type { NavItem, NavItemConfig } from '@/types'; // Updated types
-import React from 'react'; // Added React for useMemo
+import type { NavItem, NavItemConfig } from '@/types';
+import React from 'react';
 import {
   SidebarProvider,
   Sidebar,
@@ -16,27 +16,37 @@ import { Navbar } from './Navbar';
 import { SidebarNav } from './SidebarNav';
 import { Logo } from './Logo';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useLanguage } from '@/context/LanguageContext'; // Added useLanguage
+import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext'; // Added useAuth
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  navItemsConfig: NavItemConfig[]; // Changed from navItems to navItemsConfig
+  navItemsConfig: NavItemConfig[];
 }
 
-function LayoutContent({ children, navItemsConfig }: AppLayoutProps) { // Changed prop name
+function LayoutContent({ children, navItemsConfig }: AppLayoutProps) {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
-  const { t } = useLanguage(); // Get translation function
+  const { t } = useLanguage();
+  const { user, logout, isLoading: authIsLoading } = useAuth(); // Get user and logout from AuthContext
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
 
-  // Translate navigation items
   const navItems: NavItem[] = React.useMemo(() => {
     return navItemsConfig.map(item => ({
       ...item,
-      title: t(item.titleKey), // Translate titleKey to title
+      title: t(item.titleKey),
     }));
   }, [navItemsConfig, t]);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout(); // logout is async in mock, might not be in real one
+    setIsLoggingOut(false);
+    // Navigation to /login is handled by AuthContext
+  };
 
   return (
     <>
@@ -49,13 +59,27 @@ function LayoutContent({ children, navItemsConfig }: AppLayoutProps) { // Change
           )}
         </SidebarHeader>
         <SidebarContent>
-          <SidebarNav navItems={navItems} isCollapsed={isCollapsed} /> {/* Pass translated navItems */}
+          <SidebarNav navItems={navItems} isCollapsed={isCollapsed} />
         </SidebarContent>
         <SidebarFooter>
-          <Button variant="ghost" className={cn("w-full", isCollapsed ? "justify-center" : "justify-start")}>
-            <LogOut className="h-5 w-5" />
-            {!isCollapsed && <span className="ml-2">Log Out</span>}
-          </Button>
+          {authIsLoading ? (
+             <Skeleton className={cn("w-full h-10", isCollapsed ? "mx-auto w-10" : "")} />
+          ) : user ? (
+            <Button 
+              variant="ghost" 
+              className={cn("w-full", isCollapsed ? "justify-center" : "justify-start")}
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <LogOut className="h-5 w-5" />
+              )}
+              {!isCollapsed && !isLoggingOut && <span className="ml-2">Log Out</span>}
+              {!isCollapsed && isLoggingOut && <span className="ml-2">Logging out...</span>}
+            </Button>
+          ) : null }
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="flex flex-col">
@@ -69,10 +93,10 @@ function LayoutContent({ children, navItemsConfig }: AppLayoutProps) { // Change
 }
 
 
-export function AppLayout({ children, navItemsConfig }: AppLayoutProps) { // Changed prop name
+export function AppLayout({ children, navItemsConfig }: AppLayoutProps) {
   return (
     <SidebarProvider defaultOpen={true}>
-      <LayoutContent navItemsConfig={navItemsConfig}> {/* Changed prop name */}
+      <LayoutContent navItemsConfig={navItemsConfig}>
         {children}
       </LayoutContent>
     </SidebarProvider>

@@ -3,7 +3,8 @@ import type {Metadata, Viewport} from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
-import { LanguageProvider } from '@/context/LanguageContext'; // Added LanguageProvider
+import { LanguageProvider } from '@/context/LanguageContext';
+import { AuthProvider } from '@/contexts/AuthContext'; // Added AuthProvider
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,13 +37,15 @@ export default function RootLayout({
     <html lang="en" className="h-full">
       <head>
         {/* Recommended for PWA: Apple touch icon */}
-        <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" />
+        <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
-        <LanguageProvider> {/* Added LanguageProvider */}
-          {children}
-          <Toaster />
-        </LanguageProvider>
+        <AuthProvider> {/* Added AuthProvider */}
+          <LanguageProvider>
+            {children}
+            <Toaster />
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );
