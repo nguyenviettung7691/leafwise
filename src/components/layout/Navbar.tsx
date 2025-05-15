@@ -2,21 +2,31 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation'; // Added useRouter
+import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { UserCircle, Settings, LogIn, LogOut, Loader2 } from 'lucide-react'; // Added LogOut, Loader2
+import { Settings, LogIn, LogOut, Loader2 } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { APP_NAV_CONFIG } from '@/lib/constants'; // Import nav config
-import { useLanguage } from '@/context/LanguageContext'; // Import useLanguage
+import { APP_NAV_CONFIG } from '@/lib/constants';
+import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/lib/utils';
-import React from 'react'; // Added React for useState and useMemo
+import React from 'react';
+
+// Helper function to determine if a nav item should be active
+const isActive = (itemHref: string, currentPathname: string): boolean => {
+  if (itemHref === '/') {
+    // "My Plants" is active on the homepage or any /plants/... sub-route
+    return currentPathname === '/' || currentPathname.startsWith('/plants');
+  }
+  // Other items are active if the current path starts with their href
+  return currentPathname.startsWith(itemHref);
+};
 
 export function Navbar() {
-  const { user, logout, isLoading: authIsLoading } = useAuth(); // Renamed isLoading to authIsLoading for clarity
+  const { user, logout, isLoading: authIsLoading } = useAuth();
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const pathname = usePathname();
   const { t } = useLanguage();
@@ -32,15 +42,17 @@ export function Navbar() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     await logout();
-    // Navigation to /login is handled by AuthContext or router can be used here if needed
     setIsLoggingOut(false);
-    router.push('/login'); // Ensure redirection
+    router.push('/login');
   };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between p-4 sm:p-6 lg:p-8">
-        <div className="flex items-center gap-4"> {/* Increased gap */}
+      {/* The container class handles max-width, centering, and its own padding.
+          justify-between pushes the immediate children (left group and right group) apart. */}
+      <div className="container flex h-16 items-center justify-between">
+        {/* Left Group: Logo and Navigation Links */}
+        <div className="flex items-center gap-x-6"> {/* Increased gap for visual separation */}
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
@@ -50,7 +62,7 @@ export function Navbar() {
                 asChild
                 className={cn(
                   "transition-colors h-9 px-3",
-                  (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)))
+                  isActive(item.href, pathname) // Use the isActive helper
                     ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 )}
@@ -65,12 +77,13 @@ export function Navbar() {
           </nav>
         </div>
         
-        {/* Mobile Nav Trigger (placeholder for potential future dropdown) */}
+        {/* Mobile Nav Trigger (Placeholder for future dropdown/sheet menu) */}
         <div className="md:hidden">
-           {/* Can add a dropdown menu trigger here for mobile */}
+           {/* Example: <SheetTrigger asChild><Button variant="ghost" size="icon"><Menu /></Button></SheetTrigger> */}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Right Group: User Actions */}
+        <div className="flex items-center gap-2"> {/* Slightly reduced gap for icon group compactness */}
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
@@ -87,7 +100,7 @@ export function Navbar() {
                 </Avatar>
               </Link>
               <Link href="/settings" passHref>
-                <Button variant="ghost" size="icon" aria-label="Settings">
+                <Button variant="ghost" size="icon" aria-label={t('nav.settings')}>
                   <Settings className="h-5 w-5" />
                 </Button>
               </Link>
@@ -96,7 +109,7 @@ export function Navbar() {
                 size="icon"
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                aria-label="Log Out"
+                aria-label="Log Out" // Consider adding to locales if multi-language for this exact string is needed
               >
                 {isLoggingOut ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -109,7 +122,8 @@ export function Navbar() {
             <Link href="/login" passHref>
               <Button variant="ghost">
                 <LogIn className="h-5 w-5 mr-2" />
-                Sign In
+                {/* Consider translating "Sign In" if it's in your locale files */}
+                Sign In 
               </Button>
             </Link>
           )}
