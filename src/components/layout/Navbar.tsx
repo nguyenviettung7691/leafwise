@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, LogOut, Loader2, UserCircle, Languages, Menu } from 'lucide-react';
+import { Settings, LogIn, Menu, Palette } from 'lucide-react'; // Removed LogOut, Loader2, UserCircle. Added Palette
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,26 +21,28 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter, // Added DialogFooter
+  DialogClose, // Added DialogClose
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch'; // Added Switch
+import { useTheme } from 'next-themes'; // Added useTheme
 
 // Helper function to determine if a nav item should be active
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
-    // "My Plants" is active on the homepage or any /plants/... sub-route
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
-  // Other items are active if the current path starts with their href
   return currentPathname.startsWith(itemHref);
 };
 
 export function Navbar() {
-  const { user, isLoading: authIsLoading } = useAuth(); // Removed logout from here
+  const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
-  const router = useRouter();
+  const { theme, setTheme } = useTheme(); // For Dark Mode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const navItems: NavItem[] = React.useMemo(() => {
@@ -77,7 +79,6 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Left Group: Logo and Navigation Links */}
         <div className="flex items-center gap-x-2 sm:gap-x-6">
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
@@ -85,7 +86,6 @@ export function Navbar() {
           </nav>
         </div>
 
-        {/* Mobile Nav Trigger (Hamburger Menu) */}
         <div className="md:hidden">
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
@@ -105,7 +105,6 @@ export function Navbar() {
           </Sheet>
         </div>
 
-        {/* Right Group: User Actions */}
         <div className="flex items-center gap-2">
           {authIsLoading ? (
             <>
@@ -142,6 +141,21 @@ export function Navbar() {
                   <div className="space-y-6 py-4">
                     <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                       <div className="flex items-center gap-3 mb-2">
+                        <Palette className="h-5 w-5 text-primary" />
+                        <Label htmlFor="themePreference-dialog" className="text-base font-medium">
+                          Dark Mode
+                        </Label>
+                      </div>
+                      <Switch
+                        id="themePreference-dialog"
+                        checked={theme === 'dark'}
+                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                        aria-label="Toggle dark mode"
+                        disabled={authIsLoading}
+                      />
+                    </div>
+                    <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+                      <div className="flex items-center gap-3 mb-2">
                         <Languages className="h-5 w-5 text-primary" />
                         <Label htmlFor="language-select-dialog" className="text-base font-medium">
                           {t('settings.language')}
@@ -164,9 +178,15 @@ export function Navbar() {
                       />
                     </div>
                   </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                        Close
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
-              {/* Logout button removed from here */}
             </>
           ) : (
             <Link href="/login" passHref>

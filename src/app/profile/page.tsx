@@ -9,20 +9,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Palette, Smartphone, Camera, LogOut, Loader2 as AuthLoader } from 'lucide-react'; // Renamed Loader2 to AuthLoader
+import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader } from 'lucide-react';
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from 'next-themes';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation'; // For redirecting after logout
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
-  const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -34,7 +42,6 @@ export default function ProfilePage() {
 
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     if (authUser) {
@@ -118,11 +125,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
-    // AuthContext's logout already handles navigation, but good to be explicit if needed.
-    // router.push('/login'); // This might be redundant if AuthContext handles it.
     setIsLoggingOut(false);
   };
 
@@ -274,19 +279,7 @@ export default function ProfilePage() {
                 disabled={authLoading || isLoggingOut}
               />
             </div>
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
-               <div className='flex items-center gap-3'>
-                <Palette className="h-5 w-5 text-primary" />
-                <Label htmlFor="themePreference" className="text-base">Dark Mode</Label>
-              </div>
-              <Switch
-                id="themePreference"
-                checked={theme === 'dark'}
-                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                aria-label="Toggle dark mode"
-                disabled={authLoading || isLoggingOut}
-              />
-            </div>
+            {/* Dark Mode switch removed from here */}
           </CardContent>
            <CardFooter className="pt-6 border-t">
             <p className="text-xs text-muted-foreground">Profile changes and preferences are mock-saved to local storage.</p>
@@ -300,15 +293,33 @@ export default function ProfilePage() {
                 <CardTitle className="text-xl">Account Actions</CardTitle>
             </CardHeader>
             <CardContent>
-                <Button
-                    variant="destructive"
-                    className="w-full sm:w-auto"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut || authLoading}
-                >
-                    {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
-                    {isLoggingOut ? 'Logging out...' : 'Log Out'}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                        variant="destructive"
+                        className="w-full sm:w-auto"
+                        disabled={isLoggingOut || authLoading}
+                    >
+                        {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+                        {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You will be returned to the login page.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut} className="bg-destructive hover:bg-destructive/90">
+                        {isLoggingOut ? <AuthLoader className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Log Out
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
             </CardContent>
         </Card>
 
