@@ -25,6 +25,7 @@ import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-
 import { Input } from '@/components/ui/input';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
+import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -250,9 +251,32 @@ export default function PlantDetailPage() {
     setTimeout(() => setSelectedGridPhoto(null), 300); // Delay clearing to allow fade-out
   };
 
+  const calculateNextDueDate = (frequency: string): string | undefined => {
+    const now = new Date();
+    if (frequency === 'Ad-hoc') return undefined;
+    if (frequency === 'Daily') return addDays(now, 1).toISOString();
+    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
+    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
+    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
+  
+    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/);
+    if (everyXMatch) {
+      const value = parseInt(everyXMatch[1], 10);
+      const unit = everyXMatch[2];
+      if (unit === 'Days') return addDays(now, value).toISOString();
+      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
+      if (unit === 'Months') return addMonths(now, value).toISOString();
+    }
+    // For unrecognized or complex frequencies, return undefined for prototype
+    console.warn(`Next due date calculation not implemented for frequency: ${frequency}`);
+    return undefined; 
+  };
+
   const handleSaveNewTask = (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
+
+    const calculatedNextDueDate = calculateNextDueDate(taskData.frequency);
 
     const newTask: CareTask = {
         id: `ct-${plant.id}-${Date.now()}`,
@@ -262,7 +286,7 @@ export default function PlantDetailPage() {
         timeOfDay: taskData.timeOfDay,
         level: taskData.level,
         isPaused: false,
-        // nextDueDate: could be calculated here based on frequency
+        nextDueDate: calculatedNextDueDate,
     };
 
     // Simulate API call
@@ -647,3 +671,5 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
