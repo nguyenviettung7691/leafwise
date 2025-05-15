@@ -94,8 +94,7 @@ export default function PlantDetailPage() {
 
   const handleToggleTaskPause = async (taskId: string) => {
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-
+    
     let taskNameForToast = '';
     let wasPausedBeforeUpdate: boolean | undefined = undefined;
 
@@ -106,6 +105,9 @@ export default function PlantDetailPage() {
         wasPausedBeforeUpdate = taskBeingToggled.isPaused;
       }
     }
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
@@ -329,7 +331,7 @@ export default function PlantDetailPage() {
             <div className="flex justify-between items-start">
                 <div>
                     <Badge variant="outline" className={`capitalize mt-1 ${healthConditionStyles[plant.healthCondition]}`}>
-                        {plant.healthCondition.replace('_', ' ')} (Overall)
+                        {plant.healthCondition.replace('_', ' ')}
                     </Badge>
                 </div>
                 <div className="flex gap-2">
