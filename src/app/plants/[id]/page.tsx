@@ -17,14 +17,16 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
-import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView'; // New import
-import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History } from 'lucide-react';
-import { useEffect, useState, useRef } from 'react';
+import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
+import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History, TrendingUp } from 'lucide-react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { LineChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -39,6 +41,19 @@ const healthConditionRingStyles: Record<PlantHealthCondition, string> = {
   needs_attention: 'ring-yellow-500',
   sick: 'ring-red-500',
   unknown: 'ring-gray-500',
+};
+
+const healthScoreMapping: Record<PlantHealthCondition, number> = {
+  unknown: 0,
+  sick: 1,
+  needs_attention: 2,
+  healthy: 3,
+};
+const healthScoreLabels: Record<number, string> = {
+  0: 'Unknown',
+  1: 'Sick',
+  2: 'Needs Attention',
+  3: 'Healthy',
 };
 
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
@@ -151,12 +166,11 @@ export default function PlantDetailPage() {
       return { ...prevPlant, careTasks: updatedTasks };
     });
     
+    setLoadingTaskId(null);
     if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
       const isNowPaused = !wasPausedBeforeUpdate; 
       toast({ title: "Task Updated", description: `Task "${taskNameForToast}" has been ${isNowPaused ? "paused" : "resumed"}.`});
     }
-    
-    setLoadingTaskId(null);
   };
 
   const handleEditPlant = () => {
@@ -317,7 +331,7 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: calculateNextDueDate(taskData.frequency), // Recalculate next due date on edit
+          nextDueDate: calculateNextDueDate(taskData.frequency), 
         } : t
       );
       setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
@@ -357,7 +371,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); // Ensure no initial data for new task
+    setInitialTaskFormData(undefined); 
     setIsTaskFormDialogOpen(true);
   };
 
@@ -391,15 +405,32 @@ export default function PlantDetailPage() {
     setTaskIdToDelete(null);
   };
 
-  // Handler for editing task from calendar
   const handleSelectTaskFromCalendarForEdit = (task: CareTask) => {
     openEditTaskDialog(task);
   };
   
-  // Handler for deleting task from calendar
   const handleSelectTaskFromCalendarForDelete = (taskId: string) => {
     handleOpenDeleteTaskConfirmDialog(taskId);
   };
+
+  const chartData = useMemo(() => {
+    if (!plant || !plant.photos || plant.photos.length < 1) return [];
+    return plant.photos
+      .map(photo => ({
+        date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
+        originalDate: parseISO(photo.dateTaken),
+        health: healthScoreMapping[photo.healthCondition],
+        healthLabel: photo.healthCondition.replace(/_/g, ' '),
+      }))
+      .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
+  }, [plant]);
+
+  const chartConfig = {
+    health: {
+      label: 'Health Status',
+      color: 'hsl(var(--primary))',
+    },
+  } satisfies ChartConfig;
 
 
   if (isLoadingPage) {
@@ -635,7 +666,6 @@ export default function PlantDetailPage() {
                     {isManagingCarePlan ? "No care tasks defined yet. Click 'Add Task' to get started." : "No care tasks defined yet. Click 'Manage' to add tasks."}
                  </p>
               )}
-               {/* Weekly Calendar View */}
                 {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
                   <WeeklyCareCalendarView
                     tasks={plant.careTasks}
@@ -676,6 +706,73 @@ export default function PlantDetailPage() {
                   onChange={handleGrowthPhotoFileChange}
                 />
               </div>
+
+              {chartData.length > 0 && (
+                <div className="mt-4 mb-6 pt-4 border-t">
+                  <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Health Trend
+                  </h4>
+                  {chartData.length < 2 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Add at least one more photo with diagnosis to see a health trend.
+                    </p>
+                  ) : (
+                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                      <LineChart
+                        accessibilityLayer
+                        data={chartData}
+                        margin={{ top: 5, right: 10, left: -25, bottom: 5 }}
+                      >
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="date"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => value.slice(0, 6)} // Shorten date for X-axis
+                        />
+                        <YAxis
+                          domain={[0, 3]}
+                          ticks={[0, 1, 2, 3]}
+                          tickFormatter={(value) => healthScoreLabels[value] || ''}
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          width={100}
+                        />
+                        <RechartsTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent 
+                            indicator="dot" 
+                            labelKey="date"
+                            formatter={(value, name, props) => (
+                                <div className="text-sm">
+                                    <p className="font-medium text-foreground">{props.payload.date}</p>
+                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload.healthLabel}</span></p>
+                                </div>
+                            )}
+                          />}
+                        />
+                        <Line
+                          dataKey="health"
+                          type="monotone"
+                          stroke="var(--color-health)"
+                          strokeWidth={2}
+                          dot={{
+                            fill: "var(--color-health)",
+                            r: 4,
+                          }}
+                          activeDot={{
+                            r: 6,
+                          }}
+                        />
+                      </LineChart>
+                    </ChartContainer>
+                  )}
+                </div>
+              )}
+
               {plant.photos && plant.photos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {plant.photos.map((photo) => (
@@ -818,8 +915,8 @@ export default function PlantDetailPage() {
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
-                setTaskToEdit(null); // Reset taskToEdit when dialog closes
-                setInitialTaskFormData(undefined); // Clear initial data
+                setTaskToEdit(null); 
+                setInitialTaskFormData(undefined); 
             }
         }}>
             <DialogContent className="sm:max-w-lg">
@@ -838,8 +935,8 @@ export default function PlantDetailPage() {
                         setInitialTaskFormData(undefined);
                     }}
                     isLoading={isSavingTask}
-                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'} // Prop for form title
-                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'} // Prop for submit button text
+                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'} 
+                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'} 
                 />
             </DialogContent>
         </Dialog>
@@ -866,3 +963,4 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
