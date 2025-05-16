@@ -95,24 +95,14 @@ body {
       -ms-transform: rotate(3deg) translate(0px, -4px);
           transform: rotate(3deg) translate(0px, -4px);
 }
+
+/* Ensure spinner is hidden if NProgress.configure isn't enough or has timing issues */
 #nprogress .spinner {
-  display: block;
-  position: fixed;
-  z-index: 1031;
-  top: 15px;
-  right: 15px;
+  display: none !important;
 }
-#nprogress .spinner-icon {
-  width: 18px;
-  height: 18px;
-  box-sizing: border-box;
-  border: solid 2px transparent;
-  border-top-color: hsl(var(--primary)); /* Use primary color */
-  border-left-color: hsl(var(--primary)); /* Use primary color */
-  border-radius: 50%;
-  -webkit-animation: nprogress-spinner 400ms linear infinite;
-          animation: nprogress-spinner 400ms linear infinite;
-}
+
+/* Default NProgress spinner animation - commented out as spinner is hidden */
+/*
 .nprogress-custom-parent {
   overflow: hidden;
   position: relative;
@@ -129,3 +119,4 @@ body {
   0%   { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+*/
