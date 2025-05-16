@@ -417,6 +417,7 @@ export default function PlantDetailPage() {
     if (!plant || !plant.photos || plant.photos.length < 1) return [];
     return plant.photos
       .map(photo => ({
+        id: photo.id, // Ensure photo ID is included for click handling
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -431,6 +432,18 @@ export default function PlantDetailPage() {
       color: 'hsl(var(--primary))',
     },
   } satisfies ChartConfig;
+  
+  const handleChartDotClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload.length > 0) {
+      const clickedDotPayload = data.activePayload[0].payload;
+      if (clickedDotPayload && clickedDotPayload.id && plant) {
+        const clickedPhoto = plant.photos.find(p => p.id === clickedDotPayload.id);
+        if (clickedPhoto) {
+          openGridPhotoDialog(clickedPhoto);
+        }
+      }
+    }
+  };
 
 
   if (isLoadingPage) {
@@ -723,6 +736,7 @@ export default function PlantDetailPage() {
                         accessibilityLayer
                         data={chartData}
                         margin={{ top: 5, right: 10, left: -25, bottom: 5 }}
+                        onClick={handleChartDotClick}
                       >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
                         <XAxis
