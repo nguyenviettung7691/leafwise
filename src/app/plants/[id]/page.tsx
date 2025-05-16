@@ -56,29 +56,6 @@ const healthScoreLabels: Record<number, string> = {
   3: 'Healthy',
 };
 
-// For Y-Axis tick label coloring
-const healthTickLabelColors: Record<number, string> = {
-  0: 'text-gray-500 dark:text-gray-400',      // Unknown
-  1: 'text-red-500 dark:text-red-400',        // Sick
-  2: 'text-yellow-500 dark:text-yellow-400',  // Needs Attention
-  3: 'text-green-500 dark:text-green-400',    // Healthy
-};
-
-const CustomizedYAxisTick = (props: any) => {
-  const { x, y, payload } = props;
-  const label = healthScoreLabels[payload.value as number] || '';
-  const colorClass = healthTickLabelColors[payload.value as number] || 'text-muted-foreground';
-
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={4} textAnchor="end" className={cn("text-xs font-medium", colorClass)}>
-        {label}
-      </text>
-    </g>
-  );
-};
-
-
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
   const formData: Partial<CarePlanTaskFormData> = {
     name: task.name,
@@ -777,7 +754,7 @@ export default function PlantDetailPage() {
                           axisLine={false}
                           tickMargin={8}
                           width={100}
-                          tick={<CustomizedYAxisTick />}
+                          tickFormatter={(value) => healthScoreLabels[value as number] || ''}
                         />
                         <RechartsTooltip
                           cursor={false}
