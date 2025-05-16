@@ -6,7 +6,7 @@ import React, { useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ImageUp, Loader2, TrendingUp } from 'lucide-react';
+import { ImageUp, Loader2, TrendingUp, Camera } from 'lucide-react'; // Added Camera
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip } from 'recharts';
@@ -131,7 +131,7 @@ export function PlantGrowthTracker({
               <LineChart
                 accessibilityLayer
                 data={chartData}
-                margin={{ top: 5, right: 10, left: -25, bottom: 5 }}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }} // Adjusted left/right margins
                 onClick={onChartDotClick}
               >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -148,7 +148,7 @@ export function PlantGrowthTracker({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  width={100}
+                  width={100} 
                   tickFormatter={(value) => healthScoreLabels[value as number] || ''}
                 />
                 <RechartsTooltip
@@ -182,38 +182,48 @@ export function PlantGrowthTracker({
           )}
         </div>
       )}
-
-      {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {sortedPhotosForGallery.map((photo) => (
-            <button
-              key={photo.id}
-              className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-              onClick={() => onOpenGridPhotoDialog(photo)}
-              aria-label={`View photo from ${formatDate(photo.dateTaken)}`}
-            >
-              <Image
-                src={photo.url}
-                alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
-                width={200} height={200}
-                className={cn(
-                  "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200 group-hover:ring-2 group-hover:ring-offset-1",
-                  healthConditionRingStyles[photo.healthCondition]
-                )}
-                data-ai-hint="plant growth"
-              />
-              <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md">
-                <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
-                <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                  {photo.healthCondition.replace('_', ' ')}
-                </Badge>
-              </div>
-            </button>
-          ))}
+      
+      {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
+        <div className="mt-4 pt-4 border-t">
+          <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
+            Photo Gallery
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {sortedPhotosForGallery.map((photo) => (
+              <button
+                key={photo.id}
+                className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                onClick={() => onOpenGridPhotoDialog(photo)}
+                aria-label={`View photo from ${formatDate(photo.dateTaken)}`}
+              >
+                <Image
+                  src={photo.url}
+                  alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
+                  width={200} height={200}
+                  className={cn(
+                    "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200 group-hover:ring-2 group-hover:ring-offset-1",
+                    healthConditionRingStyles[photo.healthCondition]
+                  )}
+                  data-ai-hint="plant growth"
+                />
+                <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md">
+                  <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
+                  <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
+                    {photo.healthCondition.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-      ) : (
-        <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
+      )}
+
+      {(!sortedPhotosForGallery || sortedPhotosForGallery.length === 0) && chartData.length === 0 && (
+         <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
       )}
     </div>
   );
 }
+
+    

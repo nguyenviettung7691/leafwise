@@ -18,7 +18,8 @@ import {
   isSameDay,
   parseISO,
   isWithinInterval,
-  getDay 
+  getDay,
+  isSameWeek, // Added for current week check
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -32,13 +33,15 @@ const DEFAULT_HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 7 AM (7) t
 
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(false);
+  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true); // Default to true
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
 
   const currentWeekStart = startOfWeek(currentDate, { weekStartsOn });
   const currentWeekEnd = endOfWeek(currentDate, { weekStartsOn });
   const daysInWeek = eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd });
+
+  const isCurrentActualWeek = isSameWeek(currentDate, new Date(), { weekStartsOn });
 
   const goToPreviousWeek = () => {
     setCurrentDate(subWeeks(currentDate, 1));
@@ -84,7 +87,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
     
-    if (uniqueHoursWithTasks.size === 0) return []; // If filter is on and no timed tasks, show no hour slots
+    if (uniqueHoursWithTasks.size === 0) return []; 
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
   }, [showOnlyHoursWithTasks, tasks, currentWeekStart, currentWeekEnd]);
@@ -98,8 +101,9 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label="Previous week">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium w-40 text-center tabular-nums">
+          <span className="text-sm font-medium w-auto text-center tabular-nums px-2"> {/* Adjusted width to auto and added padding */}
             {format(currentWeekStart, 'MMM d')} - {format(currentWeekEnd, 'MMM d, yyyy')}
+            {isCurrentActualWeek && <span className="text-primary font-semibold"> (Current)</span>}
           </span>
           <Button variant="outline" size="icon" onClick={goToNextWeek} aria-label="Next week">
             <ChevronRight className="h-4 w-4" />
@@ -119,9 +123,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         </div>
 
         <div className="grid grid-cols-[auto_repeat(7,minmax(100px,1fr))] border-t">
-          {/* Time Column Header - Empty for alignment */}
           <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
-          {/* Day Headers */}
           {daysInWeek.map(day => {
             const dayOfWeek = getDay(day); 
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
@@ -137,7 +139,6 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             );
           })}
 
-          {/* Hour Rows */}
           {hoursToDisplay.map(hour => {
             const isDayTime = hour >= 7 && hour < 19; 
             return (
@@ -187,7 +188,6 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             );
           })}
           
-          {/* All Day Tasks Section */}
           <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-14">All Day</div>
           {daysInWeek.map(day => {
              const allDayTasksForDay = getTasksForDay(day).filter(task => !task.timeOfDay || task.timeOfDay.toLowerCase() === 'all day');
@@ -224,3 +224,4 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
   );
 }
 
+    

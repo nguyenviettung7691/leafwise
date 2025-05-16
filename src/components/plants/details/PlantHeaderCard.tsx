@@ -6,12 +6,14 @@ import type { Plant, PlantHealthCondition } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'; // Added Dialog components
+import { Edit, Trash2, Loader2, Expand } from 'lucide-react'; // Added Expand
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import React from 'react'; // Added React for state
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -33,20 +35,45 @@ export function PlantHeaderCard({
   onConfirmDelete,
   isDeleting,
 }: PlantHeaderCardProps) {
+  const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
+
   return (
     <Card className="overflow-hidden shadow-xl">
       <CardHeader className="relative p-0">
-        <div className="aspect-video w-full overflow-hidden bg-muted">
-          <Image
-            src={plant.primaryPhotoUrl || 'https://placehold.co/800x450.png'}
-            alt={plant.commonName}
-            width={800}
-            height={450}
-            className="object-cover w-full h-full"
-            data-ai-hint="plant detail"
-            priority
-          />
-        </div>
+        <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+          <DialogTrigger asChild>
+            <div className="aspect-video w-full overflow-hidden bg-muted cursor-pointer group">
+              <Image
+                src={plant.primaryPhotoUrl || 'https://placehold.co/800x450.png'}
+                alt={plant.commonName}
+                width={800}
+                height={450}
+                className="object-cover w-full h-full"
+                data-ai-hint="plant detail"
+                priority
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Expand className="h-12 w-12 text-white" />
+              </div>
+            </div>
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl p-2 sm:p-4">
+            <DialogHeader className="sr-only">
+              <DialogTitle>{plant.commonName} - Full Size</DialogTitle>
+            </DialogHeader>
+            <Image
+              src={plant.primaryPhotoUrl || 'https://placehold.co/1200x675.png'}
+              alt={`${plant.commonName} - full size`}
+              width={1200}
+              height={675}
+              className="rounded-md object-contain max-h-[80vh] w-full"
+              data-ai-hint="plant detail"
+            />
+            <DialogClose asChild>
+              <Button variant="outline" className="absolute top-4 right-4 sm:hidden">Close</Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
         <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
           <CardTitle className="text-3xl font-bold text-white">{plant.commonName}</CardTitle>
           {plant.scientificName && <CardDescription className="text-lg text-gray-200 italic">{plant.scientificName}</CardDescription>}
@@ -92,3 +119,5 @@ export function PlantHeaderCard({
     </Card>
   );
 }
+
+    

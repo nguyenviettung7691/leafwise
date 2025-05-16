@@ -1,29 +1,27 @@
 
 'use client';
 
+import Link from 'next/link'; // Added for Back button
 import { AppLayout } from '@/components/layout/AppLayout';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft } from 'lucide-react'; // Added ChevronLeft
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -41,7 +39,7 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
   const formData: Partial<CarePlanTaskFormData> = {
     name: task.name,
-    description: task.description || '', // Include description
+    description: task.description || '',
     level: task.level,
   };
 
@@ -100,7 +98,6 @@ export default function PlantDetailPage() {
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
   const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
   
-  // Care Task Dialog States
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
   const [initialTaskFormData, setInitialTaskFormData] = useState<CarePlanTaskFormData | undefined>(undefined);
@@ -269,7 +266,7 @@ export default function PlantDetailPage() {
     setPlant(prev => prev ? {...prev, photos: [newPhoto, ...prev.photos]} : null);
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
-        mockPlants[plantIndex].photos.unshift(newPhoto); // Add to beginning for newest first
+        mockPlants[plantIndex].photos.unshift(newPhoto);
     }
 
     toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
@@ -308,47 +305,42 @@ export default function PlantDetailPage() {
   const handleSaveTask = (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
+    let updatedTasks;
 
-    if (taskToEdit) {
-      const updatedTasks = plant.careTasks.map(t => 
+    if (taskToEdit) { // Editing existing task
+      updatedTasks = plant.careTasks.map(t => 
         t.id === taskToEdit.id ? {
           ...t,
           name: taskData.name,
-          description: taskData.description, // Save description
+          description: taskData.description,
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
           nextDueDate: calculateNextDueDate(taskData.frequency), 
         } : t
       );
-      setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
-      
-      const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
-      if (plantIndex !== -1) {
-          mockPlants[plantIndex].careTasks = updatedTasks;
-      }
       toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
-
-    } else {
-      const calculatedNextDueDate = calculateNextDueDate(taskData.frequency);
+    } else { // Adding new task
       const newTask: CareTask = {
-          id: `ct-${plant.id}-${Date.now()}`,
+          id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           plantId: plant.id,
           name: taskData.name,
-          description: taskData.description, // Save description
+          description: taskData.description,
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
           isPaused: false,
-          nextDueDate: calculatedNextDueDate,
+          nextDueDate: calculateNextDueDate(taskData.frequency),
       };
-      setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: [...prevPlant.careTasks, newTask] } : null);
-
-      const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
-      if (plantIndex !== -1) {
-          mockPlants[plantIndex].careTasks.push(newTask);
-      }
+      updatedTasks = [...plant.careTasks, newTask];
       toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
+    }
+
+    setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
+    
+    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
+    if (plantIndex !== -1) {
+        mockPlants[plantIndex].careTasks = updatedTasks;
     }
 
     setIsSavingTask(false);
@@ -435,6 +427,15 @@ export default function PlantDetailPage() {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
+        <div className="mb-4">
+            <Link href="/" passHref>
+                <Button variant="outline" size="sm">
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Back to My Plants
+                </Button>
+            </Link>
+        </div>
+
         <PlantHeaderCard
           plant={plant}
           onEditPlant={handleEditPlant}
@@ -442,39 +443,32 @@ export default function PlantDetailPage() {
           isDeleting={isDeleting}
         />
 
-        <Card className="shadow-xl">
-          <CardContent className="p-6 space-y-6">
-            <PlantInformationGrid plant={plant} />
-            <Separator />
-            <PlantCareManagement
-              plant={plant}
-              loadingTaskId={loadingTaskId}
-              onToggleTaskPause={handleToggleTaskPause}
-              onOpenEditTaskDialog={openEditTaskDialog}
-              onOpenDeleteTaskDialog={handleOpenDeleteTaskConfirmDialog}
-              onOpenAddTaskDialog={openAddTaskDialog}
-            />
-            <Separator />
-            <PlantGrowthTracker
-              plant={plant}
-              onOpenGridPhotoDialog={openGridPhotoDialog}
-              onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
-              isDiagnosingNewPhoto={isDiagnosingNewPhoto}
-              growthPhotoInputRef={growthPhotoInputRef}
-              onChartDotClick={handleChartDotClick}
-            />
-            <input
-              type="file"
-              ref={growthPhotoInputRef}
-              className="hidden"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleGrowthPhotoFileChange}
-            />
-          </CardContent>
-          <CardFooter className="p-6 bg-muted/30 border-t">
-             <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
-          </CardFooter>
-        </Card>
+        <PlantInformationGrid plant={plant} />
+        
+        <PlantCareManagement
+          plant={plant}
+          loadingTaskId={loadingTaskId}
+          onToggleTaskPause={handleToggleTaskPause}
+          onOpenEditTaskDialog={openEditTaskDialog}
+          onOpenDeleteTaskDialog={handleOpenDeleteTaskConfirmDialog}
+          onOpenAddTaskDialog={openAddTaskDialog}
+        />
+        
+        <PlantGrowthTracker
+          plant={plant}
+          onOpenGridPhotoDialog={openGridPhotoDialog}
+          onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
+          isDiagnosingNewPhoto={isDiagnosingNewPhoto}
+          growthPhotoInputRef={growthPhotoInputRef}
+          onChartDotClick={handleChartDotClick}
+        />
+        <input
+          type="file"
+          ref={growthPhotoInputRef}
+          className="hidden"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handleGrowthPhotoFileChange}
+        />
 
         {/* Dialog for New Photo Analysis */}
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
@@ -624,8 +618,14 @@ export default function PlantDetailPage() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
-
+        
+        <div className="mt-6 border-t pt-4">
+             <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
+          </div>
       </div>
     </AppLayout>
   );
 }
+
+
+    
