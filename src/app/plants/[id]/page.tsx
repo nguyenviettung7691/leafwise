@@ -284,7 +284,7 @@ export default function PlantDetailPage() {
     setPlant(prev => prev ? {...prev, photos: [newPhoto, ...prev.photos]} : null);
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
-        mockPlants[plantIndex].photos.unshift(newPhoto);
+        mockPlants[plantIndex].photos.unshift(newPhoto); // Add to beginning for newest first
     }
 
     toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
@@ -416,9 +416,9 @@ export default function PlantDetailPage() {
 
   const chartData = useMemo(() => {
     if (!plant || !plant.photos || plant.photos.length < 1) return [];
-    return plant.photos
+    return [...plant.photos] // Create a shallow copy to sort for the chart
       .map(photo => ({
-        id: photo.id, // Ensure photo ID is included for click handling
+        id: photo.id,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -426,6 +426,12 @@ export default function PlantDetailPage() {
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
   }, [plant]);
+
+  const sortedPhotosForGallery = useMemo(() => {
+    if (!plant || !plant.photos) return [];
+    return [...plant.photos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
+  }, [plant]);
+
 
   const chartConfig = {
     health: {
@@ -788,9 +794,9 @@ export default function PlantDetailPage() {
                 </div>
               )}
 
-              {plant.photos && plant.photos.length > 0 ? (
+              {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {plant.photos.map((photo) => (
+                  {sortedPhotosForGallery.map((photo) => (
                     <button
                         key={photo.id}
                         className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
