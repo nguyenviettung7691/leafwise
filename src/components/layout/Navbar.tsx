@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, Menu, Palette } from 'lucide-react'; // Removed LogOut, Loader2, UserCircle. Added Palette
+import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react'; // Added Languages
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
