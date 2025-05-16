@@ -15,6 +15,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge'; // Added import for Badge
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
@@ -305,10 +306,12 @@ export default function PlantDetailPage() {
   const handleSaveTask = (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
+    
     let updatedTasks;
+    const baseTasks = plant.careTasks ? [...plant.careTasks] : []; // Ensure baseTasks is always an array
 
     if (taskToEdit) { // Editing existing task
-      updatedTasks = plant.careTasks.map(t => 
+      updatedTasks = baseTasks.map(t => 
         t.id === taskToEdit.id ? {
           ...t,
           name: taskData.name,
@@ -332,7 +335,7 @@ export default function PlantDetailPage() {
           isPaused: false,
           nextDueDate: calculateNextDueDate(taskData.frequency),
       };
-      updatedTasks = [...plant.careTasks, newTask];
+      updatedTasks = [...baseTasks, newTask];
       toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
 
@@ -629,3 +632,4 @@ export default function PlantDetailPage() {
 
 
     
+
