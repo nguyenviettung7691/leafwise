@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Sun, Moon } from 'lucide-react'; // Added Sun, Moon
 import {
   format,
   startOfWeek,
@@ -83,7 +83,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
     
-    if (uniqueHoursWithTasks.size === 0) return []; // Show no hour rows if no timed tasks for the week
+    if (uniqueHoursWithTasks.size === 0) return [];
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
   }, [showOnlyHoursWithTasks, tasks, currentWeekStart, currentWeekEnd]);
@@ -117,9 +117,9 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           </Label>
         </div>
 
-        <div className="grid grid-cols-[60px_repeat(7,minmax(100px,1fr))] border-t">
+        <div className="grid grid-cols-[auto_repeat(7,minmax(100px,1fr))] border-t"> {/* Changed first col width to auto */}
           {/* Time Column Header - Empty for alignment */}
-          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center">Time</div>
+          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px]">Time</div> {/* Added min-width */}
           {/* Day Headers */}
           {daysInWeek.map(day => (
             <div key={day.toISOString()} className="p-2 border-r border-b text-center text-xs font-semibold">
@@ -129,51 +129,57 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           ))}
 
           {/* Hour Rows */}
-          {hoursToDisplay.map(hour => (
-            <React.Fragment key={hour}>
-              <div className="p-1 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center">
-                {format(new Date(0,0,0,hour), 'ha')}
-              </div>
-              {daysInWeek.map(day => {
-                const tasksForThisHour = getTasksForDay(day).filter(task => {
-                    if (!task.timeOfDay || task.timeOfDay.toLowerCase() === 'all day') return false;
-                    try {
-                        const taskHour = parseInt(task.timeOfDay.split(':')[0], 10);
-                        return taskHour === hour;
-                    } catch { return false; }
-                });
-                return (
-                  <div key={`${day.toISOString()}-hour-${hour}`} className="p-0.5 border-r border-b min-h-[3.5rem] relative text-[10px] leading-tight space-y-0.5">
-                    {tasksForThisHour.map(task => (
-                      <div
-                        key={task.id}
-                        className={cn(
-                          "p-1 rounded text-white hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px]",
-                          task.level === 'advanced' ? "bg-accent" : "bg-primary"
-                        )}
-                        onClick={() => onEditTask(task)}
-                        title={`${task.name} (${task.timeOfDay}) - Edit`}
-                      >
-                         <span className="font-semibold">{task.name}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent"
-                            onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id);}}
-                            aria-label="Delete task"
-                          >
-                            <Trash2 className="h-2.5 w-2.5 text-destructive-foreground dark:text-destructive-foreground" />
-                          </Button>
-                      </div>
-                    ))}
+          {hoursToDisplay.map(hour => {
+            const isDayTime = hour >= 7 && hour < 19; // 7 AM to 6 PM is considered daytime
+            return (
+              <React.Fragment key={hour}>
+                <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center min-w-[70px]"> {/* Added min-width */}
+                  <div className="flex items-center gap-1">
+                    <span>{format(new Date(0, 0, 0, hour), 'ha')}</span>
+                    {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
                   </div>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                </div>
+                {daysInWeek.map(day => {
+                  const tasksForThisHour = getTasksForDay(day).filter(task => {
+                      if (!task.timeOfDay || task.timeOfDay.toLowerCase() === 'all day') return false;
+                      try {
+                          const taskHour = parseInt(task.timeOfDay.split(':')[0], 10);
+                          return taskHour === hour;
+                      } catch { return false; }
+                  });
+                  return (
+                    <div key={`${day.toISOString()}-hour-${hour}`} className="p-0.5 border-r border-b min-h-[3.5rem] relative text-[10px] leading-tight space-y-0.5">
+                      {tasksForThisHour.map(task => (
+                        <div
+                          key={task.id}
+                          className={cn(
+                            "p-1 rounded text-white hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px]",
+                            task.level === 'advanced' ? "bg-accent" : "bg-primary"
+                          )}
+                          onClick={() => onEditTask(task)}
+                          title={`${task.name} (${task.timeOfDay}) - Edit`}
+                        >
+                           <span className="font-semibold">{task.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent"
+                              onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id);}}
+                              aria-label="Delete task"
+                            >
+                              <Trash2 className="h-2.5 w-2.5 text-destructive-foreground dark:text-destructive-foreground" />
+                            </Button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
           
           {/* All Day Tasks Section */}
-          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center">All Day</div>
+          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px]">All Day</div> {/* Added min-width */}
           {daysInWeek.map(day => {
              const allDayTasksForDay = getTasksForDay(day).filter(task => !task.timeOfDay || task.timeOfDay.toLowerCase() === 'all day');
              return (
