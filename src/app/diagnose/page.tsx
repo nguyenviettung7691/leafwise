@@ -9,11 +9,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
-import type { PlantFormData } from '@/types';
+import type { PlantFormData, Plant } from '@/types'; // Added Plant
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDisplay';
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
-import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm'; // New import
+import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
+import { mockPlants } from '@/lib/mock-data'; // Added for saving
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -27,7 +28,8 @@ export default function DiagnosePlantPage() {
   const [isSavingPlant, setIsSavingPlant] = useState(false);
   const [plantSaved, setPlantSaved] = useState(false);
 
-  const [showCarePlanGeneratorSection, setShowCarePlanGeneratorSection] = useState(false);
+  // showCarePlanGeneratorSection state is removed
+  // const [showCarePlanGeneratorSection, setShowCarePlanGeneratorSection] = useState(false); 
   const [carePlanMode, setCarePlanMode] = useState<'basic' | 'advanced'>('basic');
   const [locationClimate, setLocationClimate] = useState('');
   const [isLoadingCarePlan, setIsLoadingCarePlan] = useState(false);
@@ -46,7 +48,7 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setShowCarePlanGeneratorSection(false);
+    // setShowCarePlanGeneratorSection(false); // Removed
     setCarePlanResult(null);
     setCarePlanError(null);
     setLocationClimate('');
@@ -61,9 +63,8 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setShowCarePlanGeneratorSection(false);
+    // setShowCarePlanGeneratorSection(false); // Removed
     setCarePlanError(null);
-    // Description is NOT cleared, file and previewUrl ARE cleared if no file is selected
 
     const selectedFile = event.target.files?.[0];
 
@@ -105,7 +106,7 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setDiagnosisResult(null);
     setCarePlanResult(null);
-    setShowCarePlanGeneratorSection(false);
+    // setShowCarePlanGeneratorSection(false); // Removed
     setShowSavePlantForm(false);
     setPlantSaved(false);
 
@@ -130,11 +131,8 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
       });
 
-      // Show care plan generator if it's a plant but not identifiable enough to save directly
-      // or if it's identifiable and the user might want to skip saving
-      if (result.identification.isPlant) {
-        setShowCarePlanGeneratorSection(true);
-      }
+      // Removed logic that set setShowCarePlanGeneratorSection(true) here
+      // The care plan generator will now only show if plantSaved is true.
 
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
@@ -148,14 +146,60 @@ export default function DiagnosePlantPage() {
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
     console.log("Saving plant data (simulated):", data);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Simulate a short delay for saving
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newPlantId = `mock-plant-${Date.now()}`;
+    let newPhotoUrl: string | undefined = undefined;
+
+    if (data.primaryPhoto && data.primaryPhoto[0]) {
+      const file = data.primaryPhoto[0];
+      newPhotoUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = (error) => {
+          console.error("Error reading file for data URL:", error);
+          resolve(undefined); 
+        }
+        reader.readAsDataURL(file);
+      });
+    } else if (data.diagnosedPhotoDataUrl) {
+      newPhotoUrl = data.diagnosedPhotoDataUrl;
+    }
+    
+    const newPlant: Plant = {
+      id: newPlantId,
+      commonName: data.commonName,
+      scientificName: data.scientificName || undefined,
+      familyCategory: data.familyCategory,
+      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
+      ageEstimateYears: data.ageEstimateYears,
+      healthCondition: data.healthCondition,
+      location: data.location || undefined,
+      customNotes: data.customNotes || undefined,
+      primaryPhotoUrl: newPhotoUrl || `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName)}`,
+      photos: newPhotoUrl ? [{
+        id: `p-${newPlantId}-initial-${Date.now()}`,
+        url: newPhotoUrl,
+        dateTaken: new Date().toISOString(),
+        healthCondition: data.healthCondition,
+        diagnosisNotes: 'Initial diagnosis when saved from diagnose page.',
+      }] : [],
+      careTasks: [],
+      plantingDate: new Date().toISOString(),
+      lastCaredDate: undefined, // New plants won't have a last cared date initially
+    };
+
+    mockPlants.unshift(newPlant);
+
     toast({
       title: "Plant Saved!",
       description: `${data.commonName} has been (simulated) saved to My Plants.`,
     });
     setPlantSaved(true);
     setShowSavePlantForm(false);
-    setShowCarePlanGeneratorSection(true); // Ensure care plan section shows after saving
+    // setShowCarePlanGeneratorSection(true); // Removed
     setIsSavingPlant(false);
   };
 
@@ -201,11 +245,9 @@ export default function DiagnosePlantPage() {
   } : undefined;
 
   // Logic to determine if care plan generator should be visible:
-  // 1. Diagnosis done, it's a plant, and user has saved it.
-  // 2. OR Diagnosis done, it's a plant, (user chose not to save or cannot save because no common name), and not currently showing save form.
+  // Only if diagnosis is done, it's a plant, and the plant has been saved.
   const shouldShowCarePlanGenerator = 
-    diagnosisResult?.identification.isPlant &&
-    (plantSaved || (showCarePlanGeneratorSection && !showSavePlantForm));
+    diagnosisResult?.identification.isPlant && plantSaved;
 
 
   return (
@@ -246,14 +288,12 @@ export default function DiagnosePlantPage() {
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
-              // If it's a plant, and we cancel saving, ensure care plan section is still available
-              if (diagnosisResult?.identification.isPlant) {
-                setShowCarePlanGeneratorSection(true);
-              }
+              // Removed setShowCarePlanGeneratorSection(true)
             }}
             isLoading={isSavingPlant}
             formTitle="Save to My Plants"
             formDescription={`Confirm or update the details for ${diagnosisResult.identification.commonName || 'this plant'} before saving.`}
+            submitButtonText="Save Plant"
           />
         )}
 
