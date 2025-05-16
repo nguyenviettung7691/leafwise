@@ -2,9 +2,11 @@
 'use client';
 
 import type { CareTask } from '@/types';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import {
   format,
@@ -15,6 +17,7 @@ import {
   eachDayOfInterval,
   isSameDay,
   parseISO,
+  isWithinInterval,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -24,8 +27,11 @@ interface WeeklyCareCalendarViewProps {
   onDeleteTask: (taskId: string) => void;
 }
 
+const DEFAULT_HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 7 AM (7) to 11 PM (23)
+
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(false);
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
 
@@ -40,8 +46,6 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
   const goToNextWeek = () => {
     setCurrentDate(addWeeks(currentDate, 1));
   };
-  
-  const hours = Array.from({ length: 17 }, (_, i) => i + 7); // 7 AM (7) to 11 PM (23)
 
   const getTasksForDay = (day: Date) => {
     return tasks.filter(task => {
@@ -54,6 +58,36 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
   };
+
+  const hoursToDisplay = useMemo(() => {
+    if (!showOnlyHoursWithTasks) {
+      return DEFAULT_HOURS;
+    }
+    const tasksThisWeek = tasks.filter(task => {
+      if (!task.nextDueDate || task.isPaused) return false;
+      try {
+        const dueDate = parseISO(task.nextDueDate);
+        return isWithinInterval(dueDate, { start: currentWeekStart, end: currentWeekEnd });
+      } catch {
+        return false;
+      }
+    });
+
+    const uniqueHoursWithTasks = new Set<number>();
+    tasksThisWeek.forEach(task => {
+      if (task.timeOfDay && task.timeOfDay.toLowerCase() !== 'all day' && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
+        try {
+          const taskHour = parseInt(task.timeOfDay.split(':')[0], 10);
+          uniqueHoursWithTasks.add(taskHour);
+        } catch {}
+      }
+    });
+    
+    if (uniqueHoursWithTasks.size === 0) return []; // Show no hour rows if no timed tasks for the week
+    return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
+
+  }, [showOnlyHoursWithTasks, tasks, currentWeekStart, currentWeekEnd]);
+
 
   return (
     <Card className="mt-6 shadow-md">
@@ -72,6 +106,17 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         </div>
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
+        <div className="flex items-center space-x-2 px-4 py-2 border-b">
+          <Checkbox
+            id="show-only-hours-with-tasks"
+            checked={showOnlyHoursWithTasks}
+            onCheckedChange={(checked) => setShowOnlyHoursWithTasks(Boolean(checked))}
+          />
+          <Label htmlFor="show-only-hours-with-tasks" className="text-xs font-normal">
+            Show only time of day with tasks
+          </Label>
+        </div>
+
         <div className="grid grid-cols-[60px_repeat(7,minmax(100px,1fr))] border-t">
           {/* Time Column Header - Empty for alignment */}
           <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center">Time</div>
@@ -84,7 +129,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           ))}
 
           {/* Hour Rows */}
-          {hours.map(hour => (
+          {hoursToDisplay.map(hour => (
             <React.Fragment key={hour}>
               <div className="p-1 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center">
                 {format(new Date(0,0,0,hour), 'ha')}
@@ -163,3 +208,4 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
+
