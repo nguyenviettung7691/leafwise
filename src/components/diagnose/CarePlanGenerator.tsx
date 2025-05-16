@@ -145,14 +145,6 @@ export function CarePlanGenerator({
               <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
             </CardHeader>
             
-            {/* TEMPORARY DEBUGGING: Show raw generatedTasks data */}
-            <details className="mb-4 text-xs bg-slate-100 p-2 rounded dark:bg-slate-800">
-              <summary className="cursor-pointer font-medium">Debug: View Raw AI Task Data</summary>
-              <pre className="mt-2 p-2 border rounded bg-white dark:bg-slate-700 max-h-48 overflow-auto">
-                {JSON.stringify(carePlanResult.generatedTasks, null, 2)}
-              </pre>
-            </details>
-            
             {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
               <div className="space-y-3">
                 {carePlanResult.generatedTasks.map((task, index) => (
@@ -168,10 +160,7 @@ export function CarePlanGenerator({
               <Separator className="my-4" />
               <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
               <div className="space-y-3 text-xs text-muted-foreground">
-                <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                  <CalendarPlus className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{carePlanResult.customizableSchedulesPlaceholder}</p>
-                </div>
+                {/* Removed customizableSchedulesPlaceholder */}
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
                   <p>{carePlanResult.pushNotificationsPlaceholder}</p>
