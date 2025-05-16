@@ -2,7 +2,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthOutput } from '@/types'; // DiagnosePlantHealthOutput for plant name
+import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthOutput, AIGeneratedTask } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,10 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertCircle, ClipboardList, CalendarPlus, Zap, ListChecks, SaveIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import React from 'react'; // Import React for useState
+import React from 'react';
 
 interface CarePlanGeneratorProps {
-  diagnosisResult: DiagnosePlantHealthOutput | null; // To get plant name for the button
+  diagnosisResult: DiagnosePlantHealthOutput | null;
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;
@@ -24,18 +24,22 @@ interface CarePlanGeneratorProps {
   carePlanMode: 'basic' | 'advanced';
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
-  onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void; // New prop
+  onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
 }
 
-const CarePlanDetailItem = ({ title, data }: { title: string; data?: { frequency?: string, amount?: string, details: string } }) => {
-  if (!data || !data.details) return null;
+const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
   return (
-    <div className="mb-3">
-      <h4 className="font-semibold text-md mb-1">{title}</h4>
-      {data.frequency && <p className="text-sm"><strong className="text-muted-foreground">Frequency:</strong> {data.frequency}</p>}
-      {data.amount && <p className="text-sm"><strong className="text-muted-foreground">Amount/Intensity:</strong> {data.amount}</p>}
-      <p className="text-sm text-foreground/90 whitespace-pre-wrap">{data.details}</p>
-    </div>
+    <Card className="bg-muted/50 p-3">
+      <h4 className="font-semibold text-sm flex items-center">
+        {task.taskName}
+        <Badge variant={task.taskLevel === 'advanced' ? 'default' : 'outline'} className="ml-2 capitalize text-xs">
+          {task.taskLevel}
+        </Badge>
+      </h4>
+      {task.taskDescription && <p className="text-xs text-muted-foreground mt-1 mb-1 whitespace-pre-wrap">{task.taskDescription}</p>}
+      <p className="text-xs"><strong className="text-muted-foreground">Frequency:</strong> {task.suggestedFrequency}</p>
+      <p className="text-xs"><strong className="text-muted-foreground">Time:</strong> {task.suggestedTimeOfDay}</p>
+    </Card>
   );
 };
 
@@ -54,12 +58,6 @@ export function CarePlanGenerator({
   const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
   const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
 
-
-  const noAdvancedDetails = carePlanResult && carePlanMode === 'advanced' &&
-    !carePlanResult.soilManagement?.details &&
-    !carePlanResult.pruning?.details &&
-    !carePlanResult.fertilization?.details;
-
   const plantNameForButton = diagnosisResult?.identification.commonName || "this plant";
 
   const handleSaveClick = async () => {
@@ -69,7 +67,6 @@ export function CarePlanGenerator({
         await onSaveCarePlan(carePlanResult);
         setCarePlanEffectivelySaved(true);
       } catch (error) {
-        // Error handling for saving care plan can be added here (e.g., toast)
         console.error("Error saving care plan:", error);
       } finally {
         setIsCarePlanSavedProcessing(false);
@@ -78,10 +75,12 @@ export function CarePlanGenerator({
   };
   
   React.useEffect(() => {
-    // Reset saved state if care plan result changes (e.g., new plan generated)
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
 
+  if (process.env.NODE_ENV === 'development' && carePlanResult) {
+    console.log('CarePlanGenerator received carePlanResult:', JSON.stringify(carePlanResult, null, 2));
+  }
 
   return (
     <Card className="shadow-xl animate-in fade-in-50 mt-6">
@@ -139,37 +138,32 @@ export function CarePlanGenerator({
         {carePlanResult && !isLoadingCarePlan && (
           <div className="mt-6 pt-6 border-t">
             <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-xl flex items-center">
-                <CheckCircle className="text-primary mr-2 h-6 w-6" />
+              <CardTitle className="text-lg flex items-center"> {/* Updated from text-xl */}
+                <CheckCircle className="text-primary mr-2 h-5 w-5" /> {/* Updated from h-6 w-6 */}
                 Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
               </CardTitle>
               <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
             </CardHeader>
-            <div className="space-y-4 text-sm">
-              <div>
-                <h3 className="font-bold text-lg text-primary mb-3">Basic Care Details</h3>
-                <CarePlanDetailItem title="Watering" data={carePlanResult.watering} />
-                <CarePlanDetailItem title="Lighting" data={carePlanResult.lighting} />
-                <div className="mb-3">
-                  <h4 className="font-semibold text-md mb-1">Basic Maintenance</h4>
-                  <p className="text-sm text-foreground/90 whitespace-pre-wrap">{carePlanResult.basicMaintenance}</p>
-                </div>
+            
+            {/* TEMPORARY DEBUGGING: Show raw generatedTasks data */}
+            <details className="mb-4 text-xs bg-slate-100 p-2 rounded dark:bg-slate-800">
+              <summary className="cursor-pointer font-medium">Debug: View Raw AI Task Data</summary>
+              <pre className="mt-2 p-2 border rounded bg-white dark:bg-slate-700 max-h-48 overflow-auto">
+                {JSON.stringify(carePlanResult.generatedTasks, null, 2)}
+              </pre>
+            </details>
+            
+            {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
+              <div className="space-y-3">
+                {carePlanResult.generatedTasks.map((task, index) => (
+                  <AIGeneratedTaskItem key={task.taskName + index} task={task} /> // Using a slightly more stable key
+                ))}
               </div>
-
-              {carePlanMode === 'advanced' && (
-                <>
-                  <Separator className="my-4" />
-                  <div>
-                    <h3 className="font-bold text-lg text-primary mb-3">Advanced Care Details</h3>
-                    <CarePlanDetailItem title="Soil Management" data={carePlanResult.soilManagement} />
-                    <CarePlanDetailItem title="Pruning" data={carePlanResult.pruning} />
-                    <CarePlanDetailItem title="Fertilization" data={carePlanResult.fertilization} />
-                    {noAdvancedDetails && (
-                      <p className="text-sm text-muted-foreground mt-2">No specific advanced care details were generated for this plan.</p>
-                    )}
-                  </div>
-                </>
-              )}
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-3 px-2 border border-dashed rounded-md bg-muted/30">
+                No specific tasks were generated by the AI for this plan. You can still save this as an empty plan or try generating again with different options.
+              </p>
+            )}
 
               <Separator className="my-4" />
               <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
@@ -193,7 +187,7 @@ export function CarePlanGenerator({
                   variant={carePlanEffectivelySaved ? "default" : "outline"}
                   className="w-full"
                   onClick={handleSaveClick}
-                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant}
+                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant }
                 >
                   {isCarePlanSavedProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -203,7 +197,6 @@ export function CarePlanGenerator({
                   {carePlanEffectivelySaved ? `Care Plan Saved for ${plantNameForButton}` : `Save Care Plan for ${plantNameForButton}`}
                 </Button>
               </div>
-            </div>
           </div>
         )}
       </CardContent>
@@ -215,3 +208,4 @@ export function CarePlanGenerator({
     </Card>
   );
 }
+
