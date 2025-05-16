@@ -4,7 +4,7 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
-import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan'; 
+import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
 import type { GenerateDetailedCarePlanOutput, AIGeneratedTask } from '@/types'; // Import GenerateDetailedCarePlanOutput from types
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
@@ -17,6 +17,7 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { mockPlants } from '@/lib/mock-data';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns'; // Removed parseISO as it's not used here
+import { Button } from '@/components/ui/button'; // Added missing import
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -48,7 +49,7 @@ export default function DiagnosePlantPage() {
     if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
     if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
     if (frequency === 'Yearly') return addYears(now, 1).toISOString();
-  
+
     // Match "Every X Days/Weeks/Months"
     const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
     if (everyXMatch) {
@@ -62,7 +63,7 @@ export default function DiagnosePlantPage() {
     // For more complex parsing, a more robust library or logic would be needed.
     // For now, if not matched, return undefined.
     console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}". Returning undefined.`);
-    return undefined; 
+    return undefined;
   };
 
   const resetDiagnosisState = () => {
@@ -169,7 +170,7 @@ export default function DiagnosePlantPage() {
         title: "Diagnosis Complete!",
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
       });
-      // No longer set showCarePlanGeneratorSection here. It's controlled by plantSaved.
+      // No longer set showCarePlanGeneratorSection here. It's controlled by plantSaved or other conditions.
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
       setDiagnosisError(errorMessage);
@@ -194,14 +195,14 @@ export default function DiagnosePlantPage() {
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = (error) => {
           console.error("Error reading file for data URL:", error);
-          resolve(undefined); 
+          resolve(undefined);
         }
         reader.readAsDataURL(fileToSave);
       });
     } else if (data.diagnosedPhotoDataUrl) {
       newPhotoUrl = data.diagnosedPhotoDataUrl;
     }
-    
+
     const newPlant: Plant = {
       id: newPlantId,
       commonName: data.commonName,
@@ -279,7 +280,7 @@ export default function DiagnosePlantPage() {
       toast({ title: "Error", description: "Could not find the saved plant.", variant: "destructive" });
       return;
     }
-    
+
     // Defensive check for plan.generatedTasks
     const tasksToMap = Array.isArray(plan.generatedTasks) ? plan.generatedTasks : [];
 
@@ -294,7 +295,7 @@ export default function DiagnosePlantPage() {
       nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency),
       level: aiTask.taskLevel,
     }));
-    
+
     mockPlants[plantIndex].careTasks.push(...newCareTasks);
 
     toast({
@@ -313,8 +314,7 @@ export default function DiagnosePlantPage() {
     diagnosedPhotoDataUrl: previewUrl,
   } : undefined;
 
-  const shouldShowCarePlanGenerator = 
-    diagnosisResult?.identification.isPlant && plantSaved;
+  const shouldShowCarePlanGenerator = diagnosisResult?.identification.isPlant && plantSaved;
 
   return (
     <AppLayout>
@@ -345,7 +345,7 @@ export default function DiagnosePlantPage() {
             onShowSaveForm={() => setShowSavePlantForm(true)}
             plantSaved={plantSaved}
             showSavePlantForm={showSavePlantForm}
-            lastSavedPlantId={lastSavedPlantId} 
+            lastSavedPlantId={lastSavedPlantId}
           />
         )}
 
@@ -374,7 +374,7 @@ export default function DiagnosePlantPage() {
             carePlanMode={carePlanMode}
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
-            onSaveCarePlan={handleSaveCarePlan} 
+            onSaveCarePlan={handleSaveCarePlan}
           />
         )}
          {/* Reset button for full form reset, for testing/convenience */}
