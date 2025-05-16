@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // Added AlertDescription
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
 import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History, TrendingUp } from 'lucide-react';
@@ -55,6 +55,29 @@ const healthScoreLabels: Record<number, string> = {
   2: 'Needs Attention',
   3: 'Healthy',
 };
+
+// For Y-Axis tick label coloring
+const healthTickLabelColors: Record<number, string> = {
+  0: 'text-gray-500 dark:text-gray-400',      // Unknown
+  1: 'text-red-500 dark:text-red-400',        // Sick
+  2: 'text-yellow-500 dark:text-yellow-400',  // Needs Attention
+  3: 'text-green-500 dark:text-green-400',    // Healthy
+};
+
+const CustomizedYAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  const label = healthScoreLabels[payload.value as number] || '';
+  const colorClass = healthTickLabelColors[payload.value as number] || 'text-muted-foreground';
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={4} textAnchor="end" className={cn("text-xs font-medium", colorClass)}>
+        {label}
+      </text>
+    </g>
+  );
+};
+
 
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
   const formData: Partial<CarePlanTaskFormData> = {
@@ -167,6 +190,7 @@ export default function PlantDetailPage() {
     });
     
     setLoadingTaskId(null);
+
     if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
       const isNowPaused = !wasPausedBeforeUpdate; 
       toast({ title: "Task Updated", description: `Task "${taskNameForToast}" has been ${isNowPaused ? "paused" : "resumed"}.`});
@@ -749,11 +773,11 @@ export default function PlantDetailPage() {
                         <YAxis
                           domain={[0, 3]}
                           ticks={[0, 1, 2, 3]}
-                          tickFormatter={(value) => healthScoreLabels[value] || ''}
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
                           width={100}
+                          tick={<CustomizedYAxisTick />}
                         />
                         <RechartsTooltip
                           cursor={false}
@@ -860,7 +884,7 @@ export default function PlantDetailPage() {
                                     <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
                                         <MessageSquareWarning className="h-4 w-4 text-blue-500" />
                                         <AlertTitle>Suggestion: Update Overall Health</AlertTitle>
-                                        <p>The AI suggests updating the plant's overall health status to <Badge variant="outline" className="capitalize">{newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth.replace('_', ' ')}</Badge>.</p>
+                                        <AlertDescription>The AI suggests updating the plant's overall health status to <Badge variant="outline" className="capitalize">{newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth.replace('_', ' ')}</Badge>.</AlertDescription>
                                         <div className="mt-3 flex gap-2">
                                             <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
                                                 <CheckCircle className="mr-1.5 h-4 w-4"/>Update Health

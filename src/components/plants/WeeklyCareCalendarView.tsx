@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2, Sun, Moon } from 'lucide-react'; // Added Sun, Moon
+import { ChevronLeft, ChevronRight, Trash2, Sun, Moon } from 'lucide-react'; 
 import {
   format,
   startOfWeek,
@@ -18,7 +18,7 @@ import {
   isSameDay,
   parseISO,
   isWithinInterval,
-  getDay // Import getDay
+  getDay 
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -84,7 +84,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
     
-    if (uniqueHoursWithTasks.size === 0) return [];
+    if (uniqueHoursWithTasks.size === 0) return []; // If filter is on and no timed tasks, show no hour slots
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
   }, [showOnlyHoursWithTasks, tasks, currentWeekStart, currentWeekEnd]);
@@ -118,20 +118,20 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           </Label>
         </div>
 
-        <div className="grid grid-cols-[auto_repeat(7,minmax(100px,1fr))] border-t"> {/* Changed first col width to auto */}
+        <div className="grid grid-cols-[auto_repeat(7,minmax(100px,1fr))] border-t">
           {/* Time Column Header - Empty for alignment */}
-          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px]">Time</div> {/* Added min-width */}
+          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
           {/* Day Headers */}
           {daysInWeek.map(day => {
-            const dayOfWeek = getDay(day); // 0 for Sunday, 6 for Saturday
+            const dayOfWeek = getDay(day); 
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const dayNameClassName = cn(
-              "", // default class
-              isWeekend ? (dayOfWeek === 6 ? "text-blue-400" : "text-red-400") : "text-foreground" // Conditional colors
+              "font-semibold",
+              isWeekend ? "dark:text-primary/70 text-primary/90" : "text-foreground"
             );
             return (
-              <div key={day.toISOString()} className="p-2 border-r border-b text-center text-xs font-semibold">
-                <div className={dayNameClassName}>{format(day, 'EEE')}</div> {/* Apply class here */}
+              <div key={day.toISOString()} className="p-2 border-r border-b text-center text-xs h-10 flex flex-col justify-center items-center">
+                <div className={dayNameClassName}>{format(day, 'EEE')}</div>
                 <div className="text-muted-foreground">{format(day, 'd')}</div>
               </div>
             );
@@ -139,10 +139,10 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
 
           {/* Hour Rows */}
           {hoursToDisplay.map(hour => {
-            const isDayTime = hour >= 7 && hour < 19; // 7 AM to 6 PM is considered daytime
+            const isDayTime = hour >= 7 && hour < 19; 
             return (
               <React.Fragment key={hour}>
-                <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center min-w-[70px]"> {/* Added min-width */}
+                <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center min-w-[70px]">
                   <div className="flex items-center gap-1">
                     <span>{format(new Date(0, 0, 0, hour), 'ha')}</span>
                     {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
@@ -172,7 +172,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent"
+                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id);}}
                               aria-label="Delete task"
                             >
@@ -188,11 +188,11 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           })}
           
           {/* All Day Tasks Section */}
-          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px]">All Day</div> {/* Added min-width */}
+          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-14">All Day</div>
           {daysInWeek.map(day => {
              const allDayTasksForDay = getTasksForDay(day).filter(task => !task.timeOfDay || task.timeOfDay.toLowerCase() === 'all day');
              return (
-                <div key={`all-day-tasks-${day.toISOString()}`} className="p-0.5 border-r border-b border-t min-h-[3.5rem] text-[10px] leading-tight space-y-0.5">
+                <div key={`all-day-tasks-${day.toISOString()}`} className="p-0.5 border-r border-b border-t min-h-[3.5rem] text-[10px] leading-tight space-y-0.5 h-14">
                     {allDayTasksForDay.map(task => (
                          <div
                             key={task.id}
@@ -207,7 +207,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                            <Button
                               variant="ghost"
                               size="icon"
-                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent"
+                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id);}}
                               aria-label="Delete task"
                             >
