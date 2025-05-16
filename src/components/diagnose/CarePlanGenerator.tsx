@@ -2,7 +2,7 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthOutput } from '@/types';
+import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthOutput } from '@/types'; // DiagnosePlantHealthOutput for plant name
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,9 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, CheckCircle, AlertCircle, ClipboardList, CalendarPlus, Zap, ListChecks, SaveIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import React from 'react'; // Import React for useState
 
 interface CarePlanGeneratorProps {
-  diagnosisResult: DiagnosePlantHealthOutput | null;
+  diagnosisResult: DiagnosePlantHealthOutput | null; // To get plant name for the button
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;
@@ -23,6 +24,7 @@ interface CarePlanGeneratorProps {
   carePlanMode: 'basic' | 'advanced';
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
+  onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void; // New prop
 }
 
 const CarePlanDetailItem = ({ title, data }: { title: string; data?: { frequency?: string, amount?: string, details: string } }) => {
@@ -47,12 +49,39 @@ export function CarePlanGenerator({
   carePlanMode,
   onCarePlanModeChange,
   onGenerateCarePlan,
+  onSaveCarePlan,
 }: CarePlanGeneratorProps) {
+  const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
+  const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
+
 
   const noAdvancedDetails = carePlanResult && carePlanMode === 'advanced' &&
     !carePlanResult.soilManagement?.details &&
     !carePlanResult.pruning?.details &&
     !carePlanResult.fertilization?.details;
+
+  const plantNameForButton = diagnosisResult?.identification.commonName || "this plant";
+
+  const handleSaveClick = async () => {
+    if (carePlanResult) {
+      setIsCarePlanSavedProcessing(true);
+      try {
+        await onSaveCarePlan(carePlanResult);
+        setCarePlanEffectivelySaved(true);
+      } catch (error) {
+        // Error handling for saving care plan can be added here (e.g., toast)
+        console.error("Error saving care plan:", error);
+      } finally {
+        setIsCarePlanSavedProcessing(false);
+      }
+    }
+  };
+  
+  React.useEffect(() => {
+    // Reset saved state if care plan result changes (e.g., new plan generated)
+    setCarePlanEffectivelySaved(false);
+  }, [carePlanResult]);
+
 
   return (
     <Card className="shadow-xl animate-in fade-in-50 mt-6">
@@ -160,9 +189,18 @@ export function CarePlanGenerator({
               </div>
 
               <div className="mt-6">
-                <Button variant="outline" className="w-full" disabled>
-                  <SaveIcon className="mr-2 h-4 w-4" />
-                  Save Care Plan (Coming Soon)
+                <Button
+                  variant={carePlanEffectivelySaved ? "default" : "outline"}
+                  className="w-full"
+                  onClick={handleSaveClick}
+                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant}
+                >
+                  {isCarePlanSavedProcessing ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <SaveIcon className="mr-2 h-4 w-4" />
+                  )}
+                  {carePlanEffectivelySaved ? `Care Plan Saved for ${plantNameForButton}` : `Save Care Plan for ${plantNameForButton}`}
                 </Button>
               </div>
             </div>

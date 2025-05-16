@@ -6,15 +6,16 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react'; // Added CheckCircle
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
-import type { PlantFormData, Plant } from '@/types'; // Added Plant
+import type { PlantFormData, Plant, CareTask } from '@/types';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDisplay';
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
-import { mockPlants } from '@/lib/mock-data'; // Added for saving
+import { mockPlants } from '@/lib/mock-data';
+import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns'; // For calculateNextDueDate
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -27,9 +28,8 @@ export default function DiagnosePlantPage() {
   const [showSavePlantForm, setShowSavePlantForm] = useState(false);
   const [isSavingPlant, setIsSavingPlant] = useState(false);
   const [plantSaved, setPlantSaved] = useState(false);
+  const [lastSavedPlantId, setLastSavedPlantId] = useState<string | null>(null); // New state
 
-  // showCarePlanGeneratorSection state is removed
-  // const [showCarePlanGeneratorSection, setShowCarePlanGeneratorSection] = useState(false); 
   const [carePlanMode, setCarePlanMode] = useState<'basic' | 'advanced'>('basic');
   const [locationClimate, setLocationClimate] = useState('');
   const [isLoadingCarePlan, setIsLoadingCarePlan] = useState(false);
@@ -40,6 +40,26 @@ export default function DiagnosePlantPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to calculate next due date (already in PlantDetailPage, moved here for reuse)
+  const calculateNextDueDate = (frequency: string): string | undefined => {
+    const now = new Date();
+    if (frequency === 'Ad-hoc') return undefined;
+    if (frequency === 'Daily') return addDays(now, 1).toISOString();
+    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
+    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
+    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
+  
+    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/);
+    if (everyXMatch) {
+      const value = parseInt(everyXMatch[1], 10);
+      const unit = everyXMatch[2];
+      if (unit === 'Days') return addDays(now, value).toISOString();
+      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
+      if (unit === 'Months') return addMonths(now, value).toISOString();
+    }
+    return undefined; 
+  };
+
   const fullResetDiagnosisForm = () => {
     setFile(null);
     setPreviewUrl(null);
@@ -48,7 +68,7 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    // setShowCarePlanGeneratorSection(false); // Removed
+    setLastSavedPlantId(null);
     setCarePlanResult(null);
     setCarePlanError(null);
     setLocationClimate('');
@@ -57,13 +77,12 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear previous results when a new file is selected
     setDiagnosisResult(null);
     setCarePlanResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    // setShowCarePlanGeneratorSection(false); // Removed
+    setLastSavedPlantId(null);
     setCarePlanError(null);
 
     const selectedFile = event.target.files?.[0];
@@ -106,9 +125,9 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setDiagnosisResult(null);
     setCarePlanResult(null);
-    // setShowCarePlanGeneratorSection(false); // Removed
     setShowSavePlantForm(false);
     setPlantSaved(false);
+    setLastSavedPlantId(null);
 
     const readFileAsDataURL = (fileToRead: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -131,9 +150,6 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
       });
 
-      // Removed logic that set setShowCarePlanGeneratorSection(true) here
-      // The care plan generator will now only show if plantSaved is true.
-
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
       setDiagnosisError(errorMessage);
@@ -146,15 +162,13 @@ export default function DiagnosePlantPage() {
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
     console.log("Saving plant data (simulated):", data);
-
-    // Simulate a short delay for saving
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
     let newPhotoUrl: string | undefined = undefined;
 
     if (data.primaryPhoto && data.primaryPhoto[0]) {
-      const file = data.primaryPhoto[0];
+      const fileToSave = data.primaryPhoto[0];
       newPhotoUrl = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -162,7 +176,7 @@ export default function DiagnosePlantPage() {
           console.error("Error reading file for data URL:", error);
           resolve(undefined); 
         }
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(fileToSave);
       });
     } else if (data.diagnosedPhotoDataUrl) {
       newPhotoUrl = data.diagnosedPhotoDataUrl;
@@ -188,10 +202,11 @@ export default function DiagnosePlantPage() {
       }] : [],
       careTasks: [],
       plantingDate: new Date().toISOString(),
-      lastCaredDate: undefined, // New plants won't have a last cared date initially
+      lastCaredDate: undefined,
     };
 
     mockPlants.unshift(newPlant);
+    setLastSavedPlantId(newPlantId); // Save the ID of the newly created plant
 
     toast({
       title: "Plant Saved!",
@@ -199,7 +214,6 @@ export default function DiagnosePlantPage() {
     });
     setPlantSaved(true);
     setShowSavePlantForm(false);
-    // setShowCarePlanGeneratorSection(true); // Removed
     setIsSavingPlant(false);
   };
 
@@ -213,7 +227,7 @@ export default function DiagnosePlantPage() {
 
     setIsLoadingCarePlan(true);
     setCarePlanError(null);
-    setCarePlanResult(null);
+    setCarePlanResult(null); // Clear previous results
 
     try {
       const input: GenerateDetailedCarePlanInput = {
@@ -235,6 +249,71 @@ export default function DiagnosePlantPage() {
     }
   };
 
+  const handleSaveCarePlan = (plan: GenerateDetailedCarePlanOutput) => {
+    if (!lastSavedPlantId) {
+      toast({ title: "Error", description: "No recently saved plant to attach care plan to.", variant: "destructive" });
+      return;
+    }
+    const plantIndex = mockPlants.findIndex(p => p.id === lastSavedPlantId);
+    if (plantIndex === -1) {
+      toast({ title: "Error", description: "Could not find the saved plant.", variant: "destructive" });
+      return;
+    }
+
+    const newCareTasks: CareTask[] = [];
+    const plantId = lastSavedPlantId;
+
+    const createTaskFromDetail = (
+      name: string, 
+      detail?: { details: string; frequency?: string; amount?: string }, 
+      level: 'basic' | 'advanced' = 'basic'
+    ) => {
+      if (detail && detail.details) {
+        newCareTasks.push({
+          id: `cp-${plantId}-${name.toLowerCase().replace(' ', '-')}-${Date.now()}`,
+          plantId: plantId,
+          name: name,
+          description: detail.details,
+          frequency: detail.frequency || 'Ad-hoc',
+          timeOfDay: 'All day', // Default, could be inferred or made configurable
+          isPaused: false,
+          nextDueDate: calculateNextDueDate(detail.frequency || 'Ad-hoc'),
+          level: level,
+        });
+      }
+    };
+
+    createTaskFromDetail('Watering', plan.watering, 'basic');
+    createTaskFromDetail('Lighting', plan.lighting, 'basic');
+    if (plan.basicMaintenance) {
+         newCareTasks.push({
+          id: `cp-${plantId}-basic-maintenance-${Date.now()}`,
+          plantId: plantId,
+          name: 'Basic Maintenance',
+          description: plan.basicMaintenance,
+          frequency: 'As needed',
+          timeOfDay: 'All day',
+          isPaused: false,
+          nextDueDate: calculateNextDueDate('As needed'),
+          level: 'basic',
+        });
+    }
+
+    if (carePlanMode === 'advanced') {
+      createTaskFromDetail('Soil Management', plan.soilManagement, 'advanced');
+      createTaskFromDetail('Pruning', plan.pruning, 'advanced');
+      createTaskFromDetail('Fertilization', plan.fertilization, 'advanced');
+    }
+    
+    mockPlants[plantIndex].careTasks.push(...newCareTasks);
+
+    toast({
+      title: "Care Plan Saved!",
+      description: `Care plan tasks added to ${mockPlants[plantIndex].commonName}.`,
+    });
+  };
+
+
   const initialPlantFormData = diagnosisResult ? {
     commonName: diagnosisResult.identification.commonName || '',
     scientificName: diagnosisResult.identification.scientificName || '',
@@ -244,11 +323,8 @@ export default function DiagnosePlantPage() {
     diagnosedPhotoDataUrl: previewUrl,
   } : undefined;
 
-  // Logic to determine if care plan generator should be visible:
-  // Only if diagnosis is done, it's a plant, and the plant has been saved.
   const shouldShowCarePlanGenerator = 
     diagnosisResult?.identification.isPlant && plantSaved;
-
 
   return (
     <AppLayout>
@@ -288,7 +364,6 @@ export default function DiagnosePlantPage() {
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
-              // Removed setShowCarePlanGeneratorSection(true)
             }}
             isLoading={isSavingPlant}
             formTitle="Save to My Plants"
@@ -308,6 +383,7 @@ export default function DiagnosePlantPage() {
             carePlanMode={carePlanMode}
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
+            onSaveCarePlan={handleSaveCarePlan} // Pass the new handler
           />
         )}
       </div>
