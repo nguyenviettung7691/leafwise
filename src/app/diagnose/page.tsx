@@ -4,9 +4,9 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
-import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
+import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type AIGeneratedTask, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan'; // AIGeneratedTask for direct use
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle } from 'lucide-react'; // Added CheckCircle
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import type { PlantFormData, Plant, CareTask } from '@/types';
@@ -15,7 +15,7 @@ import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDis
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { mockPlants } from '@/lib/mock-data';
-import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns'; // For calculateNextDueDate
+import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -28,7 +28,7 @@ export default function DiagnosePlantPage() {
   const [showSavePlantForm, setShowSavePlantForm] = useState(false);
   const [isSavingPlant, setIsSavingPlant] = useState(false);
   const [plantSaved, setPlantSaved] = useState(false);
-  const [lastSavedPlantId, setLastSavedPlantId] = useState<string | null>(null); // New state
+  const [lastSavedPlantId, setLastSavedPlantId] = useState<string | null>(null);
 
   const [carePlanMode, setCarePlanMode] = useState<'basic' | 'advanced'>('basic');
   const [locationClimate, setLocationClimate] = useState('');
@@ -40,10 +40,9 @@ export default function DiagnosePlantPage() {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to calculate next due date (already in PlantDetailPage, moved here for reuse)
   const calculateNextDueDate = (frequency: string): string | undefined => {
     const now = new Date();
-    if (frequency === 'Ad-hoc') return undefined;
+    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
     if (frequency === 'Daily') return addDays(now, 1).toISOString();
     if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
     if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
@@ -206,7 +205,7 @@ export default function DiagnosePlantPage() {
     };
 
     mockPlants.unshift(newPlant);
-    setLastSavedPlantId(newPlantId); // Save the ID of the newly created plant
+    setLastSavedPlantId(newPlantId);
 
     toast({
       title: "Plant Saved!",
@@ -227,7 +226,7 @@ export default function DiagnosePlantPage() {
 
     setIsLoadingCarePlan(true);
     setCarePlanError(null);
-    setCarePlanResult(null); // Clear previous results
+    setCarePlanResult(null);
 
     try {
       const input: GenerateDetailedCarePlanInput = {
@@ -260,50 +259,17 @@ export default function DiagnosePlantPage() {
       return;
     }
 
-    const newCareTasks: CareTask[] = [];
-    const plantId = lastSavedPlantId;
-
-    const createTaskFromDetail = (
-      name: string, 
-      detail?: { details: string; frequency?: string; amount?: string }, 
-      level: 'basic' | 'advanced' = 'basic'
-    ) => {
-      if (detail && detail.details) {
-        newCareTasks.push({
-          id: `cp-${plantId}-${name.toLowerCase().replace(' ', '-')}-${Date.now()}`,
-          plantId: plantId,
-          name: name,
-          description: detail.details,
-          frequency: detail.frequency || 'Ad-hoc',
-          timeOfDay: 'All day', // Default, could be inferred or made configurable
-          isPaused: false,
-          nextDueDate: calculateNextDueDate(detail.frequency || 'Ad-hoc'),
-          level: level,
-        });
-      }
-    };
-
-    createTaskFromDetail('Watering', plan.watering, 'basic');
-    createTaskFromDetail('Lighting', plan.lighting, 'basic');
-    if (plan.basicMaintenance) {
-         newCareTasks.push({
-          id: `cp-${plantId}-basic-maintenance-${Date.now()}`,
-          plantId: plantId,
-          name: 'Basic Maintenance',
-          description: plan.basicMaintenance,
-          frequency: 'As needed',
-          timeOfDay: 'All day',
-          isPaused: false,
-          nextDueDate: calculateNextDueDate('As needed'),
-          level: 'basic',
-        });
-    }
-
-    if (carePlanMode === 'advanced') {
-      createTaskFromDetail('Soil Management', plan.soilManagement, 'advanced');
-      createTaskFromDetail('Pruning', plan.pruning, 'advanced');
-      createTaskFromDetail('Fertilization', plan.fertilization, 'advanced');
-    }
+    const newCareTasks: CareTask[] = plan.generatedTasks.map((aiTask: AIGeneratedTask) => ({
+      id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      plantId: lastSavedPlantId,
+      name: aiTask.taskName,
+      description: aiTask.taskDescription, // Save description from AI task
+      frequency: aiTask.suggestedFrequency,
+      timeOfDay: aiTask.suggestedTimeOfDay,
+      isPaused: false,
+      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency),
+      level: aiTask.taskLevel,
+    }));
     
     mockPlants[plantIndex].careTasks.push(...newCareTasks);
 

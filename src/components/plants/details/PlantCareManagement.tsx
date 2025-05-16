@@ -71,12 +71,15 @@ export function PlantCareManagement({
           {plant.careTasks.map(task => (
             <Card key={task.id} className={cn("bg-secondary/30", task.isPaused ? "opacity-70" : "")}>
               <CardContent className="p-4 flex justify-between items-center">
-                <div>
+                <div className="flex-1"> {/* Allow text to wrap */}
                   <p className="font-medium flex items-center">
                     {task.name}
                     <Badge
                       variant={task.level === 'advanced' ? 'default' : 'outline'}
-                      className="ml-2 text-xs capitalize"
+                      className={cn(
+                        "ml-2 text-xs capitalize",
+                        task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
+                      )}
                     >
                       {task.level}
                     </Badge>
@@ -86,7 +89,10 @@ export function PlantCareManagement({
                       </Badge>
                     )}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-1">
                     Frequency: {task.frequency}
                     {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
                     {task.isPaused ? (
@@ -96,7 +102,7 @@ export function PlantCareManagement({
                     )}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0"> {/* Prevent buttons from shrinking */}
                   {isManagingCarePlan && (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => onOpenEditTaskDialog(task)} aria-label="Edit Task">

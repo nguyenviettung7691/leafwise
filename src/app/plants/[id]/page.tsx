@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
-} from '@/components/ui/alert-dialog'; // AlertDialogTrigger removed as it's used via asChild
+} from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
@@ -31,7 +31,7 @@ import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
 
-const healthConditionStyles: Record<PlantHealthCondition, string> = { // Keep for dialogs
+const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
   needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-300 dark:border-yellow-500',
   sick: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-700/30 dark:text-red-300 dark:border-red-500',
@@ -41,6 +41,7 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = { // Keep fo
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
   const formData: Partial<CarePlanTaskFormData> = {
     name: task.name,
+    description: task.description || '', // Include description
     level: task.level,
   };
 
@@ -286,7 +287,7 @@ export default function PlantDetailPage() {
 
   const calculateNextDueDate = (frequency: string): string | undefined => {
     const now = new Date();
-    if (frequency === 'Ad-hoc') return undefined;
+    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
     if (frequency === 'Daily') return addDays(now, 1).toISOString();
     if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
     if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
@@ -313,6 +314,7 @@ export default function PlantDetailPage() {
         t.id === taskToEdit.id ? {
           ...t,
           name: taskData.name,
+          description: taskData.description, // Save description
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
@@ -333,6 +335,7 @@ export default function PlantDetailPage() {
           id: `ct-${plant.id}-${Date.now()}`,
           plantId: plant.id,
           name: taskData.name,
+          description: taskData.description, // Save description
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
@@ -402,7 +405,7 @@ export default function PlantDetailPage() {
     }
   };
   
-  const formatDateForDialog = (dateString?: string) => { // Renamed to avoid conflict
+  const formatDateForDialog = (dateString?: string) => {
     if (!dateString) return 'N/A';
     try {
       const date = parseISO(dateString);
@@ -598,6 +601,7 @@ export default function PlantDetailPage() {
                     }}
                     isLoading={isSavingTask}
                     formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'} 
+                    formDescription={taskToEdit ? `Update the details for this care task for ${plant.commonName}.` : `Manually add a new care plan task for ${plant.commonName}.`}
                     submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'} 
                 />
             </DialogContent>

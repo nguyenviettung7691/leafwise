@@ -29,8 +29,8 @@ export const mockPlants: Plant[] = [
       { id: 'p1-2', url: 'https://placehold.co/600x400.png?text=Monstera+Today', dateTaken: oneWeekAgo.toISOString(), healthCondition: 'healthy', diagnosisNotes: 'Recently repotted, still vibrant.' },
     ],
     careTasks: [
-      { id: 'ct1-1', plantId: '1', name: 'Watering', frequency: 'Weekly', timeOfDay: '09:00', nextDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
-      { id: 'ct1-2', plantId: '1', name: 'Fertilizing', frequency: 'Monthly', timeOfDay: '10:00', nextDueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'advanced' },
+      { id: 'ct1-1', plantId: '1', name: 'Watering', description: 'Water thoroughly until water drains from the bottom. Discard excess water.', frequency: 'Weekly', timeOfDay: '09:00', nextDueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
+      { id: 'ct1-2', plantId: '1', name: 'Fertilizing', description: 'Use a balanced liquid fertilizer, diluted to half strength.', frequency: 'Monthly', timeOfDay: '10:00', nextDueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'advanced' },
     ],
     lastCaredDate: threeDaysAgo.toISOString(),
   },
@@ -51,7 +51,7 @@ export const mockPlants: Plant[] = [
       { id: 'p2-1', url: 'https://placehold.co/600x400.png?text=Snake+Plant+Today', dateTaken: oneWeekAgo.toISOString(), healthCondition: 'needs_attention', diagnosisNotes: 'Noticed slight yellowing on one leaf tip. Potentially overwatered last cycle.' },
     ],
     careTasks: [
-      { id: 'ct2-1', plantId: '2', name: 'Watering', frequency: 'Every 3 Weeks', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
+      { id: 'ct2-1', plantId: '2', name: 'Watering', description: 'Allow soil to dry out completely between waterings.', frequency: 'Every 3 Weeks', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
     ],
     lastCaredDate: oneWeekAgo.toISOString(),
   },
@@ -73,8 +73,8 @@ export const mockPlants: Plant[] = [
        { id: 'p3-2', url: 'https://placehold.co/600x400.png?text=Fiddle+Leaf+Today', dateTaken: oneWeekAgo.toISOString(), healthCondition: 'sick', diagnosisNotes: 'Significant leaf drop and more brown spots. Suspect root rot or severe stress.'},
     ],
     careTasks: [
-      { id: 'ct3-1', plantId: '3', name: 'Watering', frequency: 'Weekly', timeOfDay: '08:00', nextDueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
-      { id: 'ct3-2', plantId: '3', name: 'Check for pests', frequency: 'Every 2 Weeks', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), isPaused: true, resumeDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), level: 'advanced' },
+      { id: 'ct3-1', plantId: '3', name: 'Watering', description: 'Check soil moisture deeply. Avoid letting it sit in water.', frequency: 'Weekly', timeOfDay: '08:00', nextDueDate: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
+      { id: 'ct3-2', plantId: '3', name: 'Check for pests', description: 'Inspect leaves (top and bottom) and stems for any signs of pests.', frequency: 'Every 2 Weeks', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), isPaused: true, resumeDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), level: 'advanced' },
     ],
     lastCaredDate: twoWeeksAgo.toISOString(),
   },
@@ -92,7 +92,7 @@ export const mockPlants: Plant[] = [
     customNotes: 'Producing many spiderettes!',
     photos: [ { id: 'p4-initial', url: 'https://placehold.co/600x400.png?text=Spider+Plant+Initial', dateTaken: sixMonthsAgo.toISOString(), healthCondition: 'healthy', diagnosisNotes: 'Small but healthy.'}],
     careTasks: [
-      { id: 'ct4-1', plantId: '4', name: 'Watering', frequency: 'Every 5 Days', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
+      { id: 'ct4-1', plantId: '4', name: 'Watering', description: 'Keep soil consistently moist but not soggy.', frequency: 'Every 5 Days', timeOfDay: 'All day', nextDueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), isPaused: false, level: 'basic' },
     ],
     lastCaredDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
   },

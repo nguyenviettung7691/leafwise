@@ -8,7 +8,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Label will be used by FormLabel
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 
 const taskFormSchema = z.object({
   name: z.string().min(1, { message: "Task name is required." }),
+  description: z.string().optional(), // New field
   frequencyMode: z.enum(['adhoc', 'daily', 'every_x_days', 'weekly', 'every_x_weeks', 'monthly', 'every_x_months', 'yearly'], {
     required_error: "Frequency mode is required.",
   }),
@@ -51,6 +53,7 @@ const taskFormSchema = z.object({
 
 export type OnSaveTaskData = {
     name: string;
+    description?: string; // New field
     frequency: string;
     timeOfDay: string;
     level: 'basic' | 'advanced';
@@ -62,6 +65,7 @@ interface CarePlanTaskFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   formTitle?: string;
+  formDescription?: string; // Added for consistency
   submitButtonText?: string;
 }
 
@@ -83,12 +87,14 @@ export function CarePlanTaskForm({
   onCancel, 
   isLoading,
   formTitle = "Add New Care Plan Task",
+  formDescription, // Added
   submitButtonText 
 }: CarePlanTaskFormProps) {
   const form = useForm<CarePlanTaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialData || {
       name: '',
+      description: '', // Initialize description
       frequencyMode: 'adhoc',
       frequencyValue: undefined,
       timeOfDayOption: 'all_day',
@@ -100,6 +106,16 @@ export function CarePlanTaskForm({
   React.useEffect(() => {
     if (initialData) {
       form.reset(initialData);
+    } else {
+      form.reset({ // Ensure full reset for new task
+        name: '',
+        description: '',
+        frequencyMode: 'adhoc',
+        frequencyValue: undefined,
+        timeOfDayOption: 'all_day',
+        specificTime: '',
+        level: 'basic',
+      });
     }
   }, [initialData, form]);
 
@@ -131,6 +147,7 @@ export function CarePlanTaskForm({
 
     onSave({
         name: data.name,
+        description: data.description, // Pass description
         frequency: frequencyString,
         timeOfDay: timeOfDayString,
         level: data.level,
@@ -151,6 +168,7 @@ export function CarePlanTaskForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* formTitle and formDescription could be passed to DialogHeader if this form is always in a dialog */}
         <FormField
           control={form.control}
           name="name"
@@ -220,6 +238,20 @@ export function CarePlanTaskForm({
                 </PopoverContent>
               </Popover>
               <FormDescription>What care task is this? Type custom or select from list.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description (Optional)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="e.g., Use distilled water, ensure good drainage." {...field} value={field.value ?? ''} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -351,5 +383,3 @@ export function CarePlanTaskForm({
     </Form>
   );
 }
-
-    

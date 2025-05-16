@@ -12,7 +12,7 @@ export interface CareTask {
   id: string;
   plantId: string;
   name: string; // e.g., "Watering", "Fertilizing"
-  description?: string;
+  description?: string; // New field
   frequency: string; // e.g., "Daily", "Weekly", "Every 2 weeks", "Ad-hoc"
   timeOfDay?: string; // e.g., "14:30" or "All day"
   lastCompleted?: string; // ISO string
@@ -55,12 +55,30 @@ export interface PlantFormData {
 
 export type CarePlanTaskFormData = {
   name: string;
+  description?: string; // New field
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly';
   frequencyValue?: number;
   timeOfDayOption: 'specific_time' | 'all_day';
   specificTime?: string;
   level: 'basic' | 'advanced';
 };
+
+// For AI Generated Care Plan Flow
+export interface AIGeneratedTask {
+  taskName: string;
+  taskDescription: string;
+  suggestedFrequency: string; // e.g., "Daily", "Every 3 days", "Once a month"
+  suggestedTimeOfDay: string; // e.g., "Morning", "Anytime", "10:00"
+  taskLevel: 'basic' | 'advanced';
+}
+
+export interface GenerateDetailedCarePlanOutput {
+  generatedTasks: AIGeneratedTask[];
+  customizableSchedulesPlaceholder: string;
+  pushNotificationsPlaceholder: string;
+  activityTrackingPlaceholder: string;
+}
+
 
 export interface NavItemConfig {
   titleKey: string;
@@ -100,3 +118,27 @@ export interface ComparePlantHealthOutput {
   shouldUpdateOverallHealth: boolean;
   suggestedOverallHealth?: PlantHealthCondition;
 }
+
+export type DiagnosePlantHealthInput = {
+    photoDataUri: string;
+    description?: string;
+};
+
+export type DiagnosePlantHealthOutput = {
+    identification: {
+        isPlant: boolean;
+        commonName?: string;
+        scientificName?: string;
+        familyCategory?: string;
+        ageEstimateYears?: number;
+    };
+    healthAssessment: {
+        isHealthy: boolean;
+        diagnosis?: string;
+        confidence?: 'low' | 'medium' | 'high';
+    };
+    careRecommendations: Array<{
+        action: string;
+        details?: string;
+    }>;
+};
