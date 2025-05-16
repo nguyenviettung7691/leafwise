@@ -3,6 +3,7 @@
 
 import type { DiagnosePlantHealthOutput, PlantFormData } from '@/types';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,6 +17,7 @@ interface DiagnosisResultDisplayProps {
   onShowSaveForm: () => void;
   plantSaved: boolean;
   showSavePlantForm: boolean;
+  lastSavedPlantId: string | null; // New prop
 }
 
 export function DiagnosisResultDisplay({
@@ -24,6 +26,7 @@ export function DiagnosisResultDisplay({
   onShowSaveForm,
   plantSaved,
   showSavePlantForm,
+  lastSavedPlantId, // New prop
 }: DiagnosisResultDisplayProps) {
   const { t } = useLanguage();
 
@@ -108,13 +111,24 @@ export function DiagnosisResultDisplay({
             )}
 
             {plantSaved && (
-              <Alert variant="default" className="mt-4 bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
-                <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                <AlertTitle>Plant Saved!</AlertTitle>
-                <AlertDescription>
-                  {diagnosisResult?.identification.commonName || 'This plant'} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.
-                </AlertDescription>
-              </Alert>
+              <>
+                <Alert variant="default" className="mt-4 bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
+                  <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                  <AlertTitle>Plant Saved!</AlertTitle>
+                  <AlertDescription>
+                    {diagnosisResult?.identification.commonName || 'This plant'} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.
+                  </AlertDescription>
+                </Alert>
+                {lastSavedPlantId && (
+                  <div className="text-center mt-2">
+                    <Link href={`/plants/${lastSavedPlantId}`} passHref>
+                      <Button variant="link">
+                        View {diagnosisResult.identification.commonName || 'this plant'} in My Plants
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}

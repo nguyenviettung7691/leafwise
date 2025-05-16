@@ -355,6 +355,7 @@ export default function DiagnosePlantPage() {
             onShowSaveForm={() => setShowSavePlantForm(true)}
             plantSaved={plantSaved}
             showSavePlantForm={showSavePlantForm}
+            lastSavedPlantId={lastSavedPlantId} 
           />
         )}
 
@@ -383,7 +384,7 @@ export default function DiagnosePlantPage() {
             carePlanMode={carePlanMode}
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
-            onSaveCarePlan={handleSaveCarePlan} // Pass the new handler
+            onSaveCarePlan={handleSaveCarePlan} 
           />
         )}
       </div>
