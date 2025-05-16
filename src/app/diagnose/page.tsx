@@ -4,7 +4,8 @@
 import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
-import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type AIGeneratedTask, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan'; // AIGeneratedTask for direct use
+import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan'; 
+import type { GenerateDetailedCarePlanOutput, AIGeneratedTask } from '@/types'; // Import GenerateDetailedCarePlanOutput from types
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +16,7 @@ import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDis
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { mockPlants } from '@/lib/mock-data';
-import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears } from 'date-fns'; // Removed parseISO as it's not used here
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -42,21 +43,38 @@ export default function DiagnosePlantPage() {
 
   const calculateNextDueDate = (frequency: string): string | undefined => {
     const now = new Date();
-    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
+    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined; // Adjusted to match AI examples
     if (frequency === 'Daily') return addDays(now, 1).toISOString();
     if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
     if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
     if (frequency === 'Yearly') return addYears(now, 1).toISOString();
   
-    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/);
+    // Match "Every X Days/Weeks/Months"
+    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
     if (everyXMatch) {
       const value = parseInt(everyXMatch[1], 10);
       const unit = everyXMatch[2];
-      if (unit === 'Days') return addDays(now, value).toISOString();
-      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
-      if (unit === 'Months') return addMonths(now, value).toISOString();
+      if (unit.toLowerCase() === 'days') return addDays(now, value).toISOString();
+      if (unit.toLowerCase() === 'weeks') return addWeeks(now, value).toISOString();
+      if (unit.toLowerCase() === 'months') return addMonths(now, value).toISOString();
     }
+    // Fallback for other string frequencies that might come from AI.
+    // For more complex parsing, a more robust library or logic would be needed.
+    // For now, if not matched, return undefined.
+    console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}". Returning undefined.`);
     return undefined; 
+  };
+
+  const resetDiagnosisState = () => {
+    // Keep file, previewUrl, and description as they are part of the form input stage
+    setDiagnosisResult(null);
+    setDiagnosisError(null);
+    setShowSavePlantForm(false);
+    setPlantSaved(false);
+    // lastSavedPlantId should persist if a plant was just saved, to allow care plan generation
+    setCarePlanResult(null);
+    setCarePlanError(null);
+    // Don't reset locationClimate and carePlanMode as they are inputs for the next step
   };
 
   const fullResetDiagnosisForm = () => {
@@ -76,12 +94,15 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Reset only the results and flags related to a previous diagnosis/save/care plan.
+    // Keep the current form inputs (file, description, locationClimate, carePlanMode).
     setDiagnosisResult(null);
-    setCarePlanResult(null);
     setDiagnosisError(null);
-    setShowSavePlantForm(false);
-    setPlantSaved(false);
-    setLastSavedPlantId(null);
+    setShowSavePlantForm(false); // Hide save form if a new image is selected
+    setPlantSaved(false); // Reset plant saved status
+    // Don't reset lastSavedPlantId here, it's needed if user saves then generates plan for *that* saved plant.
+    // It will be naturally reset if they diagnose and save a *new* plant.
+    setCarePlanResult(null);
     setCarePlanError(null);
 
     const selectedFile = event.target.files?.[0];
@@ -126,7 +147,7 @@ export default function DiagnosePlantPage() {
     setCarePlanResult(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setLastSavedPlantId(null);
+    setLastSavedPlantId(null); // Reset last saved plant ID for a new diagnosis
 
     const readFileAsDataURL = (fileToRead: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -148,7 +169,7 @@ export default function DiagnosePlantPage() {
         title: "Diagnosis Complete!",
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
       });
-
+      // No longer set showCarePlanGeneratorSection here. It's controlled by plantSaved.
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
       setDiagnosisError(errorMessage);
@@ -258,12 +279,15 @@ export default function DiagnosePlantPage() {
       toast({ title: "Error", description: "Could not find the saved plant.", variant: "destructive" });
       return;
     }
+    
+    // Defensive check for plan.generatedTasks
+    const tasksToMap = Array.isArray(plan.generatedTasks) ? plan.generatedTasks : [];
 
-    const newCareTasks: CareTask[] = plan.generatedTasks.map((aiTask: AIGeneratedTask) => ({
+    const newCareTasks: CareTask[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
       id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       plantId: lastSavedPlantId,
       name: aiTask.taskName,
-      description: aiTask.taskDescription, // Save description from AI task
+      description: aiTask.taskDescription,
       frequency: aiTask.suggestedFrequency,
       timeOfDay: aiTask.suggestedTimeOfDay,
       isPaused: false,
@@ -353,6 +377,10 @@ export default function DiagnosePlantPage() {
             onSaveCarePlan={handleSaveCarePlan} 
           />
         )}
+         {/* Reset button for full form reset, for testing/convenience */}
+         <div className="text-center mt-8">
+            <Button variant="outline" onClick={fullResetDiagnosisForm}>Reset Diagnosis Page</Button>
+        </div>
       </div>
     </AppLayout>
   );
