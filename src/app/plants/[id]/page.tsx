@@ -12,48 +12,30 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
-} from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // Added AlertDescription
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
+} from '@/components/ui/alert-dialog'; // AlertDialogTrigger removed as it's used via asChild
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
-import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
-import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History, TrendingUp } from 'lucide-react';
-import { useEffect, useState, useRef, useMemo } from 'react';
+
+import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
+import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
+import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
+import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
+
+import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, CartesianGrid, XAxis, YAxis, Line, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
-
-const healthConditionStyles: Record<PlantHealthCondition, string> = {
+const healthConditionStyles: Record<PlantHealthCondition, string> = { // Keep for dialogs
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
   needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-300 dark:border-yellow-500',
   sick: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-700/30 dark:text-red-300 dark:border-red-500',
   unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
-};
-
-const healthConditionRingStyles: Record<PlantHealthCondition, string> = {
-  healthy: 'ring-green-500',
-  needs_attention: 'ring-yellow-500',
-  sick: 'ring-red-500',
-  unknown: 'ring-gray-500',
-};
-
-const healthScoreMapping: Record<PlantHealthCondition, number> = {
-  unknown: 0,
-  sick: 1,
-  needs_attention: 2,
-  healthy: 3,
-};
-const healthScoreLabels: Record<number, string> = {
-  0: 'Unknown',
-  1: 'Sick',
-  2: 'Needs Attention',
-  3: 'Healthy',
 };
 
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
@@ -106,6 +88,7 @@ export default function PlantDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
+
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutput;
@@ -115,7 +98,8 @@ export default function PlantDetailPage() {
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
   const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
-  const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
+  
+  // Care Task Dialog States
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
   const [initialTaskFormData, setInitialTaskFormData] = useState<CarePlanTaskFormData | undefined>(undefined);
@@ -406,40 +390,6 @@ export default function PlantDetailPage() {
     setTaskIdToDelete(null);
   };
 
-  const handleSelectTaskFromCalendarForEdit = (task: CareTask) => {
-    openEditTaskDialog(task);
-  };
-  
-  const handleSelectTaskFromCalendarForDelete = (taskId: string) => {
-    handleOpenDeleteTaskConfirmDialog(taskId);
-  };
-
-  const chartData = useMemo(() => {
-    if (!plant || !plant.photos || plant.photos.length < 1) return [];
-    return [...plant.photos] // Create a shallow copy to sort for the chart
-      .map(photo => ({
-        id: photo.id,
-        date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
-        originalDate: parseISO(photo.dateTaken),
-        health: healthScoreMapping[photo.healthCondition],
-        healthLabel: photo.healthCondition.replace(/_/g, ' '),
-      }))
-      .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plant]);
-
-  const sortedPhotosForGallery = useMemo(() => {
-    if (!plant || !plant.photos) return [];
-    return [...plant.photos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-  }, [plant]);
-
-
-  const chartConfig = {
-    health: {
-      label: 'Health Status',
-      color: 'hsl(var(--primary))',
-    },
-  } satisfies ChartConfig;
-  
   const handleChartDotClick = (data: any) => {
     if (data && data.activePayload && data.activePayload.length > 0) {
       const clickedDotPayload = data.activePayload[0].payload;
@@ -449,6 +399,17 @@ export default function PlantDetailPage() {
           openGridPhotoDialog(clickedPhoto);
         }
       }
+    }
+  };
+  
+  const formatDateForDialog = (dateString?: string) => { // Renamed to avoid conflict
+    if (!dateString) return 'N/A';
+    try {
+      const date = parseISO(dateString);
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error("Error parsing date:", dateString, error);
+      return 'Invalid Date';
     }
   };
 
@@ -468,367 +429,47 @@ export default function PlantDetailPage() {
     return null;
   }
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    try {
-      const date = parseISO(dateString);
-      return format(date, 'MMM d, yyyy');
-    } catch (error) {
-      console.error("Error parsing date:", dateString, error);
-      return 'Invalid Date';
-    }
-  };
-  
-  const formatDateTime = (dateString?: string, timeString?: string) => {
-    if (!dateString) return 'N/A';
-    let formattedString = formatDate(dateString);
-    if (timeString && timeString !== 'All day' && /^\d{2}:\d{2}$/.test(timeString)) {
-      formattedString += ` at ${timeString}`;
-    }
-    return formattedString;
-  };
-
-
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto">
-        <Card className="overflow-hidden shadow-xl">
-          <CardHeader className="relative p-0">
-            <div className="aspect-video w-full overflow-hidden bg-muted">
-              <Image
-                src={plant.primaryPhotoUrl || 'https://placehold.co/800x450.png'}
-                alt={plant.commonName}
-                width={800}
-                height={450}
-                className="object-cover w-full h-full"
-                data-ai-hint="plant detail"
-                priority
-              />
-            </div>
-            <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
-              <CardTitle className="text-3xl font-bold text-white">{plant.commonName}</CardTitle>
-              {plant.scientificName && <CardDescription className="text-lg text-gray-200 italic">{plant.scientificName}</CardDescription>}
-            </div>
-          </CardHeader>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <PlantHeaderCard
+          plant={plant}
+          onEditPlant={handleEditPlant}
+          onConfirmDelete={handleDeletePlant}
+          isDeleting={isDeleting}
+        />
+
+        <Card className="shadow-xl">
           <CardContent className="p-6 space-y-6">
-            <div className="flex justify-between items-start">
-                <div>
-                    <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]}`}>
-                        {plant.healthCondition.replace('_', ' ')}
-                    </Badge>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={handleEditPlant} aria-label="Edit Plant">
-                        <Edit className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" aria-label="Delete Plant" disabled={isDeleting}>
-                            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently (simulate) delete your plant
-                            "{plant.commonName}".
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDeletePlant} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                </div>
-            </div>
-
+            <PlantInformationGrid plant={plant} />
             <Separator />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-              <div className="flex items-start gap-3">
-                <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium">Age Estimate</p>
-                  <p className="text-muted-foreground">{plant.ageEstimate || 'Unknown'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium">Created Date</p>
-                  <p className="text-muted-foreground">{formatDate(plant.plantingDate)}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="font-medium">Location</p>
-                  <p className="text-muted-foreground">{plant.location || 'Unknown'}</p>
-                </div>
-              </div>
-              {plant.familyCategory && (
-                <div className="flex items-start gap-3">
-                  <Users className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium">Family</p>
-                    <p className="text-muted-foreground">{plant.familyCategory}</p>
-                  </div>
-                </div>
-              )}
-               {plant.lastCaredDate && (
-                <div className="flex items-start gap-3">
-                  <History className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium">Last Cared</p>
-                    <p className="text-muted-foreground">{formatDate(plant.lastCaredDate)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {plant.customNotes && (
-              <div>
-                <h3 className="font-semibold text-lg mb-2">Notes</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{plant.customNotes}</p>
-              </div>
-            )}
-
+            <PlantCareManagement
+              plant={plant}
+              loadingTaskId={loadingTaskId}
+              onToggleTaskPause={handleToggleTaskPause}
+              onOpenEditTaskDialog={openEditTaskDialog}
+              onOpenDeleteTaskDialog={handleOpenDeleteTaskConfirmDialog}
+              onOpenAddTaskDialog={openAddTaskDialog}
+            />
             <Separator />
-
-            {/* Care Plan Section */}
-            <div>
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold text-lg">Care Plan</h3>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setIsManagingCarePlan(!isManagingCarePlan)}>
-                            {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-                            {isManagingCarePlan ? 'Done' : 'Manage'}
-                        </Button>
-                        {isManagingCarePlan && (
-                           <Button variant="default" size="sm" onClick={openAddTaskDialog}>
-                                <PlusCircle className="h-4 w-4 mr-2" /> Add Task
-                            </Button>
-                        )}
-                    </div>
-                </div>
-                {plant.careTasks && plant.careTasks.length > 0 ? (
-                <div className="space-y-3">
-                  {plant.careTasks.map(task => (
-                    <Card key={task.id} className={cn("bg-secondary/30", task.isPaused ? "opacity-70" : "")}>
-                      <CardContent className="p-4 flex justify-between items-center">
-                        <div>
-                          <p className="font-medium flex items-center">
-                            {task.name}
-                            <Badge
-                              variant={task.level === 'advanced' ? 'default' : 'outline'}
-                              className="ml-2 text-xs capitalize"
-                            >
-                              {task.level}
-                            </Badge>
-                            {task.isPaused && (
-                              <Badge variant="outline" className="ml-2 text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
-                                Paused
-                              </Badge>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Frequency: {task.frequency}
-                            {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
-                            {task.isPaused ? (
-                                task.resumeDate ? ` | Resumes: ${formatDate(task.resumeDate)}` : ' | Paused'
-                            ) : (
-                                task.nextDueDate ? ` | Next: ${formatDateTime(task.nextDueDate, task.timeOfDay)}` : ''
-                            )}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            {isManagingCarePlan && (
-                                <>
-                                    <Button variant="ghost" size="icon" onClick={() => openEditTaskDialog(task)} aria-label="Edit Task">
-                                        <EditTaskIcon className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDeleteTaskConfirmDialog(task.id)} aria-label="Delete Task" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </>
-                            )}
-                            <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleTaskPause(task.id)}
-                            disabled={loadingTaskId === task.id}
-                            className="w-28 text-xs"
-                            >
-                            {loadingTaskId === task.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : task.isPaused ? (
-                                <>
-                                <Play className="mr-1.5 h-3.5 w-3.5" /> Resume
-                                </>
-                            ) : (
-                                <>
-                                <Pause className="mr-1.5 h-3.5 w-3.5" /> Pause
-                                </>
-                            )}
-                            </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                 <p className="text-muted-foreground text-sm text-center py-4">
-                    {isManagingCarePlan ? "No care tasks defined yet. Click 'Add Task' to get started." : "No care tasks defined yet. Click 'Manage' to add tasks."}
-                 </p>
-              )}
-                {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
-                  <WeeklyCareCalendarView
-                    tasks={plant.careTasks}
-                    onEditTask={handleSelectTaskFromCalendarForEdit}
-                    onDeleteTask={handleSelectTaskFromCalendarForDelete}
-                  />
-                )}
-            </div>
-
-            <Separator />
-
-            {/* Growth Monitoring Section */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-semibold text-lg">Growth Monitoring</h3>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => growthPhotoInputRef.current?.click()}
-                    disabled={isDiagnosingNewPhoto}
-                >
-                  {isDiagnosingNewPhoto ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Diagnosing...
-                    </>
-                  ) : (
-                    <>
-                      <ImageUp className="h-4 w-4 mr-2" /> Add Photo & Diagnose
-                    </>
-                  )}
-                </Button>
-                <input
-                  type="file"
-                  ref={growthPhotoInputRef}
-                  className="hidden"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleGrowthPhotoFileChange}
-                />
-              </div>
-
-              {chartData.length > 0 && (
-                <div className="mt-4 mb-6 pt-4 border-t">
-                  <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Health Trend
-                  </h4>
-                  {chartData.length < 2 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      Add at least one more photo with diagnosis to see a health trend.
-                    </p>
-                  ) : (
-                    <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                      <LineChart
-                        accessibilityLayer
-                        data={chartData}
-                        margin={{ top: 5, right: 10, left: -25, bottom: 5 }}
-                        onClick={handleChartDotClick}
-                      >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis
-                          dataKey="date"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          tickFormatter={(value) => value.slice(0, 6)} // Shorten date for X-axis
-                        />
-                        <YAxis
-                          domain={[0, 3]}
-                          ticks={[0, 1, 2, 3]}
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          width={100}
-                          tickFormatter={(value) => healthScoreLabels[value as number] || ''}
-                        />
-                        <RechartsTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent 
-                            indicator="dot" 
-                            labelKey="date"
-                            formatter={(value, name, props) => (
-                                <div className="text-sm">
-                                    <p className="font-medium text-foreground">{props.payload.date}</p>
-                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload.healthLabel}</span></p>
-                                </div>
-                            )}
-                          />}
-                        />
-                        <Line
-                          dataKey="health"
-                          type="monotone"
-                          stroke="var(--color-health)"
-                          strokeWidth={2}
-                          dot={{
-                            fill: "var(--color-health)",
-                            r: 4,
-                          }}
-                          activeDot={{
-                            r: 6,
-                          }}
-                        />
-                      </LineChart>
-                    </ChartContainer>
-                  )}
-                </div>
-              )}
-
-              {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {sortedPhotosForGallery.map((photo) => (
-                    <button
-                        key={photo.id}
-                        className="group relative aspect-square block w-full overflow-hidden rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                        onClick={() => openGridPhotoDialog(photo)}
-                        aria-label={`View photo from ${formatDate(photo.dateTaken)}`}
-                    >
-                      <Image
-                        src={photo.url}
-                        alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
-                        width={200} height={200}
-                        className={cn(
-                            "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200 group-hover:ring-2 group-hover:ring-offset-1",
-                            healthConditionRingStyles[photo.healthCondition]
-                         )}
-                        data-ai-hint="plant growth"
-                       />
-                      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md">
-                        <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
-                        <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                            {photo.healthCondition.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
-              )}
-            </div>
+            <PlantGrowthTracker
+              plant={plant}
+              onOpenGridPhotoDialog={openGridPhotoDialog}
+              onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
+              isDiagnosingNewPhoto={isDiagnosingNewPhoto}
+              growthPhotoInputRef={growthPhotoInputRef}
+              onChartDotClick={handleChartDotClick}
+            />
+            <input
+              type="file"
+              ref={growthPhotoInputRef}
+              className="hidden"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleGrowthPhotoFileChange}
+            />
           </CardContent>
           <CardFooter className="p-6 bg-muted/30 border-t">
-             <p className="text-xs text-muted-foreground">Last updated: {formatDate(new Date().toISOString())} (Simulated - reflects last interaction)</p>
+             <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
           </CardFooter>
         </Card>
 
@@ -913,12 +554,12 @@ export default function PlantDetailPage() {
         <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Photo Details - {selectedGridPhoto ? formatDate(selectedGridPhoto.dateTaken) : ''}</DialogTitle>
+                    <DialogTitle>Photo Details - {selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''}</DialogTitle>
                 </DialogHeader>
                 {selectedGridPhoto && (
                     <div className="space-y-3 py-3">
-                        <Image src={selectedGridPhoto.url} alt={`Photo from ${formatDate(selectedGridPhoto.dateTaken)}`} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
-                        <p><strong>Date:</strong> {formatDate(selectedGridPhoto.dateTaken)}</p>
+                        <Image src={selectedGridPhoto.url} alt={`Photo from ${formatDateForDialog(selectedGridPhoto.dateTaken)}`} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
+                        <p><strong>Date:</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
                         <p><strong>Health at Diagnosis:</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{selectedGridPhoto.healthCondition.replace('_',' ')}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>Diagnosis Notes:</strong> {selectedGridPhoto.diagnosisNotes}</p>}
                         {selectedGridPhoto.notes && <p><strong>General Notes:</strong> {selectedGridPhoto.notes}</p>}
@@ -984,4 +625,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
