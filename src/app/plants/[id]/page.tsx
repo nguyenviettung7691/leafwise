@@ -553,7 +553,12 @@ export default function PlantDetailPage() {
                         <div>
                           <p className="font-medium flex items-center">
                             {task.name}
-                            <Badge variant="outline" className="ml-2 text-xs capitalize">{task.level}</Badge>
+                            <Badge
+                              variant={task.level === 'advanced' ? 'default' : 'outline'}
+                              className="ml-2 text-xs capitalize"
+                            >
+                              {task.level}
+                            </Badge>
                             {task.isPaused && (
                               <Badge variant="outline" className="ml-2 text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
                                 Paused
@@ -564,7 +569,7 @@ export default function PlantDetailPage() {
                             Frequency: {task.frequency}
                             {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
                             {task.isPaused ? (
-                                task.resumeDate ? ` | Resumes: ${formatDate(task.resumeDate)}` : ''
+                                task.resumeDate ? ` | Resumes: ${formatDate(task.resumeDate)}` : ' | Paused'
                             ) : (
                                 task.nextDueDate ? ` | Next: ${formatDateTime(task.nextDueDate, task.timeOfDay)}` : ''
                             )}
@@ -828,3 +833,4 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
