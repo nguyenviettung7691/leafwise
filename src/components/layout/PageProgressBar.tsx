@@ -5,8 +5,9 @@ import { useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
 
+// Configure NProgress
 if (typeof window !== 'undefined') {
-  NProgress.configure({ showSpinner: false, trickleSpeed: 200 }); // Faster trickle
+  NProgress.configure({ showSpinner: false }); // Use default trickle speed
 }
 
 export function PageProgressBar() {
@@ -25,8 +26,7 @@ export function PageProgressBar() {
         NProgress.done(true); // true forces completion without animation
       }
       
-      // console.log(`NProgress.start() for: ${newPath}`);
-      NProgress.start();
+      NProgress.start(); // This will use the trickle effect for indeterminate progress
       activePathRef.current = newPath; // Mark this path as the one that started NProgress
     }
 
@@ -37,12 +37,11 @@ export function PageProgressBar() {
       // that was active when NProgress was started by this effect instance.
       // This prevents a premature .done() if another navigation starts very quickly.
       if (activePathRef.current === newPath) {
-        // console.log(`NProgress.done() for: ${newPath}`);
         NProgress.done();
         activePathRef.current = null; // Clear the active path once its progress is done
       }
     };
-  }, [pathname, searchParams]); // Re-run when path or search params change
+  }, [pathname, searchParams]); // Re-run on any path or search param change
 
-  return null;
+  return null; // This component doesn't render anything itself
 }
