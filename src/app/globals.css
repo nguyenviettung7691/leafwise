@@ -33,16 +33,6 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-
-    /* Sidebar specific variables */
-    --sidebar-background: 0 0% 98%; /* Very light grey, almost white */
-    --sidebar-foreground: 0 0% 20%; /* Dark Grey */
-    --sidebar-primary: 120 61% 50%; /* Lime Green */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 16 70% 62%; /* Terracotta */
-    --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 0 0% 85%; /* Medium-light Grey */
-    --sidebar-ring: 120 61% 50%; /* Lime Green */
   }
 
   .dark {
@@ -67,16 +57,6 @@ body {
     --ring: 120 61% 50%; /* Lime Green */
     --chart-1: 120 61% 55%;
     --chart-2: 16 70% 65%;
-
-    /* Dark Sidebar specific variables */
-    --sidebar-background: 0 0% 12%; /* Dark sidebar background */
-    --sidebar-foreground: 0 0% 95%; /* Light sidebar foreground */
-    --sidebar-primary: 120 61% 50%; /* Lime Green */
-    --sidebar-primary-foreground: 0 0% 10%; /* Dark text on lime green */
-    --sidebar-accent: 16 70% 62%; /* Terracotta */
-    --sidebar-accent-foreground: 0 0% 10%; /* Dark text on terracotta */
-    --sidebar-border: 0 0% 25%; /* Darker sidebar border */
-    --sidebar-ring: 120 61% 50%; /* Lime Green */
   }
 }
 
@@ -88,4 +68,64 @@ body {
     @apply bg-background text-foreground;
     min-height: 100vh;
   }
+}
+
+/* NProgress basic styling */
+#nprogress {
+  pointer-events: none;
+}
+#nprogress .bar {
+  background: hsl(var(--primary)); /* Use primary color */
+  position: fixed;
+  z-index: 1031;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px; /* Thicker bar */
+}
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px hsl(var(--primary)), 0 0 5px hsl(var(--primary));
+  opacity: 1.0;
+  -webkit-transform: rotate(3deg) translate(0px, -4px);
+      -ms-transform: rotate(3deg) translate(0px, -4px);
+          transform: rotate(3deg) translate(0px, -4px);
+}
+#nprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: 1031;
+  top: 15px;
+  right: 15px;
+}
+#nprogress .spinner-icon {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: solid 2px transparent;
+  border-top-color: hsl(var(--primary)); /* Use primary color */
+  border-left-color: hsl(var(--primary)); /* Use primary color */
+  border-radius: 50%;
+  -webkit-animation: nprogress-spinner 400ms linear infinite;
+          animation: nprogress-spinner 400ms linear infinite;
+}
+.nprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+.nprogress-custom-parent #nprogress .spinner,
+.nprogress-custom-parent #nprogress .bar {
+  position: absolute;
+}
+@-webkit-keyframes nprogress-spinner {
+  0%   { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+@keyframes nprogress-spinner {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

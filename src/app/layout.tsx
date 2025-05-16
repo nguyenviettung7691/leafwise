@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
+import { PageProgressBar } from '@/components/layout/PageProgressBar'; // Import PageProgressBar
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,7 +41,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Added suppressHydrationWarning for next-themes */}
         {/* Recommended for PWA: Apple touch icon */}
         <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
       </head>
@@ -53,6 +53,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <LanguageProvider>
+              <PageProgressBar /> {/* Add PageProgressBar here */}
               {children}
               <Toaster />
             </LanguageProvider>
