@@ -24,16 +24,14 @@ export type GenerateDetailedCarePlanInput = z.infer<typeof GenerateDetailedCareP
 const AIGeneratedTaskSchema = z.object({
     taskName: z.string().describe("The specific name of the care task (e.g., 'Watering', 'Check Soil Moisture', 'Fertilize with Balanced NPK')."),
     taskDescription: z.string().describe("A brief description or specific instructions for the task."),
-    suggestedFrequency: z.string().describe("How often the task should be performed. CRITICAL: Use one of the following formats ONLY: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', or 'Every X Days', 'Every X Weeks', 'Every X Months' (where X is a number, e.g., 'Every 3 Days', 'Every 2 Weeks'). DO NOT use ranges (e.g., '2-4 days') or vague terms (e.g., 'bi-weekly' unless it's 'Every 2 Weeks')."),
-    suggestedTimeOfDay: z.string().describe("The suggested time of day for the task. CRITICAL: Use 'All day' or a specific time in HH:MM format (e.g., '09:00', '15:30'). DO NOT use 'Morning', 'Evening', 'Afternoon'."),
+    suggestedFrequency: z.string().describe("How often the task should be performed. Use formats like 'Daily', 'Weekly', 'Every X Days', 'Ad-hoc'. See prompt examples for exact formats."),
+    suggestedTimeOfDay: z.string().describe("When the task should be performed. Use 'All day' or HH:MM format (e.g., '09:00'). See prompt examples."),
     taskLevel: z.enum(['basic', 'advanced']).describe("The level of this task, either 'basic' or 'advanced'.")
 });
 export type AIGeneratedTask = z.infer<typeof AIGeneratedTaskSchema>;
 
 
 const GenerateDetailedCarePlanOutputSchema = z.object({
-  // Removed old direct fields like watering, lighting, etc.
-  // Now focusing on the generatedTasks array.
   generatedTasks: z.array(AIGeneratedTaskSchema).describe("A list of specific, actionable care tasks. Aim for 3-5 tasks for 'basic' mode, and 5-8 for 'advanced' mode, covering various aspects of care relevant to the plant and mode."),
   customizableSchedulesPlaceholder: z.string().describe('Placeholder text for customizable schedules feature.'),
   pushNotificationsPlaceholder: z.string().describe('Placeholder text for push notifications feature.'),
@@ -62,8 +60,8 @@ Requested Care Plan Mode: {{{carePlanMode}}}
 Generate a list of 'generatedTasks'. Each task MUST include:
 -   'taskName': A specific name (e.g., "Water thoroughly", "Rotate for even light", "Fertilize with high nitrogen feed").
 -   'taskDescription': Clear, concise instructions for performing the task.
--   'suggestedFrequency': How often. IMPORTANT: Format MUST be 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', or 'Every X Months' (e.g., "Every 7 Days" IS VALID, "Weekly" IS VALID, "Once a week" IS NOT VALID, "From 2-4 days" IS NOT VALID).
--   'suggestedTimeOfDay': When. IMPORTANT: Format MUST be 'All day' or HH:MM (e.g., "09:00", "14:30"). Do NOT use "Morning", "Evening".
+-   'suggestedFrequency': How often. Please use one of these formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', or 'Every X Months'. (e.g., "Every 7 Days" and "Weekly" are valid. "Once a week" or "From 2-4 days" are not valid).
+-   'suggestedTimeOfDay': When. Please use 'All day' or HH:MM format (e.g., "09:00", "14:30"). Do not use "Morning" or "Evening".
 -   'taskLevel': Must be 'basic' or 'advanced'.
 
 Task Generation Guidelines:
@@ -74,7 +72,7 @@ Task Generation Guidelines:
 
 Examples of good 'suggestedFrequency' and 'suggestedTimeOfDay':
 - Task: Water Peace Lily
-  - suggestedFrequency: "Every 7 Days" (or "Weekly" if that's the best fit)
+  - suggestedFrequency: "Every 7 Days" 
   - suggestedTimeOfDay: "08:00"
 - Task: Check for pests
   - suggestedFrequency: "Every 2 Weeks"
