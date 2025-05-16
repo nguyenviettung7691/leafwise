@@ -137,8 +137,9 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
         action: <CheckCircle className="text-green-500 h-5 w-5" />,
       });
-      // Show care plan section if it's not a plant OR it is a plant but has no common name (can't be saved yet)
-      if (!result.identification.isPlant || (result.identification.isPlant && !result.identification.commonName) ) {
+      
+      // Show care plan section only if it IS a plant but has no common name (can't be saved yet, but might want generic care plan)
+      if (result.identification.isPlant && !result.identification.commonName) {
         setShowCarePlanGeneratorSection(true);
       }
     } catch (e: any) {
@@ -225,7 +226,7 @@ export default function DiagnosePlantPage() {
                            !carePlanResult.fertilization?.details;
 
   return (
-    <AppLayout> {/* navItemsConfig prop removed */}
+    <AppLayout>
       <div className="max-w-3xl mx-auto space-y-8">
         <Card className="shadow-xl">
           <CardHeader>
@@ -308,68 +309,72 @@ export default function DiagnosePlantPage() {
               {!diagnosisResult.identification.isPlant && (
                 <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
                   <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                  <AlertTitle>Not a Plant?</AlertTitle>
-                  <AlertDescription>The AI could not confidently identify a plant in the image. Results might be inaccurate.</AlertDescription>
+                  <AlertTitle>Not a Plant</AlertTitle>
+                  <AlertDescription>The AI could not identify a plant in the image. Diagnosis, saving, and care plan generation are not available for non-plant images.</AlertDescription>
                 </Alert>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="bg-secondary/30">
-                  <CardHeader><CardTitle className="text-lg">Identification</CardTitle></CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p><strong>Common Name:</strong> {diagnosisResult.identification.commonName || 'N/A'}</p>
-                    <p><strong>Scientific Name:</strong> {diagnosisResult.identification.scientificName || 'N/A'}</p>
-                    <p><strong>Family Category:</strong> {diagnosisResult.identification.familyCategory || 'N/A'}</p>
-                    <p><strong>Estimated Age:</strong> {diagnosisResult.identification.ageEstimateYears ? `${diagnosisResult.identification.ageEstimateYears} year(s)` : 'N/A'}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-secondary/30">
-                  <CardHeader><CardTitle className="text-lg">Health Assessment</CardTitle></CardHeader>
-                  <CardContent className="space-y-1 text-sm">
-                    <p><strong>Status:</strong> {diagnosisResult.healthAssessment.isHealthy ? 
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700">Healthy</Badge> : 
-                      <Badge variant="destructive">Needs Attention</Badge>}
-                    </p>
-                    {diagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
-                    {diagnosisResult.healthAssessment.confidence && <p><strong>Confidence:</strong> <Badge variant="outline" className="capitalize">{diagnosisResult.healthAssessment.confidence}</Badge></p>}
-                  </CardContent>
-                </Card>
-              </div>
-              
-              {diagnosisResult.careRecommendations && diagnosisResult.careRecommendations.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-2 text-primary">Initial Recommended Actions:</h3>
-                  <ul className="space-y-2 list-disc list-inside pl-1">
-                    {diagnosisResult.careRecommendations.map((rec, index) => (
-                      <li key={index} className="text-sm">
-                        <strong>{rec.action}</strong>
-                        {rec.details && <p className="text-xs text-muted-foreground ml-4">{rec.details}</p>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {!plantSaved && diagnosisResult.identification.isPlant && diagnosisResult.identification.commonName && !showSavePlantForm && (
-                 <div className="pt-4 border-t mt-6">
-                    <Button 
-                        onClick={() => setShowSavePlantForm(true)} 
-                        className="w-full"
-                        variant="outline"
-                    >
-                        <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
-                    </Button>
-                </div>
-              )}
+              {diagnosisResult.identification.isPlant && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card className="bg-secondary/30">
+                      <CardHeader><CardTitle className="text-lg">Identification</CardTitle></CardHeader>
+                      <CardContent className="space-y-1 text-sm">
+                        <p><strong>Common Name:</strong> {diagnosisResult.identification.commonName || 'N/A'}</p>
+                        <p><strong>Scientific Name:</strong> {diagnosisResult.identification.scientificName || 'N/A'}</p>
+                        <p><strong>Family Category:</strong> {diagnosisResult.identification.familyCategory || 'N/A'}</p>
+                        <p><strong>Estimated Age:</strong> {diagnosisResult.identification.ageEstimateYears ? `${diagnosisResult.identification.ageEstimateYears} year(s)` : 'N/A'}</p>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-secondary/30">
+                      <CardHeader><CardTitle className="text-lg">Health Assessment</CardTitle></CardHeader>
+                      <CardContent className="space-y-1 text-sm">
+                        <p><strong>Status:</strong> {diagnosisResult.healthAssessment.isHealthy ? 
+                          <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700">Healthy</Badge> : 
+                          <Badge variant="destructive">Needs Attention</Badge>}
+                        </p>
+                        {diagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
+                        {diagnosisResult.healthAssessment.confidence && <p><strong>Confidence:</strong> <Badge variant="outline" className="capitalize">{diagnosisResult.healthAssessment.confidence}</Badge></p>}
+                      </CardContent>
+                    </Card>
+                  </div>
+                  
+                  {diagnosisResult.careRecommendations && diagnosisResult.careRecommendations.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-lg mb-2 text-primary">Initial Recommended Actions:</h3>
+                      <ul className="space-y-2 list-disc list-inside pl-1">
+                        {diagnosisResult.careRecommendations.map((rec, index) => (
+                          <li key={index} className="text-sm">
+                            <strong>{rec.action}</strong>
+                            {rec.details && <p className="text-xs text-muted-foreground ml-4">{rec.details}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {!plantSaved && diagnosisResult.identification.commonName && !showSavePlantForm && (
+                     <div className="pt-4 border-t mt-6">
+                        <Button 
+                            onClick={() => setShowSavePlantForm(true)} 
+                            className="w-full"
+                            variant="outline"
+                        >
+                            <SaveIcon className="mr-2 h-5 w-5" /> Save to My Plants
+                        </Button>
+                    </div>
+                  )}
 
-              {plantSaved && (
-                <Alert variant="default" className="mt-4 bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
-                    <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <AlertTitle>Plant Saved!</AlertTitle>
-                    <AlertDescription>
-                    {diagnosisResult?.identification.commonName || 'This plant'} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.
-                    </AlertDescription>
-                </Alert>
+                  {plantSaved && (
+                    <Alert variant="default" className="mt-4 bg-green-50 border-green-300 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
+                        <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <AlertTitle>Plant Saved!</AlertTitle>
+                        <AlertDescription>
+                        {diagnosisResult?.identification.commonName || 'This plant'} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.
+                        </AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
             </CardContent>
             <CardFooter>
@@ -378,7 +383,7 @@ export default function DiagnosePlantPage() {
           </Card>
         )}
 
-        {showSavePlantForm && diagnosisResult && initialPlantFormData && (
+        {showSavePlantForm && diagnosisResult && diagnosisResult.identification.isPlant && initialPlantFormData && (
           <SavePlantForm
             initialData={initialPlantFormData}
             onSave={handleSavePlant}
@@ -386,6 +391,9 @@ export default function DiagnosePlantPage() {
               setShowSavePlantForm(false);
               // Show care plan section if plant was identifiable, even if not saved
               if(diagnosisResult?.identification.isPlant && diagnosisResult?.identification.commonName) {
+                setShowCarePlanGeneratorSection(true);
+              } else if (diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName) {
+                 // If it is a plant but has no common name, still show care plan section for generic tips
                 setShowCarePlanGeneratorSection(true);
               }
             }}
@@ -397,11 +405,10 @@ export default function DiagnosePlantPage() {
         
         {/* Show Care Plan Generator if:
             1. Plant has been saved
-            2. Diagnosis result exists AND it's not a plant (still allow generic plan)
-            3. Diagnosis result exists AND it IS a plant BUT has no common name (can't save, but allow generic plan) AND save form isn't showing
-            4. Care plan section explicitly shown (e.g., after cancelling save form for an identifiable plant) AND save form isn't showing
+            2. Diagnosis result IS a plant AND has no common name (can't save, but allow generic plan) AND save form isn't showing
+            3. Care plan section explicitly shown (e.g., after cancelling save form for an identifiable plant) AND save form isn't showing
         */}
-        { (plantSaved || (diagnosisResult && !diagnosisResult.identification.isPlant) || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) || (showCarePlanGeneratorSection && !showSavePlantForm) ) && (
+        { (plantSaved || (diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) || (showCarePlanGeneratorSection && diagnosisResult && diagnosisResult.identification.isPlant && !showSavePlantForm) ) && (
           <Card className="shadow-xl animate-in fade-in-50 mt-6">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-2">
@@ -409,8 +416,7 @@ export default function DiagnosePlantPage() {
                   Generate Detailed Care Plan
               </CardTitle>
               { diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
-              { diagnosisResult && !diagnosisResult.identification.isPlant && <CardDescription>No plant identified, generic tips might be provided.</CardDescription>}
-               { diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && <CardDescription>Plant not fully identified, generic tips might be provided.</CardDescription>}
+              { diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && <CardDescription>Plant not fully identified, generic tips might be provided.</CardDescription>}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleGenerateCarePlan} className="space-y-6">
@@ -528,3 +534,4 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
+
