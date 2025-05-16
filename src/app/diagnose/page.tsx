@@ -2,23 +2,18 @@
 'use client';
 
 import { useState, type FormEvent, useRef } from 'react';
-import Image from 'next/image';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanOutput, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, Sparkles, Stethoscope, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import type { PlantFormData } from '@/types';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDisplay';
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
+import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm'; // New import
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -60,6 +55,7 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear previous results when a new file is selected
     setDiagnosisResult(null);
     setCarePlanResult(null);
     setDiagnosisError(null);
@@ -67,6 +63,7 @@ export default function DiagnosePlantPage() {
     setPlantSaved(false);
     setShowCarePlanGeneratorSection(false);
     setCarePlanError(null);
+    // Description is NOT cleared, file and previewUrl ARE cleared if no file is selected
 
     const selectedFile = event.target.files?.[0];
 
@@ -133,9 +130,12 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
       });
 
-      if (result.identification.isPlant && !result.identification.commonName) {
+      // Show care plan generator if it's a plant but not identifiable enough to save directly
+      // or if it's identifiable and the user might want to skip saving
+      if (result.identification.isPlant) {
         setShowCarePlanGeneratorSection(true);
       }
+
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
       setDiagnosisError(errorMessage);
@@ -155,13 +155,13 @@ export default function DiagnosePlantPage() {
     });
     setPlantSaved(true);
     setShowSavePlantForm(false);
-    setShowCarePlanGeneratorSection(true);
+    setShowCarePlanGeneratorSection(true); // Ensure care plan section shows after saving
     setIsSavingPlant(false);
   };
 
   const handleGenerateCarePlan = async (event: FormEvent) => {
     event.preventDefault();
-    if (!diagnosisResult || (!diagnosisResult.identification.commonName && diagnosisResult.identification.isPlant)) {
+    if (!diagnosisResult || !diagnosisResult.identification.isPlant) {
       setCarePlanError('Cannot generate care plan without a plant identification from diagnosis.');
       toast({ title: "Missing Information", description: "Plant identification is needed to generate a care plan.", variant: "destructive" });
       return;
@@ -200,72 +200,27 @@ export default function DiagnosePlantPage() {
     diagnosedPhotoDataUrl: previewUrl,
   } : undefined;
 
-  const shouldShowCarePlanGenerator = (plantSaved || (diagnosisResult?.identification.isPlant && !diagnosisResult.identification.commonName && !showSavePlantForm) || (showCarePlanGeneratorSection && diagnosisResult?.identification.isPlant && !showSavePlantForm)) && diagnosisResult?.identification.isPlant;
+  // Logic to determine if care plan generator should be visible:
+  // 1. Diagnosis done, it's a plant, and user has saved it.
+  // 2. OR Diagnosis done, it's a plant, (user chose not to save or cannot save because no common name), and not currently showing save form.
+  const shouldShowCarePlanGenerator = 
+    diagnosisResult?.identification.isPlant &&
+    (plantSaved || (showCarePlanGeneratorSection && !showSavePlantForm));
 
 
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-8">
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <Stethoscope className="h-7 w-7 text-primary" />
-              {t('nav.diagnosePlant')}
-            </CardTitle>
-            <CardDescription>Upload a photo of your plant and add any observations. Our AI will analyze it and provide a health assessment and care tips.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleDiagnosisSubmit} className="space-y-6">
-              <div>
-                <Label htmlFor="plant-image-diagnose" className="block text-sm font-medium text-foreground mb-1">
-                  Plant Image (Max 4MB)
-                </Label>
-                <Input
-                  id="plant-image-diagnose"
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handleFileChange}
-                  className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                />
-              </div>
-
-              {previewUrl && (
-                <div className="mt-4 p-2 border rounded-md bg-muted/50 flex justify-center">
-                  <Image
-                    src={previewUrl}
-                    alt="Plant preview for diagnosis"
-                    width={250}
-                    height={250}
-                    className="rounded-md object-contain max-h-[250px] shadow-md"
-                    data-ai-hint="plant user-uploaded"
-                  />
-                </div>
-              )}
-
-              <div>
-                <Label htmlFor="plant-description" className="block text-sm font-medium text-foreground mb-1">
-                  Optional Description
-                </Label>
-                <Textarea
-                  id="plant-description"
-                  placeholder="e.g., Yellowing leaves, brown spots, wilting..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <Button type="submit" disabled={isLoadingDiagnosis || !file} className="w-full text-base py-3">
-                {isLoadingDiagnosis ? (
-                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Analyzing Plant...</>
-                ) : (
-                  <><Sparkles className="mr-2 h-5 w-5" />Diagnose Plant</>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <DiagnosisUploadForm
+          isLoadingDiagnosis={isLoadingDiagnosis}
+          previewUrl={previewUrl}
+          description={description}
+          onDescriptionChange={setDescription}
+          onFileChange={handleFileChange}
+          onSubmitDiagnosis={handleDiagnosisSubmit}
+          fileInputRef={fileInputRef}
+          isFileSelected={file !== null}
+        />
 
         {diagnosisError && (
           <Alert variant="destructive">
@@ -291,15 +246,14 @@ export default function DiagnosePlantPage() {
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
-              if (diagnosisResult?.identification.isPlant && diagnosisResult?.identification.commonName) {
-                setShowCarePlanGeneratorSection(true);
-              } else if (diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName) {
+              // If it's a plant, and we cancel saving, ensure care plan section is still available
+              if (diagnosisResult?.identification.isPlant) {
                 setShowCarePlanGeneratorSection(true);
               }
             }}
             isLoading={isSavingPlant}
             formTitle="Save to My Plants"
-            formDescription="Confirm or update the details from the diagnosis before saving."
+            formDescription={`Confirm or update the details for ${diagnosisResult.identification.commonName || 'this plant'} before saving.`}
           />
         )}
 
