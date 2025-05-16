@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react'; // Added Languages
+import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react'; // Added LogOutIcon
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,29 +21,32 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter, // Added DialogFooter
-  DialogClose, // Added DialogClose
+  DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch'; // Added Switch
-import { useTheme } from 'next-themes'; // Added useTheme
+import { Switch } from '@/components/ui/switch';
+import { useTheme } from 'next-themes';
 
 // Helper function to determine if a nav item should be active
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
+    // Highlight "My Plants" if on / or /plants/*
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
 };
 
 export function Navbar() {
-  const { user, isLoading: authIsLoading } = useAuth();
+  const { user, isLoading: authIsLoading, logout } = useAuth(); // Added logout
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme(); // For Dark Mode
+  const { theme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isSettingsDialogOpen, setIsSettingsDialogOpen] = React.useState(false);
+
 
   const navItems: NavItem[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
@@ -65,7 +68,9 @@ export function Navbar() {
             : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
         )}
         disabled={item.disabled}
-        onClick={() => isMobile && setIsMobileMenuOpen(false)}
+        onClick={() => {
+          if (isMobile) setIsMobileMenuOpen(false);
+        }}
       >
         <Link href={item.disabled ? '#' : item.href}>
           <item.icon className="h-4 w-4 mr-2" />
@@ -79,7 +84,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-x-2 sm:gap-x-6">
+        <div className="flex items-center gap-x-6"> {/* Increased gap for better separation */}
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
             <NavLinks />
@@ -105,7 +110,7 @@ export function Navbar() {
           </Sheet>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2"> {/* Reduced gap for user actions */}
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
@@ -122,7 +127,7 @@ export function Navbar() {
                 </Avatar>
               </Link>
 
-              <Dialog>
+              <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" size="icon" aria-label={t('nav.settings')}>
                     <Settings className="h-5 w-5" />
@@ -139,20 +144,20 @@ export function Navbar() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
-                    <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Palette className="h-5 w-5 text-primary" />
-                        <Label htmlFor="themePreference-dialog" className="text-base font-medium">
-                          Dark Mode
-                        </Label>
-                      </div>
-                      <Switch
-                        id="themePreference-dialog"
-                        checked={theme === 'dark'}
-                        onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                        aria-label="Toggle dark mode"
-                        disabled={authIsLoading}
-                      />
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
+                        <div className='flex items-center gap-3'>
+                            <Palette className="h-5 w-5 text-primary" />
+                            <Label htmlFor="themePreference-dialog" className="text-base font-medium">
+                            Dark Mode
+                            </Label>
+                        </div>
+                        <Switch
+                            id="themePreference-dialog"
+                            checked={theme === 'dark'}
+                            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                            aria-label="Toggle dark mode"
+                            disabled={authIsLoading}
+                        />
                     </div>
                     <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                       <div className="flex items-center gap-3 mb-2">
