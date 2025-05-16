@@ -18,6 +18,7 @@ import {
   isSameDay,
   parseISO,
   isWithinInterval,
+  getDay // Import getDay
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -121,12 +122,20 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           {/* Time Column Header - Empty for alignment */}
           <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px]">Time</div> {/* Added min-width */}
           {/* Day Headers */}
-          {daysInWeek.map(day => (
-            <div key={day.toISOString()} className="p-2 border-r border-b text-center text-xs font-semibold">
-              <div>{format(day, 'EEE')}</div>
-              <div className="text-muted-foreground">{format(day, 'd')}</div>
-            </div>
-          ))}
+          {daysInWeek.map(day => {
+            const dayOfWeek = getDay(day); // 0 for Sunday, 6 for Saturday
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            const dayNameClassName = cn(
+              "", // default class
+              isWeekend ? (dayOfWeek === 6 ? "text-blue-400" : "text-red-400") : "text-foreground" // Conditional colors
+            );
+            return (
+              <div key={day.toISOString()} className="p-2 border-r border-b text-center text-xs font-semibold">
+                <div className={dayNameClassName}>{format(day, 'EEE')}</div> {/* Apply class here */}
+                <div className="text-muted-foreground">{format(day, 'd')}</div>
+              </div>
+            );
+          })}
 
           {/* Hour Rows */}
           {hoursToDisplay.map(hour => {
