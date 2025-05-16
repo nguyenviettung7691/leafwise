@@ -10,19 +10,20 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge'; // Added import for Badge
+import { Badge } from '@/components/ui/badge'; 
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft } from 'lucide-react'; // Added ChevronLeft
+import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft } from 'lucide-react'; 
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -308,9 +309,9 @@ export default function PlantDetailPage() {
     setIsSavingTask(true);
     
     let updatedTasks;
-    const baseTasks = plant.careTasks ? [...plant.careTasks] : []; // Ensure baseTasks is always an array
+    const baseTasks = plant.careTasks ? [...plant.careTasks] : []; 
 
-    if (taskToEdit) { // Editing existing task
+    if (taskToEdit) { 
       updatedTasks = baseTasks.map(t => 
         t.id === taskToEdit.id ? {
           ...t,
@@ -323,7 +324,7 @@ export default function PlantDetailPage() {
         } : t
       );
       toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
-    } else { // Adding new task
+    } else { 
       const newTask: CareTask = {
           id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           plantId: plant.id,
@@ -632,4 +633,5 @@ export default function PlantDetailPage() {
 
 
     
+
 
