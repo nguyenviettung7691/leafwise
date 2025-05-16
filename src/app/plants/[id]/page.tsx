@@ -17,6 +17,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
+import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView'; // New import
 import { CalendarDays, MapPin, Edit, Trash2, ImageUp, Leaf, Loader2, Users, AlertCircle, CheckCircle, Info, MessageSquareWarning, Sparkles, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, History } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +60,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
       else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
       else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
     } else {
-      formData.frequencyMode = 'adhoc';
+      formData.frequencyMode = 'adhoc'; // Fallback
     }
   }
 
@@ -70,7 +71,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day';
+    formData.timeOfDayOption = 'all_day'; // Fallback
     formData.specificTime = '';
   }
 
@@ -145,7 +146,7 @@ export default function PlantDetailPage() {
     setPlant(prevPlant => {
       if (!prevPlant) return null;
       const updatedTasks = prevPlant.careTasks.map(t =>
-        t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : undefined } : t 
+        t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : (t.resumeDate || addWeeks(new Date(), 1).toISOString()) } : t
       );
       return { ...prevPlant, careTasks: updatedTasks };
     });
@@ -180,7 +181,7 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant) return;
 
-    if (file.size > 4 * 1024 * 1024) {
+    if (file.size > 4 * 1024 * 1024) { // 4MB limit
         toast({ variant: 'destructive', title: 'Image Too Large', description: 'Please select an image file smaller than 4MB.' });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
@@ -210,11 +211,15 @@ export default function PlantDetailPage() {
                 setIsDiagnosingNewPhoto(false);
                 return;
             }
+            
+            const newHealthStatusFromDiagnosis = newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 
+                                   (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || 
+                                    newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
-                newPhotoHealthStatus: newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention')
+                newPhotoHealthStatus: newHealthStatusFromDiagnosis
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
@@ -248,13 +253,16 @@ export default function PlantDetailPage() {
 
   const addPhotoToJournal = () => {
     if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoPreviewUrl) return;
+    
+    const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' : 
+                                   (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || 
+                                    newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
     const newPhoto: PlantPhoto = {
         id: `p-${plant.id}-photo-${Date.now()}`,
         url: newPhotoDiagnosisDialogState.newPhotoPreviewUrl,
         dateTaken: new Date().toISOString(),
-        healthCondition: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' :
-                         (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention'),
+        healthCondition: newHealthStatusFromDiagnosis,
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
     };
 
@@ -309,7 +317,7 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: calculateNextDueDate(taskData.frequency),
+          nextDueDate: calculateNextDueDate(taskData.frequency), // Recalculate next due date on edit
         } : t
       );
       setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
@@ -349,7 +357,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined);
+    setInitialTaskFormData(undefined); // Ensure no initial data for new task
     setIsTaskFormDialogOpen(true);
   };
 
@@ -382,6 +390,17 @@ export default function PlantDetailPage() {
     setShowDeleteTaskDialog(false);
     setTaskIdToDelete(null);
   };
+
+  // Handler for editing task from calendar
+  const handleSelectTaskFromCalendarForEdit = (task: CareTask) => {
+    openEditTaskDialog(task);
+  };
+  
+  // Handler for deleting task from calendar
+  const handleSelectTaskFromCalendarForDelete = (taskId: string) => {
+    handleOpenDeleteTaskConfirmDialog(taskId);
+  };
+
 
   if (isLoadingPage) {
     return (
@@ -443,7 +462,7 @@ export default function PlantDetailPage() {
           <CardContent className="p-6 space-y-6">
             <div className="flex justify-between items-start">
                 <div>
-                    <Badge variant="outline" className={`capitalize mt-1 ${healthConditionStyles[plant.healthCondition]}`}>
+                    <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]}`}>
                         {plant.healthCondition.replace('_', ' ')}
                     </Badge>
                 </div>
@@ -530,6 +549,7 @@ export default function PlantDetailPage() {
 
             <Separator />
 
+            {/* Care Plan Section */}
             <div>
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="font-semibold text-lg">Care Plan</h3>
@@ -615,10 +635,19 @@ export default function PlantDetailPage() {
                     {isManagingCarePlan ? "No care tasks defined yet. Click 'Add Task' to get started." : "No care tasks defined yet. Click 'Manage' to add tasks."}
                  </p>
               )}
+               {/* Weekly Calendar View */}
+                {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
+                  <WeeklyCareCalendarView
+                    tasks={plant.careTasks}
+                    onEditTask={handleSelectTaskFromCalendarForEdit}
+                    onDeleteTask={handleSelectTaskFromCalendarForDelete}
+                  />
+                )}
             </div>
 
             <Separator />
 
+            {/* Growth Monitoring Section */}
             <div>
               <div className="flex justify-between items-center mb-3">
                 <h3 className="font-semibold text-lg">Growth Monitoring</h3>
@@ -685,6 +714,7 @@ export default function PlantDetailPage() {
           </CardFooter>
         </Card>
 
+        {/* Dialog for New Photo Analysis */}
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false}); 
@@ -761,6 +791,7 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
+        {/* Dialog for Viewing Selected Grid Photo */}
         <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -783,11 +814,12 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
+        {/* Dialog for Add/Edit Care Plan Task */}
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
-                setTaskToEdit(null);
-                setInitialTaskFormData(undefined);
+                setTaskToEdit(null); // Reset taskToEdit when dialog closes
+                setInitialTaskFormData(undefined); // Clear initial data
             }
         }}>
             <DialogContent className="sm:max-w-lg">
@@ -806,12 +838,13 @@ export default function PlantDetailPage() {
                         setInitialTaskFormData(undefined);
                     }}
                     isLoading={isSavingTask}
-                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'}
-                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'}
+                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'} // Prop for form title
+                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'} // Prop for submit button text
                 />
             </DialogContent>
         </Dialog>
 
+        {/* AlertDialog for Delete Task Confirmation */}
         <AlertDialog open={showDeleteTaskDialog} onOpenChange={setShowDeleteTaskDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -833,4 +866,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
