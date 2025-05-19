@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { Edit, Trash2, Loader2, Expand, HeartPulse, History } from 'lucide-react'; // Added History
+import { Edit, Trash2, Loader2, Expand, HeartPulse, History } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
@@ -99,59 +99,60 @@ export function PlantHeaderCard({
             </DialogClose>
           </DialogContent>
         </Dialog>
-        <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/70 to-transparent">
-          <div className="flex justify-between items-start"> {/* Changed items-center to items-start for title */}
-            <CardTitle className="text-3xl font-bold text-white">{plant.commonName}</CardTitle>
-            <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]} shrink-0 ml-2`}>
-              {plant.healthCondition.replace('_', ' ')}
-            </Badge>
-          </div>
-          {plant.scientificName && <CardDescription className="text-lg text-gray-200 italic mt-1">{plant.scientificName}</CardDescription>}
-        </div>
+        {/* Removed overlay title as per previous structure - keeping details in CardContent */}
       </CardHeader>
-      <CardContent className="p-6 space-y-3">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {caredForDuration && (
-              <span className="flex items-center gap-1">
-                <HeartPulse className="h-3.5 w-3.5 text-primary/80" />
-                {caredForDuration}
-              </span>
-            )}
-            {plant.lastCaredDate && (
-                <span className="flex items-center gap-1">
-                    <History className="h-3.5 w-3.5" />
-                    Last Cared: {formatDateSimple(plant.lastCaredDate)}
-                </span>
-            )}
+      <CardContent className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+            <CardTitle className="text-3xl font-bold">{plant.commonName}</CardTitle>
+            <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]} shrink-0`}>
+                {plant.healthCondition.replace('_', ' ')}
+            </Badge>
         </div>
-
-        <div className="flex justify-end gap-2 pt-2"> {/* Moved buttons lower */}
-          <Button variant="outline" size="icon" onClick={onEditPlant} aria-label="Edit Plant">
-            <Edit className="h-4 w-4" />
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon" aria-label="Delete Plant" disabled={isDeleting}>
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        {plant.scientificName && <CardDescription className="text-lg text-gray-500 dark:text-gray-400 italic -mt-2 mb-2">{plant.scientificName}</CardDescription>}
+        
+        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-2">
+            <div className="flex items-center gap-x-4 gap-y-1">
+                {caredForDuration && (
+                <span className="flex items-center gap-1">
+                    <HeartPulse className="h-4 w-4 text-primary/80" />
+                    {caredForDuration}
+                </span>
+                )}
+                {plant.lastCaredDate && (
+                    <span className="flex items-center gap-1">
+                        <History className="h-4 w-4" />
+                        Last Cared: {formatDateSimple(plant.lastCaredDate)}
+                    </span>
+                )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={onEditPlant} aria-label="Edit Plant">
+                <Edit className="h-4 w-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently (simulate) delete your plant
-                  "{plant.commonName}".
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                  {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="icon" aria-label="Delete Plant" disabled={isDeleting}>
+                    {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently (simulate) delete your plant
+                      "{plant.commonName}".
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                      {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
         </div>
       </CardContent>
     </Card>
