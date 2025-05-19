@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Info, SaveIcon } from 'lucide-react';
+import { CheckCircle, Info, SaveIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'; // Added Trending icons and Minus
 import { useLanguage } from '@/context/LanguageContext';
+import { cn } from '@/lib/utils';
 
 interface DiagnosisResultDisplayProps {
   diagnosisResult: DiagnosePlantHealthOutput;
@@ -17,8 +18,20 @@ interface DiagnosisResultDisplayProps {
   onShowSaveForm: () => void;
   plantSaved: boolean;
   showSavePlantForm: boolean;
-  lastSavedPlantId: string | null; // New prop
+  lastSavedPlantId: string | null;
 }
+
+const confidenceStyles = {
+  low: 'bg-destructive/10 text-destructive border-destructive/50 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/40',
+  medium: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500',
+  high: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500',
+};
+
+const confidenceIcons = {
+  low: <TrendingDown className="h-3.5 w-3.5 mr-1" />,
+  medium: <Minus className="h-3.5 w-3.5 mr-1" />,
+  high: <TrendingUp className="h-3.5 w-3.5 mr-1" />,
+};
 
 export function DiagnosisResultDisplay({
   diagnosisResult,
@@ -26,7 +39,7 @@ export function DiagnosisResultDisplay({
   onShowSaveForm,
   plantSaved,
   showSavePlantForm,
-  lastSavedPlantId, // New prop
+  lastSavedPlantId,
 }: DiagnosisResultDisplayProps) {
   const { t } = useLanguage();
 
@@ -79,7 +92,21 @@ export function DiagnosisResultDisplay({
                     <Badge variant="destructive">Needs Attention</Badge>}
                   </p>
                   {diagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
-                  {diagnosisResult.healthAssessment.confidence && <p><strong>Confidence:</strong> <Badge variant="outline" className="capitalize">{diagnosisResult.healthAssessment.confidence}</Badge></p>}
+                  {diagnosisResult.healthAssessment.confidence && (
+                    <p>
+                      <strong>Confidence:</strong>
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "capitalize ml-1.5 inline-flex items-center",
+                          confidenceStyles[diagnosisResult.healthAssessment.confidence]
+                        )}
+                      >
+                        {confidenceIcons[diagnosisResult.healthAssessment.confidence]}
+                        {diagnosisResult.healthAssessment.confidence}
+                      </Badge>
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -121,10 +148,10 @@ export function DiagnosisResultDisplay({
                 </Alert>
                 {lastSavedPlantId && (
                   <div className="text-center mt-2">
-                    <Link href={`/plants/${lastSavedPlantId}`} passHref>
-                      <Button variant="link">
+                    <Link href={`/plants/${lastSavedPlantId}`} passHref legacyBehavior>
+                      <a className="text-sm text-primary hover:underline">
                         View {diagnosisResult.identification.commonName || 'this plant'} in My Plants
-                      </Button>
+                      </a>
                     </Link>
                   </div>
                 )}

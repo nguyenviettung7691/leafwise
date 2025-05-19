@@ -9,10 +9,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, CalendarPlus, Zap, ListChecks, SaveIcon } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 interface CarePlanGeneratorProps {
   diagnosisResult: DiagnosePlantHealthOutput | null;
@@ -21,8 +22,8 @@ interface CarePlanGeneratorProps {
   carePlanResult: GenerateDetailedCarePlanOutput | null;
   locationClimate: string;
   onLocationClimateChange: (value: string) => void;
-  carePlanMode: 'basic' | 'advanced';
-  onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
+  carePlanMode: 'basic' | 'advanced'; // This prop reflects the mode used for the CURRENT carePlanResult, or the selected mode if no result yet
+  onCarePlanModeChange: (mode: 'basic' | 'advanced') => void; // For the radio button
   onGenerateCarePlan: (event: FormEvent) => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
 }
@@ -32,7 +33,13 @@ const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
     <Card className="bg-muted/50 p-3">
       <h4 className="font-semibold text-sm flex items-center">
         {task.taskName}
-        <Badge variant={task.taskLevel === 'advanced' ? 'default' : 'outline'} className="ml-2 capitalize text-xs">
+        <Badge 
+            variant={task.taskLevel === 'advanced' ? 'default' : 'outline'} 
+            className={cn(
+                "ml-2 capitalize text-xs",
+                task.taskLevel === 'advanced' ? "bg-primary text-primary-foreground" : ""
+            )}
+        >
           {task.taskLevel}
         </Badge>
       </h4>
@@ -50,8 +57,8 @@ export function CarePlanGenerator({
   carePlanResult,
   locationClimate,
   onLocationClimateChange,
-  carePlanMode,
-  onCarePlanModeChange,
+  carePlanMode, 
+  onCarePlanModeChange, 
   onGenerateCarePlan,
   onSaveCarePlan,
 }: CarePlanGeneratorProps) {
@@ -78,9 +85,6 @@ export function CarePlanGenerator({
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
 
-  if (process.env.NODE_ENV === 'development' && carePlanResult) {
-    console.log('CarePlanGenerator received carePlanResult:', JSON.stringify(carePlanResult, null, 2));
-  }
 
   return (
     <Card className="shadow-xl animate-in fade-in-50 mt-6">
@@ -138,17 +142,28 @@ export function CarePlanGenerator({
         {carePlanResult && !isLoadingCarePlan && (
           <div className="mt-6 pt-6 border-t">
             <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-lg flex items-center"> {/* Updated from text-xl */}
-                <CheckCircle className="text-primary mr-2 h-5 w-5" /> {/* Updated from h-6 w-6 */}
+              <CardTitle className="text-lg flex items-center"> 
+                <CheckCircle className="text-primary mr-2 h-5 w-5" /> 
                 Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
               </CardTitle>
-              <CardDescription>Mode: <Badge variant="outline" className="capitalize">{carePlanMode}</Badge></CardDescription>
+              <CardDescription>
+                Mode: 
+                <Badge 
+                  variant={carePlanMode === 'advanced' ? 'default' : 'outline'} 
+                  className={cn(
+                    "capitalize ml-1.5", 
+                    carePlanMode === 'advanced' ? "bg-primary text-primary-foreground" : ""
+                  )}
+                >
+                  {carePlanMode}
+                </Badge>
+              </CardDescription>
             </CardHeader>
             
             {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
               <div className="space-y-3">
                 {carePlanResult.generatedTasks.map((task, index) => (
-                  <AIGeneratedTaskItem key={task.taskName + index} task={task} /> // Using a slightly more stable key
+                  <AIGeneratedTaskItem key={task.taskName + index} task={task} />
                 ))}
               </div>
             ) : (
@@ -160,7 +175,6 @@ export function CarePlanGenerator({
               <Separator className="my-4" />
               <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
               <div className="space-y-3 text-xs text-muted-foreground">
-                {/* Removed customizableSchedulesPlaceholder */}
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
                   <p>{carePlanResult.pushNotificationsPlaceholder}</p>
@@ -176,7 +190,7 @@ export function CarePlanGenerator({
                   variant={carePlanEffectivelySaved ? "default" : "outline"}
                   className="w-full"
                   onClick={handleSaveClick}
-                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant }
+                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant || !(Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0) }
                 >
                   {isCarePlanSavedProcessing ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -197,4 +211,3 @@ export function CarePlanGenerator({
     </Card>
   );
 }
-
