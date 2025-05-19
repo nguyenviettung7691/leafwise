@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -91,7 +91,7 @@ export default function PlantDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
-  const [newPhotoJournaled, setNewPhotoJournaled] = useState(false); // For hiding journal button
+  const [newPhotoJournaled, setNewPhotoJournaled] = useState(false); 
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
@@ -235,10 +235,9 @@ export default function PlantDetailPage() {
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
                 newPhotoPreviewUrl: base64Image,
-                isLoadingCarePlanReview: true, // Start loading for care plan review
+                isLoadingCarePlanReview: true, 
             });
-            // Don't set isDiagnosingNewPhoto to false here, keep it true until care plan review is also done or modal closes
-
+            
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
@@ -250,7 +249,7 @@ export default function PlantDetailPage() {
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
                 carePlanReviewResult,
-                isLoadingCarePlanReview: false, // Care plan review done
+                isLoadingCarePlanReview: false, 
             }));
 
         } catch (e: any) {
@@ -258,7 +257,7 @@ export default function PlantDetailPage() {
             toast({ title: "Error", description: errorMsg, variant: "destructive" });
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
-            setIsDiagnosingNewPhoto(false); // Set loading to false after everything
+            setIsDiagnosingNewPhoto(false); 
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -297,7 +296,7 @@ export default function PlantDetailPage() {
     }
 
     toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
-    setNewPhotoJournaled(true); // Hide the button
+    setNewPhotoJournaled(true); 
   };
 
   const handleApplyCarePlanChanges = () => {
@@ -406,7 +405,7 @@ export default function PlantDetailPage() {
     let updatedTasks;
     const baseTasks = plant.careTasks ? [...plant.careTasks] : [];
 
-    if (taskToEdit) { // Editing existing task
+    if (taskToEdit) { 
         updatedTasks = baseTasks.map(t =>
             t.id === taskToEdit.id ? {
                 ...t,
@@ -419,7 +418,7 @@ export default function PlantDetailPage() {
             } : t
         );
         toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
-    } else { // Adding new task
+    } else { 
         const newTask: CareTask = {
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             plantId: plant.id,
@@ -580,6 +579,7 @@ export default function PlantDetailPage() {
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false});
+                setNewPhotoJournaled(false); 
             }
         }}>
             <DialogContent className="sm:max-w-2xl">
@@ -710,7 +710,7 @@ export default function PlantDetailPage() {
                            Add Diagnosed Photo to Journal
                        </Button>
                      )}
-                     {newPhotoJournaled && (<div />) /* Placeholder to keep layout consistent */}
+                     {newPhotoJournaled && (<div />) }
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             Close
@@ -796,3 +796,4 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
