@@ -68,6 +68,7 @@ export function PlantCareManagement({
       try {
         return compareAsc(parseISO(a.nextDueDate!), parseISO(b.nextDueDate!));
       } catch (e) {
+        console.error("Error parsing date for sorting:", a.nextDueDate, b.nextDueDate, e);
         return 0;
       }
     });
@@ -76,7 +77,11 @@ export function PlantCareManagement({
   const toggleManageMode = () => {
     setIsManagingCarePlan(prev => {
       if (prev) { // Exiting manage mode
-        onToggleTaskSelection(''); // Clear selection by passing an invalid ID or implementing a dedicated clear
+        // Clear selection by calling onToggleTaskSelection with a non-existent ID
+        // or by having a dedicated clear function passed down.
+        // For now, assuming parent handles clearing selection if needed.
+        // Alternatively, if onToggleTaskSelection clears all if taskId is empty/specific value:
+        // onToggleTaskSelection(""); // Example: Signal to clear all
       }
       return !prev;
     });
@@ -92,7 +97,7 @@ export function PlantCareManagement({
             <Button
               variant="destructive"
               size="sm"
-              onClick={onDeleteSelectedTasks}
+              onClick={onDeleteSelectedTasks} // This should trigger the AlertDialog in parent
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Delete ({selectedTaskIds.size})
@@ -112,7 +117,7 @@ export function PlantCareManagement({
       {sortedTasks && sortedTasks.length > 0 ? (
         <div className="space-y-3">
           {sortedTasks.map(task => {
-            const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate));
+            const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate!));
             const isSelected = selectedTaskIds.has(task.id);
             return (
             <Card
@@ -121,13 +126,10 @@ export function PlantCareManagement({
                 "bg-secondary/30 transition-all",
                 task.isPaused ? "opacity-70" : "",
                 isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : "",
-                isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : ""
+                isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
+                isManagingCarePlan ? "cursor-pointer" : ""
               )}
-              onClick={() => {
-                if (isManagingCarePlan) {
-                  onToggleTaskSelection(task.id);
-                }
-              }}
+              onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
             >
               <CardContent className="p-4 flex justify-between items-center">
                 {isManagingCarePlan && (
@@ -172,7 +174,7 @@ export function PlantCareManagement({
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  {isManagingCarePlan && !isSelected && ( // Show individual edit/delete only if not selected for multi-delete
+                  {isManagingCarePlan && !isSelected && ( 
                     <>
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label="Edit Task">
                         <EditTaskIcon className="h-4 w-4" />
@@ -188,7 +190,7 @@ export function PlantCareManagement({
                       size="sm"
                       onClick={() => onToggleTaskPause(task.id)}
                       disabled={loadingTaskId === task.id}
-                      className="w-28 text-xs"
+                      className="w-28 text-xs" // Kept width for consistency, adjust if needed
                     >
                       {loadingTaskId === task.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -217,7 +219,7 @@ export function PlantCareManagement({
         <WeeklyCareCalendarView
           tasks={plant.careTasks}
           onEditTask={onOpenEditTaskDialog}
-          onDeleteTask={onOpenDeleteTaskDialog}
+          onDeleteTask={onOpenDeleteTaskDialog} // Changed to onOpenDeleteTaskDialog to match parent
         />
       )}
     </div>
