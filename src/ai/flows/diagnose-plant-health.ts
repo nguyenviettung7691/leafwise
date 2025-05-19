@@ -36,8 +36,8 @@ const DiagnosePlantHealthOutputSchema = z.object({
   }),
   careRecommendations: z
     .array(z.object({
-        action: z.string().describe('A recommended care action.'),
-        details: z.string().optional().describe('More details about the recommended action.')
+        action: z.string().describe('A recommended care action, often framed as a care category like "Adjust Watering", "Pest Control", "Improve Lighting".'),
+        details: z.string().optional().describe('More details about the recommended action, explaining what to do and why.')
     }))
     .describe('A list of recommended care actions based on the diagnosis.'),
 });
@@ -55,7 +55,11 @@ const prompt = ai.definePrompt({
 Analyze the provided plant image and optional user description to perform the following tasks:
 1.  **Identification**: Determine if the image contains a plant. If it does, identify its common and scientific names. If possible, also determine its family category (e.g., Araceae, Asparagaceae, Cactaceae, Fabaceae) useful for general categorization, and estimate the plant's age in years (as a number, e.g., 0.5 for 6 months, 1, 2) if discernible. If unsure about any of these, indicate that.
 2.  **Health Assessment**: Assess the plant's health. Determine if it's healthy or if it shows signs of disease, pest infestation, nutrient deficiency, or other issues. Provide a diagnosis. State your confidence level (low, medium, high) for this assessment.
-3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps the user can take. These should be specific and helpful.
+3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps. Frame these recommendations in terms of common care task categories such as Watering, Lighting, Fertilizing, Pest Control, Pruning, or Soil/Potting. For example:
+    - If overwatered: 'Action: Adjust Watering', 'Details: Reduce frequency and ensure pot has good drainage.'
+    - If pests are present: 'Action: Pest Control', 'Details: Identify the pest and treat with appropriate organic insecticide like neem oil.'
+    - If insufficient light: 'Action: Adjust Lighting', 'Details: Move plant to a location with brighter, indirect sunlight.'
+    These recommendations should be specific and helpful for the user to potentially update their existing care tasks or create new ones.
 
 User Description (if provided): {{{description}}}
 Plant Photo: {{media url=photoDataUri}}
@@ -87,3 +91,4 @@ const diagnosePlantHealthFlow = ai.defineFlow(
     return output;
   }
 );
+
