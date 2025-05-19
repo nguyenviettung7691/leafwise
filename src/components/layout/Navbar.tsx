@@ -1,11 +1,11 @@
 
 'use client';
 
-import Link from 'next/link';
+import Link from 'next/link'; // Keep NextLink for non-ProgressBarLink uses if any
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react'; // Added LogOutIcon
+import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,7 +20,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -29,24 +28,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
+import { ProgressBarLink } from './ProgressBarLink'; // New import
 
-// Helper function to determine if a nav item should be active
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
-    // Highlight "My Plants" if on / or /plants/*
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
 };
 
 export function Navbar() {
-  const { user, isLoading: authIsLoading, logout } = useAuth(); // Added logout
+  const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = React.useState(false);
-
 
   const navItems: NavItem[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
@@ -57,34 +54,30 @@ export function Navbar() {
 
   const NavLinks = ({isMobile = false}: {isMobile?: boolean}) => (
     navItems.map((item) => (
-      <Button
+      <ProgressBarLink
         key={item.href}
-        variant="ghost"
-        asChild
+        href={item.disabled ? '#' : item.href}
         className={cn(
-          "transition-colors h-9 px-3 w-full justify-start md:w-auto md:justify-center",
+          "transition-colors h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
           isActive(item.href, pathname)
             ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+          item.disabled ? "pointer-events-none opacity-50" : ""
         )}
-        disabled={item.disabled}
         onClick={() => {
           if (isMobile) setIsMobileMenuOpen(false);
         }}
       >
-        <Link href={item.disabled ? '#' : item.href}>
-          <item.icon className="h-4 w-4 mr-2" />
-          {item.title}
-        </Link>
-      </Button>
+        <item.icon className="h-4 w-4 mr-0" /> {/* Removed mr-2 to use gap-2 from parent */}
+        {item.title}
+      </ProgressBarLink>
     ))
   );
-
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-x-6"> {/* Increased gap for better separation */}
+        <div className="flex items-center gap-x-6">
           <Logo iconSize={28} textSize="text-2xl" />
           <nav className="hidden md:flex items-center gap-1">
             <NavLinks />
@@ -110,7 +103,7 @@ export function Navbar() {
           </Sheet>
         </div>
 
-        <div className="flex items-center gap-2"> {/* Reduced gap for user actions */}
+        <div className="flex items-center gap-2">
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
@@ -118,14 +111,14 @@ export function Navbar() {
             </>
           ) : user ? (
             <>
-              <Link href="/profile" passHref>
+              <ProgressBarLink href="/profile">
                 <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-primary transition-colors">
                   <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name} data-ai-hint="person avatar" />
                   <AvatarFallback className="text-sm bg-muted">
                     {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-              </Link>
+              </ProgressBarLink>
 
               <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                 <DialogTrigger asChild>
@@ -194,12 +187,10 @@ export function Navbar() {
               </Dialog>
             </>
           ) : (
-            <Link href="/login" passHref>
-              <Button variant="ghost">
-                <LogIn className="h-5 w-5 mr-2" />
-                Sign In
-              </Button>
-            </Link>
+            <ProgressBarLink href="/login" className={cn(buttonVariants({ variant: "ghost" }))}>
+              <LogIn className="h-5 w-5 mr-2" />
+              Sign In
+            </ProgressBarLink>
           )}
         </div>
       </div>

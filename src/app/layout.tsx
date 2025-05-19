@@ -6,7 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/context/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
-import { PageProgressBar } from '@/components/layout/PageProgressBar'; // Import PageProgressBar
+import { ProgressProvider } from '@/contexts/ProgressContext'; // New import
+import { ProgressBar } from '@/components/layout/ProgressBar'; // New import
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -21,17 +22,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'LeafWise - Plant Care Management',
   description: 'Your personal plant care assistant.',
-  manifest: '/manifest.json', // Link to the manifest file
+  manifest: '/manifest.json',
 };
 
-// Add viewport configuration for PWA theme color and other properties
 export const viewport: Viewport = {
-  themeColor: [ // Provide light and dark theme colors
-    { media: '(prefers-color-scheme: light)', color: '#32CD32' }, // Lime Green for light
-    { media: '(prefers-color-scheme: dark)', color: '#1A202C' }, // Example dark theme color, adjust as needed
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#32CD32' },
+    { media: '(prefers-color-scheme: dark)', color: '#1A202C' },
   ],
 };
-
 
 export default function RootLayout({
   children,
@@ -41,7 +40,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Recommended for PWA: Apple touch icon */}
         <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased h-full`}>
@@ -53,9 +51,11 @@ export default function RootLayout({
         >
           <AuthProvider>
             <LanguageProvider>
-              <PageProgressBar /> {/* Add PageProgressBar here */}
-              {children}
-              <Toaster />
+              <ProgressProvider> {/* Wrap with ProgressProvider */}
+                <ProgressBar /> {/* Add ProgressBar here, outside main content flow */}
+                {children}
+                <Toaster />
+              </ProgressProvider>
             </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
