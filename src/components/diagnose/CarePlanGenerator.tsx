@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // New import
 
 interface CarePlanGeneratorProps {
   diagnosisResult: DiagnosePlantHealthOutput | null;
@@ -27,6 +28,7 @@ interface CarePlanGeneratorProps {
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
+  lastSavedPlantId?: string | null; // New prop
 }
 
 const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
@@ -56,13 +58,14 @@ export function CarePlanGenerator({
   isLoadingCarePlan,
   carePlanError,
   carePlanResult,
-  resultMode, // Use this for displaying the mode of the current result
+  resultMode,
   locationClimate,
   onLocationClimateChange,
-  carePlanMode, // This is for the radio button selection
+  carePlanMode,
   onCarePlanModeChange,
   onGenerateCarePlan,
   onSaveCarePlan,
+  lastSavedPlantId, // New prop used here
 }: CarePlanGeneratorProps) {
   const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
   const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
@@ -84,6 +87,7 @@ export function CarePlanGenerator({
   };
 
   React.useEffect(() => {
+    // Reset saved state if the care plan result changes (e.g., a new plan is generated)
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
 
@@ -190,19 +194,33 @@ export function CarePlanGenerator({
               </div>
 
               <div className="mt-6">
-                <Button
-                  variant={carePlanEffectivelySaved ? "default" : "outline"}
-                  className="w-full"
-                  onClick={handleSaveClick}
-                  disabled={isCarePlanSavedProcessing || carePlanEffectivelySaved || !diagnosisResult?.identification.isPlant || !(Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0) }
-                >
-                  {isCarePlanSavedProcessing ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <SaveIcon className="mr-2 h-4 w-4" />
-                  )}
-                  {carePlanEffectivelySaved ? `Care Plan Saved for ${plantNameForButton}` : `Save Care Plan for ${plantNameForButton}`}
-                </Button>
+                {carePlanEffectivelySaved && lastSavedPlantId ? (
+                  <ProgressBarLink
+                    href={`/plants/${lastSavedPlantId}`}
+                    className={cn(Button.name, "w-full bg-green-600 hover:bg-green-700 text-white")} // Using buttonVariants directly might be cleaner but this works
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View {plantNameForButton}'s Details
+                  </ProgressBarLink>
+                ) : (
+                  <Button
+                    variant="default" // Changed to default for primary styling
+                    className="w-full"
+                    onClick={handleSaveClick}
+                    disabled={
+                      isCarePlanSavedProcessing || 
+                      !diagnosisResult?.identification.isPlant || 
+                      !(Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0)
+                    }
+                  >
+                    {isCarePlanSavedProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <SaveIcon className="mr-2 h-4 w-4" />
+                    )}
+                    Save Care Plan for {plantNameForButton}
+                  </Button>
+                )}
               </div>
           </div>
         )}
@@ -215,4 +233,3 @@ export function CarePlanGenerator({
     </Card>
   );
 }
-

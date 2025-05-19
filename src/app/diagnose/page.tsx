@@ -82,13 +82,16 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear previous results and form states related to diagnosis & care plan
     setDiagnosisResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
+    setLastSavedPlantId(null); // Reset last saved plant ID as well
     setCarePlanResult(null);
     setCarePlanError(null);
     setGeneratedPlanMode(null);
+    // Note: Not clearing 'description' or 'locationClimate' here, as user might want to reuse them
 
     const selectedFile = event.target.files?.[0];
 
@@ -248,7 +251,7 @@ export default function DiagnosePlantPage() {
         console.log('AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
       setCarePlanResult(result);
-      setGeneratedPlanMode(carePlanMode); // Store the mode used for this result
+      setGeneratedPlanMode(carePlanMode);
       toast({ title: "Care Plan Generated!", description: `Detailed ${carePlanMode} care plan ready for ${input.plantCommonName}.` });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred generating the care plan.');
@@ -320,7 +323,7 @@ export default function DiagnosePlantPage() {
 
         {diagnosisError && (
           <Alert variant="destructive">
-            <CheckCircle className="h-4 w-4" /> {/* Icon was AlertCircle, changed for consistency with other error alerts */}
+            <CheckCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{diagnosisError}</AlertDescription>
           </Alert>
@@ -357,13 +360,14 @@ export default function DiagnosePlantPage() {
             isLoadingCarePlan={isLoadingCarePlan}
             carePlanError={carePlanError}
             carePlanResult={carePlanResult}
-            resultMode={generatedPlanMode} // Pass the mode of the generated plan
+            resultMode={generatedPlanMode}
             locationClimate={locationClimate}
             onLocationClimateChange={setLocationClimate}
-            carePlanMode={carePlanMode} // This is for the radio button selection
+            carePlanMode={carePlanMode}
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
             onSaveCarePlan={handleSaveCarePlan}
+            lastSavedPlantId={lastSavedPlantId} // Pass lastSavedPlantId
           />
         )}
          <div className="text-center mt-8">
@@ -373,4 +377,3 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
-
