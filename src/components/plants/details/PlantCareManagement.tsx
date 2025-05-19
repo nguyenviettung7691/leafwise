@@ -10,14 +10,18 @@ import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarVi
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
 import { format, parseISO, isToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PlantCareManagementProps {
   plant: Plant;
   loadingTaskId: string | null;
   onToggleTaskPause: (taskId: string) => Promise<void>;
   onOpenEditTaskDialog: (task: CareTask) => void;
-  onOpenDeleteTaskDialog: (taskId: string) => void;
+  onOpenDeleteTaskDialog: (taskId: string) => void; // For single delete icon
   onOpenAddTaskDialog: () => void;
+  selectedTaskIds: Set<string>;
+  onToggleTaskSelection: (taskId: string) => void;
+  onDeleteSelectedTasks: () => void; // For multi-delete button
 }
 
 const formatDate = (dateString?: string) => {
@@ -46,32 +50,55 @@ export function PlantCareManagement({
   onToggleTaskPause,
   onOpenEditTaskDialog,
   onOpenDeleteTaskDialog,
-  onOpenAddTaskDialog
+  onOpenAddTaskDialog,
+  selectedTaskIds,
+  onToggleTaskSelection,
+  onDeleteSelectedTasks
 }: PlantCareManagementProps) {
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
 
   const sortedTasks = useMemo(() => {
     if (!plant.careTasks) return [];
     return [...plant.careTasks].sort((a, b) => {
-      if (a.isPaused && !b.isPaused) return 1; // Paused tasks last
+      if (a.isPaused && !b.isPaused) return 1;
       if (!a.isPaused && b.isPaused) return -1;
-      if (!a.nextDueDate && b.nextDueDate) return 1; // Tasks without due date last among active/paused group
+      if (!a.nextDueDate && b.nextDueDate) return 1;
       if (a.nextDueDate && !b.nextDueDate) return -1;
-      if (!a.nextDueDate && !b.nextDueDate) return a.name.localeCompare(b.name); // Sort by name if both no due date
+      if (!a.nextDueDate && !b.nextDueDate) return a.name.localeCompare(b.name);
       try {
         return compareAsc(parseISO(a.nextDueDate!), parseISO(b.nextDueDate!));
       } catch (e) {
-        return 0; // Fallback if date parsing fails
+        return 0;
       }
     });
   }, [plant.careTasks]);
+
+  const toggleManageMode = () => {
+    setIsManagingCarePlan(prev => {
+      if (prev) { // Exiting manage mode
+        onToggleTaskSelection(''); // Clear selection by passing an invalid ID or implementing a dedicated clear
+      }
+      return !prev;
+    });
+  };
+
 
   return (
     <div>
       <div className="flex justify-between items-center mb-3 pt-6 border-t">
         <h3 className="font-semibold text-lg">Care Plan</h3>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => setIsManagingCarePlan(!isManagingCarePlan)}>
+        <div className="flex items-center gap-2">
+          {isManagingCarePlan && selectedTaskIds.size > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onDeleteSelectedTasks}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete ({selectedTaskIds.size})
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={toggleManageMode}>
             {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
             {isManagingCarePlan ? 'Done' : 'Manage'}
           </Button>
@@ -86,34 +113,51 @@ export function PlantCareManagement({
         <div className="space-y-3">
           {sortedTasks.map(task => {
             const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate));
+            const isSelected = selectedTaskIds.has(task.id);
             return (
             <Card
               key={task.id}
               className={cn(
-                "bg-secondary/30",
+                "bg-secondary/30 transition-all",
                 task.isPaused ? "opacity-70" : "",
-                isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : ""
+                isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : "",
+                isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : ""
               )}
+              onClick={() => {
+                if (isManagingCarePlan) {
+                  onToggleTaskSelection(task.id);
+                }
+              }}
             >
               <CardContent className="p-4 flex justify-between items-center">
-                <div className="flex-1 min-w-0"> {/* Added min-w-0 to allow text to wrap/truncate */}
-                  <p className="font-medium flex items-center flex-wrap gap-x-2 min-w-0">
-                    <span className="truncate">{task.name}</span> {/* Added truncate for long names */}
+                {isManagingCarePlan && (
+                  <div className="mr-3">
+                    <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onToggleTaskSelection(task.id)}
+                        onClick={(e) => e.stopPropagation()} // Prevent card click from toggling if clicking checkbox directly
+                        aria-label={`Select task ${task.name}`}
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium flex items-center flex-wrap gap-x-2 min-w-0">
+                    <span className="truncate">{task.name}</span>
                     <Badge
                       variant={task.level === 'advanced' ? 'default' : 'outline'}
                       className={cn(
-                        "text-xs capitalize shrink-0", // Added shrink-0
+                        "text-xs capitalize shrink-0",
                         task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
                       {task.level}
                     </Badge>
                     {task.isPaused && (
-                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0"> {/* Added shrink-0 */}
+                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
                         Paused
                       </Badge>
                     )}
-                  </p>
+                  </div>
                   {task.description && (
                     <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
                   )}
@@ -127,36 +171,38 @@ export function PlantCareManagement({
                     )}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2"> {/* Added shrink-0 and ml-2 for spacing */}
-                  {isManagingCarePlan && (
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  {isManagingCarePlan && !isSelected && ( // Show individual edit/delete only if not selected for multi-delete
                     <>
-                      <Button variant="ghost" size="icon" onClick={() => onOpenEditTaskDialog(task)} aria-label="Edit Task">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label="Edit Task">
                         <EditTaskIcon className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onOpenDeleteTaskDialog(task.id)} aria-label="Delete Task" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenDeleteTaskDialog(task.id);}} aria-label="Delete Task" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onToggleTaskPause(task.id)}
-                    disabled={loadingTaskId === task.id}
-                    className="w-28 text-xs"
-                  >
-                    {loadingTaskId === task.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : task.isPaused ? (
-                      <>
-                        <Play className="mr-1.5 h-3.5 w-3.5" /> Resume
-                      </>
-                    ) : (
-                      <>
-                        <Pause className="mr-1.5 h-3.5 w-3.5" /> Pause
-                      </>
-                    )}
-                  </Button>
+                  {!isManagingCarePlan && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onToggleTaskPause(task.id)}
+                      disabled={loadingTaskId === task.id}
+                      className="w-28 text-xs"
+                    >
+                      {loadingTaskId === task.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : task.isPaused ? (
+                        <>
+                          <Play className="mr-1.5 h-3.5 w-3.5" /> Resume
+                        </>
+                      ) : (
+                        <>
+                          <Pause className="mr-1.5 h-3.5 w-3.5" /> Pause
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

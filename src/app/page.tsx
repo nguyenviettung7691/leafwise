@@ -6,12 +6,26 @@ import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantHealthCondition } from '@/types';
-import { PlusCircle, Loader2 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2 } from 'lucide-react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { parseISO, compareAsc } from 'date-fns';
 import { PlantFilterSortControls, type Filters, type SortConfig } from '@/components/plants/PlantFilterSortControls';
+import { Checkbox } from '@/components/ui/checkbox'; // Added for multi-select
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
+
 
 const initialFiltersState: Filters = {
   searchTerm: '',
@@ -22,8 +36,8 @@ const initialFiltersState: Filters = {
 };
 
 const initialSortConfigState: SortConfig = {
-  key: 'nextCareDate', // Default sort by next care task
-  direction: 'asc',   // Ascending order
+  key: 'nextCareDate',
+  direction: 'asc',
 };
 
 const getNextCareTaskDate = (plant: Plant): Date | null => {
@@ -31,7 +45,7 @@ const getNextCareTaskDate = (plant: Plant): Date | null => {
   const upcomingTasks = plant.careTasks
     .filter(task => !task.isPaused && task.nextDueDate)
     .map(task => parseISO(task.nextDueDate!))
-    .filter(date => date >= new Date(new Date().setHours(0,0,0,0))) 
+    .filter(date => date >= new Date(new Date().setHours(0,0,0,0)))
     .sort((a, b) => a.getTime() - b.getTime());
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
@@ -43,11 +57,18 @@ export default function MyPlantsPage() {
   const [isNavigatingToNewPlant, setIsNavigatingToNewPlant] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   const [filters, setFilters] = useState<Filters>(initialFiltersState);
   const [sortConfig, setSortConfig] = useState<SortConfig>(initialSortConfigState);
 
+  const [isManagingPlants, setIsManagingPlants] = useState(false);
+  const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+
+
   useEffect(() => {
+    // Simulating fetching plants
     setPlants(mockPlants);
     setIsLoading(false);
   }, []);
@@ -67,7 +88,7 @@ export default function MyPlantsPage() {
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
     }));
   };
-  
+
   const handleSortDirectionChange = (direction: 'asc' | 'desc') => {
     setSortConfig(prev => ({ ...prev, direction }));
   };
@@ -85,7 +106,7 @@ export default function MyPlantsPage() {
   };
 
   const filteredAndSortedPlants = useMemo(() => {
-    let processedPlants = [...plants];
+    let processedPlants = [...plants]; // Use the 'plants' state which reflects deletions
 
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
@@ -99,7 +120,7 @@ export default function MyPlantsPage() {
       const matchesLocation = filters.location ? (plant.location && plant.location.toLowerCase().includes(filters.location.toLowerCase())) : true;
       const matchesFamily = filters.familyCategory ? (plant.familyCategory && plant.familyCategory.toLowerCase().includes(filters.familyCategory.toLowerCase())) : true;
       const matchesHealth = filters.healthCondition === 'all' || plant.healthCondition === filters.healthCondition;
-      
+
       return matchesSearch && matchesAge && matchesLocation && matchesFamily && matchesHealth;
     });
 
@@ -110,7 +131,6 @@ export default function MyPlantsPage() {
       if (sortConfig.key === 'nextCareDate') {
         valA = getNextCareTaskDate(a);
         valB = getNextCareTaskDate(b);
-        // Handle nulls for date sorting: tasks with no due date go last when ascending, first when descending
         if (valA === null && valB === null) return 0;
         if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1;
         if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -118,10 +138,10 @@ export default function MyPlantsPage() {
         valA = a[sortConfig.key as keyof Plant];
         valB = b[sortConfig.key as keyof Plant];
       }
-      
+
       let comparison = 0;
-      if (valA === undefined || valA === null) comparison = 1; 
-      else if (valB === undefined || valB === null) comparison = -1; 
+      if (valA === undefined || valA === null) comparison = 1;
+      else if (valB === undefined || valB === null) comparison = -1;
       else if (typeof valA === 'number' && typeof valB === 'number') {
         comparison = valA - valB;
       } else if (valA instanceof Date && valB instanceof Date) {
@@ -139,6 +159,7 @@ export default function MyPlantsPage() {
 
     return processedPlants;
   }, [plants, filters, sortConfig]);
+
 
   const sortOptions: { value: SortConfig['key']; label: string }[] = [
     { value: 'commonName', label: 'Common Name' },
@@ -167,18 +188,72 @@ export default function MyPlantsPage() {
     { value: '>3', label: 'Over 3 years' },
   ];
 
+  const toggleManagePlantsMode = () => {
+    setIsManagingPlants(prev => {
+      if (prev) { // Exiting manage mode
+        setSelectedPlantIds(new Set());
+      }
+      return !prev;
+    });
+  };
+
+  const handleTogglePlantSelection = useCallback((plantId: string) => {
+    setSelectedPlantIds(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(plantId)) {
+        newSelected.delete(plantId);
+      } else {
+        newSelected.add(plantId);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  const handleDeleteSelectedPlants = () => {
+    const numSelected = selectedPlantIds.size;
+    const updatedPlants = mockPlants.filter(p => !selectedPlantIds.has(p.id));
+    mockPlants.length = 0; // Clear original array
+    mockPlants.push(...updatedPlants); // Repopulate with filtered plants
+    setPlants(updatedPlants); // Update local state for UI re-render
+
+    toast({
+      title: "Plants Deleted",
+      description: `${numSelected} plant${numSelected > 1 ? 's have' : ' has'} been deleted.`,
+    });
+    setSelectedPlantIds(new Set());
+    setIsManagingPlants(false);
+    setShowDeleteConfirmDialog(false);
+  };
+
+
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.myPlants')}</h1>
-        <Button onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant}>
-          {isNavigatingToNewPlant ? (
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          ) : (
-            <PlusCircle className="mr-2 h-5 w-5" />
+        <div className="flex items-center gap-2">
+          {isManagingPlants && selectedPlantIds.size > 0 && (
+            <Button
+                variant="destructive"
+                onClick={() => setShowDeleteConfirmDialog(true)}
+                size="sm"
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete ({selectedPlantIds.size})
+            </Button>
           )}
-          {isNavigatingToNewPlant ? 'Navigating...' : 'Add New Plant'}
-        </Button>
+          <Button variant="outline" onClick={toggleManagePlantsMode} size="sm">
+            {isManagingPlants ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
+            {isManagingPlants ? 'Done' : 'Manage'}
+          </Button>
+          <Button onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant || isManagingPlants}>
+            {isNavigatingToNewPlant ? (
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            ) : (
+              <PlusCircle className="mr-2 h-5 w-5" />
+            )}
+            {isNavigatingToNewPlant ? 'Navigating...' : 'Add New Plant'}
+          </Button>
+        </div>
       </div>
 
       <PlantFilterSortControls
@@ -201,8 +276,31 @@ export default function MyPlantsPage() {
             <p className="ml-4 text-lg text-muted-foreground">Loading your beautiful plants...</p>
         </div>
       ) : (
-        <PlantGrid plants={filteredAndSortedPlants} />
+        <PlantGrid
+          plants={filteredAndSortedPlants}
+          isManaging={isManagingPlants}
+          selectedPlantIds={selectedPlantIds}
+          onToggleSelect={handleTogglePlantSelection}
+        />
       )}
+
+      <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected {selectedPlantIds.size} plant{selectedPlantIds.size > 1 ? 's' : ''}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSelectedPlants} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </AppLayout>
   );
 }

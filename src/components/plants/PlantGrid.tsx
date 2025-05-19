@@ -1,16 +1,20 @@
+
 import type { Plant } from '@/types';
 import { PlantCard } from './PlantCard';
 
 interface PlantGridProps {
   plants: Plant[];
+  isManaging?: boolean;
+  selectedPlantIds?: Set<string>;
+  onToggleSelect?: (plantId: string) => void;
 }
 
-export function PlantGrid({ plants }: PlantGridProps) {
+export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect }: PlantGridProps) {
   if (plants.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-xl text-muted-foreground">No plants added yet.</p>
-        <p className="mt-2">Click "Add New Plant" to get started!</p>
+        <p className="text-xl text-muted-foreground">No plants found.</p>
+        <p className="mt-2">Try adjusting your filters or add new plants!</p>
       </div>
     );
   }
@@ -18,7 +22,13 @@ export function PlantGrid({ plants }: PlantGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {plants.map((plant) => (
-        <PlantCard key={plant.id} plant={plant} />
+        <PlantCard
+          key={plant.id}
+          plant={plant}
+          isManaging={isManaging}
+          isSelected={selectedPlantIds?.has(plant.id)}
+          onToggleSelect={onToggleSelect}
+        />
       ))}
     </div>
   );
