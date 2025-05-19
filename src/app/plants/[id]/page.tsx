@@ -4,14 +4,14 @@
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData, ReviewCarePlanInput, ReviewCarePlanOutput, ExistingTaskModificationSuggestion, AIGeneratedTask } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData, ReviewCarePlanInput, ReviewCarePlanOutput, ExistingTaskModificationSuggestion, AIGeneratedTask, OnSaveTaskData } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
+import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
@@ -41,10 +41,11 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
-  const formData: Partial<CarePlanTaskFormData> = {
+  const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = { // Ensure startDate is part of the partial type
     name: task.name,
     description: task.description || '',
     level: task.level,
+    startDate: task.nextDueDate || new Date().toISOString(), // Use nextDueDate as startDate
   };
 
   if (task.frequency === 'Ad-hoc') formData.frequencyMode = 'adhoc';
@@ -194,7 +195,7 @@ export default function PlantDetailPage() {
 
     setIsDiagnosingNewPhoto(true);
     setNewPhotoJournaled(false); 
-    setNewPhotoDiagnosisDialogState({open: false}); // Reset previous dialog state
+    setNewPhotoDiagnosisDialogState({open: false}); 
     
 
     const reader = new FileReader();
@@ -299,6 +300,27 @@ export default function PlantDetailPage() {
     setNewPhotoJournaled(true); 
   };
 
+  const calculateNextDueDateForAIMain = (frequency: string): string | undefined => {
+    const now = new Date();
+    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
+    if (frequency === 'Daily') return addDays(now, 1).toISOString();
+    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
+    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
+    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
+  
+    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/);
+    if (everyXMatch) {
+      const value = parseInt(everyXMatch[1], 10);
+      const unit = everyXMatch[2];
+      if (unit === 'Days') return addDays(now, value).toISOString();
+      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
+      if (unit === 'Months') return addMonths(now, value).toISOString();
+    }
+    console.warn(`Next due date calculation not implemented for frequency: ${frequency}`);
+    return undefined;
+  };
+
+
   const handleApplyCarePlanChanges = () => {
     if (!plant || !newPhotoDiagnosisDialogState.carePlanReviewResult) return;
 
@@ -330,7 +352,7 @@ export default function PlantDetailPage() {
                         frequency: mod.updatedDetails.frequency || updatedCareTasks[taskIndex].frequency,
                         timeOfDay: mod.updatedDetails.timeOfDay || updatedCareTasks[taskIndex].timeOfDay,
                         level: mod.updatedDetails.level || updatedCareTasks[taskIndex].level,
-                        nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDate(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
+                        nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDateForAIMain(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
                     };
                 }
                 break;
@@ -349,7 +371,7 @@ export default function PlantDetailPage() {
             timeOfDay: aiTask.suggestedTimeOfDay,
             level: aiTask.taskLevel,
             isPaused: false,
-            nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency),
+            nextDueDate: calculateNextDueDateForAIMain(aiTask.suggestedFrequency),
         });
     });
     
@@ -378,31 +400,11 @@ export default function PlantDetailPage() {
     setTimeout(() => setSelectedGridPhoto(null), 300);
   };
 
-  const calculateNextDueDate = (frequency: string): string | undefined => {
-    const now = new Date();
-    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
-    if (frequency === 'Daily') return addDays(now, 1).toISOString();
-    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
-    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
-    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
-  
-    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/);
-    if (everyXMatch) {
-      const value = parseInt(everyXMatch[1], 10);
-      const unit = everyXMatch[2];
-      if (unit === 'Days') return addDays(now, value).toISOString();
-      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
-      if (unit === 'Months') return addMonths(now, value).toISOString();
-    }
-    console.warn(`Next due date calculation not implemented for frequency: ${frequency}`);
-    return undefined;
-  };
-
   const handleSaveTask = (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
     
-    let updatedTasks;
+    let updatedTasks: CareTask[];
     const baseTasks = plant.careTasks ? [...plant.careTasks] : [];
 
     if (taskToEdit) { 
@@ -414,7 +416,7 @@ export default function PlantDetailPage() {
                 frequency: taskData.frequency,
                 timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
-                nextDueDate: calculateNextDueDate(taskData.frequency),
+                nextDueDate: taskData.startDate, // Use startDate from form as nextDueDate
             } : t
         );
         toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
@@ -428,23 +430,19 @@ export default function PlantDetailPage() {
             timeOfDay: taskData.timeOfDay,
             level: taskData.level,
             isPaused: false,
-            nextDueDate: calculateNextDueDate(taskData.frequency),
+            nextDueDate: taskData.startDate, // Use startDate from form as nextDueDate
         };
         updatedTasks = [...baseTasks, newTask];
         toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
     
-    setPlant(prevPlant => {
-        if (prevPlant) {
-            const newPlantState = { ...prevPlant, careTasks: updatedTasks };
-            const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
-            if (plantIndex !== -1) {
-                mockPlants[plantIndex] = newPlantState;
-            }
-            return newPlantState;
-        }
-        return null;
-    });
+    const newPlantState = { ...plant, careTasks: updatedTasks };
+    setPlant(newPlantState);
+    
+    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
+    if (plantIndex !== -1) {
+        mockPlants[plantIndex] = newPlantState;
+    }
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -454,7 +452,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined);
+    setInitialTaskFormData(undefined); // Ensure fresh form for new task
     setIsTaskFormDialogOpen(true);
   };
 
@@ -477,17 +475,13 @@ export default function PlantDetailPage() {
 
     const updatedTasks = plant.careTasks.filter(t => t.id !== taskIdToDelete);
     
-    setPlant(prevPlant => {
-        if (prevPlant) {
-            const newPlantState = { ...prevPlant, careTasks: updatedTasks };
-            const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
-            if (plantIndex !== -1) {
-                mockPlants[plantIndex] = newPlantState;
-            }
-            return newPlantState;
-        }
-        return null;
-    });
+    const newPlantState = { ...plant, careTasks: updatedTasks };
+    setPlant(newPlantState);
+
+    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
+    if (plantIndex !== -1) {
+        mockPlants[plantIndex] = newPlantState;
+    }
     
     toast({ title: "Task Deleted", description: `Task "${taskToDelete.name}" has been deleted.` });
     setShowDeleteTaskDialog(false);
@@ -710,7 +704,7 @@ export default function PlantDetailPage() {
                            Add Diagnosed Photo to Journal
                        </Button>
                      )}
-                     {newPhotoJournaled && (<div />) }
+                     {newPhotoJournaled && (<div className="flex-1" />) } {/* Occupy space if button is hidden */}
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             Close
@@ -796,4 +790,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-

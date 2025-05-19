@@ -56,6 +56,7 @@ export interface PlantFormData {
 export type CarePlanTaskFormData = {
   name: string;
   description?: string;
+  startDate: string; // ISO string for the first due date
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly';
   frequencyValue?: number;
   timeOfDayOption: 'specific_time' | 'all_day';
@@ -170,4 +171,13 @@ export type DiagnosePlantHealthOutput = {
         action: string;
         details?: string;
     }>;
+};
+
+export type OnSaveTaskData = { // Type for data passed from CarePlanTaskForm
+    name: string;
+    description?: string;
+    startDate: string; // This will be used as the nextDueDate
+    frequency: string;
+    timeOfDay: string;
+    level: 'basic' | 'advanced';
 };

@@ -8,19 +8,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // Label will be used by FormLabel
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Label } from '@/components/ui/label'; 
+import { Textarea } from '@/components/ui/textarea'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Check, ChevronsUpDown, Edit2 } from 'lucide-react';
+import { PlusCircle, Check, ChevronsUpDown, Edit2, CalendarIcon } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
 
 const taskFormSchema = z.object({
   name: z.string().min(1, { message: "Task name is required." }),
-  description: z.string().optional(), // New field
+  description: z.string().optional(),
+  startDate: z.string().refine(val => val && !isNaN(Date.parse(val)), { message: "Start date is required." }),
   frequencyMode: z.enum(['adhoc', 'daily', 'every_x_days', 'weekly', 'every_x_weeks', 'monthly', 'every_x_months', 'yearly'], {
     required_error: "Frequency mode is required.",
   }),
@@ -28,7 +31,7 @@ const taskFormSchema = z.object({
   timeOfDayOption: z.enum(['specific_time', 'all_day'], {
     required_error: "Time of day option is required.",
   }),
-  specificTime: z.string().optional(), // HH:MM format
+  specificTime: z.string().optional(), 
   level: z.enum(['basic', 'advanced'], {
     required_error: "Task level is required.",
   }),
@@ -53,7 +56,8 @@ const taskFormSchema = z.object({
 
 export type OnSaveTaskData = {
     name: string;
-    description?: string; // New field
+    description?: string;
+    startDate: string; // This will be used as the nextDueDate
     frequency: string;
     timeOfDay: string;
     level: 'basic' | 'advanced';
@@ -65,7 +69,7 @@ interface CarePlanTaskFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   formTitle?: string;
-  formDescription?: string; // Added for consistency
+  formDescription?: string; 
   submitButtonText?: string;
 }
 
@@ -87,14 +91,15 @@ export function CarePlanTaskForm({
   onCancel, 
   isLoading,
   formTitle = "Add New Care Plan Task",
-  formDescription, // Added
+  formDescription, 
   submitButtonText 
 }: CarePlanTaskFormProps) {
   const form = useForm<CarePlanTaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialData || {
       name: '',
-      description: '', // Initialize description
+      description: '', 
+      startDate: new Date().toISOString(),
       frequencyMode: 'adhoc',
       frequencyValue: undefined,
       timeOfDayOption: 'all_day',
@@ -107,9 +112,10 @@ export function CarePlanTaskForm({
     if (initialData) {
       form.reset(initialData);
     } else {
-      form.reset({ // Ensure full reset for new task
+      form.reset({ 
         name: '',
         description: '',
+        startDate: new Date().toISOString(),
         frequencyMode: 'adhoc',
         frequencyValue: undefined,
         timeOfDayOption: 'all_day',
@@ -147,7 +153,8 @@ export function CarePlanTaskForm({
 
     onSave({
         name: data.name,
-        description: data.description, // Pass description
+        description: data.description, 
+        startDate: data.startDate, // Pass the selected start date
         frequency: frequencyString,
         timeOfDay: timeOfDayString,
         level: data.level,
@@ -168,7 +175,6 @@ export function CarePlanTaskForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* formTitle and formDescription could be passed to DialogHeader if this form is always in a dialog */}
         <FormField
           control={form.control}
           name="name"
@@ -252,6 +258,48 @@ export function CarePlanTaskForm({
               <FormControl>
                 <Textarea placeholder="e.g., Use distilled water, ensure good drainage." {...field} value={field.value ?? ''} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Start Date <span className="text-destructive">*</span></FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(parseISO(field.value), "PPP")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value ? parseISO(field.value) : undefined}
+                    onSelect={(date) => field.onChange(date ? date.toISOString() : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                The date this task will first be due.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
