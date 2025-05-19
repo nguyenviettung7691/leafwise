@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
-import { format, parseISO, isToday, compareAsc } from 'date-fns'; // Added isToday and compareAsc
+import { format, parseISO, isToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface PlantCareManagementProps {
@@ -87,35 +87,35 @@ export function PlantCareManagement({
           {sortedTasks.map(task => {
             const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate));
             return (
-            <Card 
-              key={task.id} 
+            <Card
+              key={task.id}
               className={cn(
-                "bg-secondary/30", 
+                "bg-secondary/30",
                 task.isPaused ? "opacity-70" : "",
-                isTaskToday ? "border-primary bg-primary/10 shadow-md" : "" // Highlight if due today
+                isTaskToday ? "border-2 border-accent bg-accent/10 shadow-lg" : ""
               )}
             >
               <CardContent className="p-4 flex justify-between items-center">
-                <div className="flex-1"> {/* Allow text to wrap */}
+                <div className="flex-1 min-w-0"> {/* Added min-w-0 to allow text to wrap/truncate */}
                   <p className="font-medium flex items-center flex-wrap gap-x-2">
-                    {task.name}
+                    <span className="truncate">{task.name}</span> {/* Added truncate for long names */}
                     <Badge
                       variant={task.level === 'advanced' ? 'default' : 'outline'}
                       className={cn(
-                        "text-xs capitalize",
+                        "text-xs capitalize shrink-0", // Added shrink-0
                         task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
                       {task.level}
                     </Badge>
                     {task.isPaused && (
-                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
+                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0"> {/* Added shrink-0 */}
                         Paused
                       </Badge>
                     )}
                   </p>
                   {task.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{task.description}</p>
+                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
                     Frequency: {task.frequency}
@@ -127,7 +127,7 @@ export function PlantCareManagement({
                     )}
                   </p>
                 </div>
-                <div className="flex items-center gap-1 shrink-0"> {/* Prevent buttons from shrinking */}
+                <div className="flex items-center gap-1 shrink-0 ml-2"> {/* Added shrink-0 and ml-2 for spacing */}
                   {isManagingCarePlan && (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => onOpenEditTaskDialog(task)} aria-label="Edit Task">
