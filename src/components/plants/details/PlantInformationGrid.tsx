@@ -2,7 +2,7 @@
 'use client';
 
 import type { Plant } from '@/types';
-import { CalendarDays, MapPin, Users, History } from 'lucide-react';
+import { CalendarDays, MapPin, Users, History, Timer } from 'lucide-react'; // Added Timer
 import { format, parseISO } from 'date-fns';
 
 interface PlantInformationGridProps {
@@ -22,9 +22,9 @@ const formatDate = (dateString?: string) => {
 
 export function PlantInformationGrid({ plant }: PlantInformationGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm pt-6">
       <div className="flex items-start gap-3">
-        <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        <Timer className="h-5 w-5 text-primary mt-0.5 shrink-0" /> {/* Changed icon */}
         <div>
           <p className="font-medium">Age Estimate</p>
           <p className="text-muted-foreground">{plant.ageEstimate || 'Unknown'}</p>
@@ -63,11 +63,12 @@ export function PlantInformationGrid({ plant }: PlantInformationGridProps) {
         </div>
       )}
       {plant.customNotes && (
-        <div className="md:col-span-2"> {/* Make notes span full width on medium screens and up */}
-          <h3 className="font-semibold text-lg mb-2">Notes</h3>
-          <p className="text-muted-foreground whitespace-pre-wrap bg-muted/50 p-3 rounded-md">{plant.customNotes}</p>
+        <div className="md:col-span-2 mt-2"> {/* Ensure notes are below other items */}
+          <h3 className="font-semibold text-md mb-1 text-foreground/90">Notes</h3>
+          <p className="text-muted-foreground whitespace-pre-wrap bg-secondary/30 p-3 rounded-md text-sm">{plant.customNotes}</p>
         </div>
       )}
     </div>
   );
 }
+

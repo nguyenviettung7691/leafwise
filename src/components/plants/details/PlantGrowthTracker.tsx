@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
@@ -38,6 +39,14 @@ const healthScoreLabels: Record<number, string> = {
   3: 'Healthy',
 };
 
+const healthConditionDotColors: Record<PlantHealthCondition, string> = {
+  healthy: 'hsl(var(--primary))', // Lime Green
+  needs_attention: 'hsl(var(--chart-4))', // Typically a yellow/orange in ShadCN
+  sick: 'hsl(var(--destructive))', // Red
+  unknown: 'hsl(var(--muted-foreground))', // Grey
+};
+
+
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
   try {
@@ -50,18 +59,20 @@ const formatDate = (dateString?: string) => {
 };
 
 const CustomChartDot = (props: any) => {
-  const { cx, cy, stroke, payload, onDotClick } = props;
-  if (!payload || payload.health === undefined) {
+  const { cx, cy, stroke, payload, onDotClick } = props; // Removed fill, as we'll use healthCondition for color
+  if (!payload || payload.healthCondition === undefined) {
     return null;
   }
+  const dotColor = healthConditionDotColors[payload.healthCondition as PlantHealthCondition] || healthConditionDotColors.unknown;
+  
   return (
     <Dot
       cx={cx}
       cy={cy}
       r={5}
-      fill={stroke}
-      stroke={stroke}
-      strokeWidth={2}
+      fill={dotColor}
+      stroke={dotColor} 
+      strokeWidth={1} // Can be adjusted
       onClick={() => onDotClick(payload)}
       style={{ cursor: 'pointer' }}
     />
@@ -92,11 +103,12 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url, // Add photoUrl for tooltip
+        photoUrl: photo.url, 
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
         healthLabel: photo.healthCondition.replace(/_/g, ' '),
+        healthCondition: photo.healthCondition, // Pass original healthCondition for dot coloring
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
   }, [plant]);
@@ -109,12 +121,12 @@ export function PlantGrowthTracker({
   const chartConfig = {
     health: {
       label: 'Health Status',
-      color: 'hsl(var(--primary))',
+      color: 'hsl(var(--primary))', // Main line color
     },
   } satisfies ChartConfig;
 
   const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload && dotPayload.id) {
+    if (dotPayload && dotPayload.id) { // dotPayload here is the data point of the chart
         onChartDotClick(dotPayload);
     }
   };
@@ -122,7 +134,7 @@ export function PlantGrowthTracker({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 pt-6 border-t">
         <h3 className="font-semibold text-lg">Growth Monitoring</h3>
         <Button
           variant="outline"
@@ -144,12 +156,12 @@ export function PlantGrowthTracker({
       </div>
 
       {chartData.length > 0 && (
-        <div className="mt-4 mb-6 pt-4 border-t">
+        <div className="mt-4 mb-6">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 1 ? (
+          {chartData.length < 1 ? ( // Should be chartData.length < 2 for a trend, but 1 point can be shown
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one more photo with diagnosis to see a health trend.
             </p>
@@ -158,7 +170,7 @@ export function PlantGrowthTracker({
               <LineChart
                 accessibilityLayer
                 data={chartData}
-                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }} // Increased left/right margin
               >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
@@ -169,6 +181,7 @@ export function PlantGrowthTracker({
                   tickFormatter={(value) => value.slice(0, 6)}
                 />
                 <YAxis
+                  dataKey="health"
                   domain={[0, 3]}
                   ticks={[0, 1, 2, 3]}
                   tickLine={false}

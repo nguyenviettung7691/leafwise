@@ -2,13 +2,13 @@
 'use client';
 
 import type { Plant, CareTask } from '@/types';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday, compareAsc } from 'date-fns'; // Added isToday and compareAsc
 import { cn } from '@/lib/utils';
 
 interface PlantCareManagementProps {
@@ -50,9 +50,25 @@ export function PlantCareManagement({
 }: PlantCareManagementProps) {
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
 
+  const sortedTasks = useMemo(() => {
+    if (!plant.careTasks) return [];
+    return [...plant.careTasks].sort((a, b) => {
+      if (a.isPaused && !b.isPaused) return 1; // Paused tasks last
+      if (!a.isPaused && b.isPaused) return -1;
+      if (!a.nextDueDate && b.nextDueDate) return 1; // Tasks without due date last among active/paused group
+      if (a.nextDueDate && !b.nextDueDate) return -1;
+      if (!a.nextDueDate && !b.nextDueDate) return a.name.localeCompare(b.name); // Sort by name if both no due date
+      try {
+        return compareAsc(parseISO(a.nextDueDate!), parseISO(b.nextDueDate!));
+      } catch (e) {
+        return 0; // Fallback if date parsing fails
+      }
+    });
+  }, [plant.careTasks]);
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 pt-6 border-t">
         <h3 className="font-semibold text-lg">Care Plan</h3>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setIsManagingCarePlan(!isManagingCarePlan)}>
@@ -66,25 +82,34 @@ export function PlantCareManagement({
           )}
         </div>
       </div>
-      {plant.careTasks && plant.careTasks.length > 0 ? (
+      {sortedTasks && sortedTasks.length > 0 ? (
         <div className="space-y-3">
-          {plant.careTasks.map(task => (
-            <Card key={task.id} className={cn("bg-secondary/30", task.isPaused ? "opacity-70" : "")}>
+          {sortedTasks.map(task => {
+            const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate));
+            return (
+            <Card 
+              key={task.id} 
+              className={cn(
+                "bg-secondary/30", 
+                task.isPaused ? "opacity-70" : "",
+                isTaskToday ? "border-primary bg-primary/10 shadow-md" : "" // Highlight if due today
+              )}
+            >
               <CardContent className="p-4 flex justify-between items-center">
                 <div className="flex-1"> {/* Allow text to wrap */}
-                  <p className="font-medium flex items-center">
+                  <p className="font-medium flex items-center flex-wrap gap-x-2">
                     {task.name}
                     <Badge
                       variant={task.level === 'advanced' ? 'default' : 'outline'}
                       className={cn(
-                        "ml-2 text-xs capitalize",
+                        "text-xs capitalize",
                         task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
                       {task.level}
                     </Badge>
                     {task.isPaused && (
-                      <Badge variant="outline" className="ml-2 text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
+                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500">
                         Paused
                       </Badge>
                     )}
@@ -135,7 +160,7 @@ export function PlantCareManagement({
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         <p className="text-muted-foreground text-sm text-center py-4">

@@ -6,14 +6,15 @@ import type { Plant, PlantHealthCondition } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog'; // Added Dialog components
-import { Edit, Trash2, Loader2, Expand } from 'lucide-react'; // Added Expand
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Edit, Trash2, Loader2, Expand, HeartPulse } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import React from 'react'; // Added React for state
+import React from 'react';
+import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid } from 'date-fns';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -29,6 +30,25 @@ interface PlantHeaderCardProps {
   isDeleting: boolean;
 }
 
+const getCaredForDuration = (plantingDate?: string): string | null => {
+  if (!plantingDate) return null;
+  const startDate = parseISO(plantingDate);
+  if (!isValid(startDate)) return null;
+
+  const now = new Date();
+  const years = differenceInYears(now, startDate);
+  if (years > 0) return `Cared for ${years} year${years > 1 ? 's' : ''}`;
+
+  const months = differenceInMonths(now, startDate);
+  if (months > 0) return `Cared for ${months} month${months > 1 ? 's' : ''}`;
+
+  const days = differenceInDays(now, startDate);
+  if (days >= 0) return `Cared for ${days} day${days !== 1 ? 's' : ''}`; // Handle 0 days
+
+  return null;
+};
+
+
 export function PlantHeaderCard({
   plant,
   onEditPlant,
@@ -36,6 +56,7 @@ export function PlantHeaderCard({
   isDeleting,
 }: PlantHeaderCardProps) {
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
+  const caredForDuration = getCaredForDuration(plant.plantingDate);
 
   return (
     <Card className="overflow-hidden shadow-xl">
@@ -79,12 +100,18 @@ export function PlantHeaderCard({
           {plant.scientificName && <CardDescription className="text-lg text-gray-200 italic">{plant.scientificName}</CardDescription>}
         </div>
       </CardHeader>
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-6 space-y-3"> {/* Reduced space-y-6 to space-y-3 */}
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex items-center gap-2">
             <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]}`}>
               {plant.healthCondition.replace('_', ' ')}
             </Badge>
+            {caredForDuration && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <HeartPulse className="h-3.5 w-3.5 text-primary/80" />
+                {caredForDuration}
+              </span>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={onEditPlant} aria-label="Edit Plant">
@@ -119,5 +146,3 @@ export function PlantHeaderCard({
     </Card>
   );
 }
-
-    
