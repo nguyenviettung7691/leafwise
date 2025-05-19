@@ -6,7 +6,7 @@ import type { Plant, PlantHealthCondition } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Edit, Trash2, Loader2, Expand, HeartPulse, History } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -67,7 +67,7 @@ export function PlantHeaderCard({
       <CardHeader className="relative p-0">
         <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
           <DialogTrigger asChild>
-            <div className="aspect-video w-full overflow-hidden bg-muted cursor-pointer group">
+            <div className="aspect-video w-full overflow-hidden bg-muted cursor-pointer group relative">
               <Image
                 src={plant.primaryPhotoUrl || 'https://placehold.co/800x450.png'}
                 alt={plant.commonName}
@@ -77,7 +77,15 @@ export function PlantHeaderCard({
                 data-ai-hint="plant detail"
                 priority
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Overlay for plant names */}
+              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 via-black/50 to-transparent pointer-events-none">
+                <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
+                {plant.scientificName && (
+                  <p className="text-lg text-gray-200 italic drop-shadow-md">{plant.scientificName}</p>
+                )}
+              </div>
+              {/* Expand icon overlay */}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Expand className="h-12 w-12 text-white" />
               </div>
             </div>
@@ -99,18 +107,15 @@ export function PlantHeaderCard({
             </DialogClose>
           </DialogContent>
         </Dialog>
-        {/* Removed overlay title as per previous structure - keeping details in CardContent */}
       </CardHeader>
-      <CardContent className="p-6 space-y-4">
-        <div className="flex items-center gap-2">
-            <CardTitle className="text-3xl font-bold">{plant.commonName}</CardTitle>
-            <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]} shrink-0`}>
+      <CardContent className="p-4 sm:p-6 space-y-3">
+        <div className="flex justify-end">
+            <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]} shrink-0 text-sm px-3 py-1`}>
                 {plant.healthCondition.replace('_', ' ')}
             </Badge>
         </div>
-        {plant.scientificName && <CardDescription className="text-lg text-gray-500 dark:text-gray-400 italic -mt-2 mb-2">{plant.scientificName}</CardDescription>}
         
-        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-2">
+        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-3 border-t mt-3">
             <div className="flex items-center gap-x-4 gap-y-1">
                 {caredForDuration && (
                 <span className="flex items-center gap-1">
