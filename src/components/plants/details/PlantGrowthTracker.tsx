@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
@@ -9,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ImageUp, Loader2, TrendingUp, Camera } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip, Dot } from 'recharts'; // Added Dot
+import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip, Dot } from 'recharts';
 import { cn } from '@/lib/utils';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -50,21 +49,20 @@ const formatDate = (dateString?: string) => {
   }
 };
 
-// Custom Dot component for the chart
 const CustomChartDot = (props: any) => {
-  const { cx, cy, stroke, payload, value, onDotClick } = props;
-  if (!payload || payload.health === undefined) { // Ensure payload and health are defined
+  const { cx, cy, stroke, payload, onDotClick } = props;
+  if (!payload || payload.health === undefined) {
     return null;
   }
   return (
     <Dot
       cx={cx}
       cy={cy}
-      r={5} // Increased radius for easier clicking
+      r={5}
       fill={stroke}
       stroke={stroke}
       strokeWidth={2}
-      onClick={() => onDotClick(payload)} // Pass the full payload to the handler
+      onClick={() => onDotClick(payload)}
       style={{ cursor: 'pointer' }}
     />
   );
@@ -77,7 +75,7 @@ interface PlantGrowthTrackerProps {
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
   growthPhotoInputRef: React.RefObject<HTMLInputElement>;
-  onChartDotClick: (chartDotPayload: any) => void; // Changed to accept any for Recharts payload
+  onChartDotClick: (chartDotPayload: any) => void;
 }
 
 export function PlantGrowthTracker({
@@ -85,7 +83,7 @@ export function PlantGrowthTracker({
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
-  growthPhotoInputRef, // This ref is for the hidden file input
+  growthPhotoInputRef,
   onChartDotClick,
 }: PlantGrowthTrackerProps) {
 
@@ -93,7 +91,8 @@ export function PlantGrowthTracker({
     if (!plant || !plant.photos || plant.photos.length < 1) return [];
     return [...plant.photos]
       .map(photo => ({
-        id: photo.id, // Keep photo ID for identifying the photo
+        id: photo.id,
+        photoUrl: photo.url, // Add photoUrl for tooltip
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -114,17 +113,9 @@ export function PlantGrowthTracker({
     },
   } satisfies ChartConfig;
 
-  // Wrapper for onChartDotClick to handle Recharts event structure
-  const handleRechartsDotClick = (event: any) => {
-    // Recharts provides the payload of the clicked dot in event.payload
-    // if it's a direct click on a Dot.
-    // If clicking the line, it might be in activePayload.
-    // For simplicity, we'll assume `CustomChartDot` provides the payload directly.
-    if (event && event.id) { // if `event` IS the payload from our custom dot
-        onChartDotClick(event);
-    } else if (event && event.activePayload && event.activePayload.length > 0 && event.activePayload[0].payload) {
-        // Fallback if the click event comes from the LineChart itself and not the custom dot
-        onChartDotClick(event.activePayload[0].payload);
+  const handleRechartsDotClick = (dotPayload: any) => {
+    if (dotPayload && dotPayload.id) {
+        onChartDotClick(dotPayload);
     }
   };
 
@@ -146,7 +137,7 @@ export function PlantGrowthTracker({
             </>
           ) : (
             <>
-              <ImageUp className="h-4 w-4 mr-2" /> Add Photo & Diagnose
+              <ImageUp className="h-4 w-4 mr-2" /> Add Photo &amp; Diagnose
             </>
           )}
         </Button>
@@ -158,7 +149,7 @@ export function PlantGrowthTracker({
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 1 ? ( // Show if even 1 photo exists, but ideally 2 for a line
+          {chartData.length < 1 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one more photo with diagnosis to see a health trend.
             </p>
@@ -168,7 +159,6 @@ export function PlantGrowthTracker({
                 accessibilityLayer
                 data={chartData}
                 margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                // Removed direct onClick from LineChart, will use dot's onClick
               >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
@@ -189,24 +179,36 @@ export function PlantGrowthTracker({
                 />
                 <RechartsTooltip
                   cursor={false}
-                  content={<ChartTooltipContent
-                    indicator="dot"
-                    labelKey="date" // Use 'date' for the label in tooltip
-                    formatter={(value, name, props) => ( // props.payload contains the full data point
-                      <div className="text-sm">
-                        <p className="font-medium text-foreground">{props.payload.date}</p>
-                        <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload.healthLabel}</span></p>
-                      </div>
-                    )}
-                  />}
+                  content={
+                    <ChartTooltipContent
+                        indicator="dot"
+                        labelKey="date"
+                        formatter={(value, name, props) => (
+                            <div className="text-sm">
+                                {props.payload?.photoUrl && (
+                                    <Image
+                                        src={props.payload.photoUrl}
+                                        alt="Plant diagnosis"
+                                        width={64}
+                                        height={64}
+                                        className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
+                                        data-ai-hint="plant chart thumbnail"
+                                    />
+                                )}
+                                <p className="font-medium text-foreground">{props.payload?.date}</p>
+                                <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
+                            </div>
+                        )}
+                    />
+                  }
                 />
                 <Line
                   dataKey="health"
                   type="monotone"
                   stroke="var(--color-health)"
                   strokeWidth={2}
-                  dot={<CustomChartDot onDotClick={handleRechartsDotClick} />} // Use CustomChartDot
-                  activeDot={{r: 7, style: { cursor: 'pointer' }}} // Style active dot
+                  dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
+                  activeDot={{r: 7, style: { cursor: 'pointer' }}}
                 />
               </LineChart>
             </ChartContainer>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -30,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
-import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates'; // New import
+import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -91,15 +90,16 @@ export default function PlantDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [newPhotoJournaled, setNewPhotoJournaled] = useState(false); // For hiding journal button
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutput;
     healthComparisonResult?: ComparePlantHealthOutput;
-    carePlanReviewResult?: ReviewCarePlanOutput; // Added
+    carePlanReviewResult?: ReviewCarePlanOutput;
     newPhotoPreviewUrl?: string;
-    isLoadingCarePlanReview?: boolean; // Added
-    isApplyingCarePlanChanges?: boolean; // Added
+    isLoadingCarePlanReview?: boolean;
+    isApplyingCarePlanChanges?: boolean;
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
@@ -193,6 +193,7 @@ export default function PlantDetailPage() {
 
     setIsDiagnosingNewPhoto(true);
     setNewPhotoDiagnosisDialogState({open: false}); // Reset previous dialog state
+    setNewPhotoJournaled(false); // Reset journaled state for new diagnosis
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -205,7 +206,6 @@ export default function PlantDetailPage() {
         }
 
         try {
-            // Step 1: Diagnose the new photo
             const newPhotoDiagnosisResult = await diagnosePlantHealth({
                 photoDataUri: base64Image,
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`
@@ -221,7 +221,6 @@ export default function PlantDetailPage() {
                                    (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || 
                                     newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
-            // Step 2: Compare health
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
@@ -229,7 +228,6 @@ export default function PlantDetailPage() {
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
-            // Open dialog partially, show loading for care plan review
             setNewPhotoDiagnosisDialogState({
                 open: true,
                 newPhotoDiagnosisResult,
@@ -237,9 +235,8 @@ export default function PlantDetailPage() {
                 newPhotoPreviewUrl: base64Image,
                 isLoadingCarePlanReview: true,
             });
-            setIsDiagnosingNewPhoto(false); // Diagnosis part is done
+            setIsDiagnosingNewPhoto(false);
 
-            // Step 3: Review and suggest care plan updates
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
@@ -254,14 +251,12 @@ export default function PlantDetailPage() {
                 isLoadingCarePlanReview: false,
             }));
 
-
         } catch (e: any) {
             const errorMsg = e instanceof Error ? e.message : "An error occurred during diagnosis or care plan review.";
             toast({ title: "Error", description: errorMsg, variant: "destructive" });
-            setIsDiagnosingNewPhoto(false); // Ensure loading stops on error
+            setIsDiagnosingNewPhoto(false);
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
-             // Already set isDiagnosingNewPhoto to false, isLoadingCarePlanReview to false
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -300,7 +295,7 @@ export default function PlantDetailPage() {
     }
 
     toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
-    // Dialog will be closed via onOpenChange or specific close button
+    setNewPhotoJournaled(true); // Hide the button
   };
 
   const handleApplyCarePlanChanges = () => {
@@ -311,7 +306,6 @@ export default function PlantDetailPage() {
     let updatedCareTasks = [...plant.careTasks];
     const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
 
-    // Apply modifications to existing tasks
     taskModifications.forEach(mod => {
         const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
         if (taskIndex === -1) return;
@@ -335,17 +329,15 @@ export default function PlantDetailPage() {
                         frequency: mod.updatedDetails.frequency || updatedCareTasks[taskIndex].frequency,
                         timeOfDay: mod.updatedDetails.timeOfDay || updatedCareTasks[taskIndex].timeOfDay,
                         level: mod.updatedDetails.level || updatedCareTasks[taskIndex].level,
-                        // Recalculate nextDueDate if frequency changed
                         nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDate(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
                     };
                 }
                 break;
-            default: // keep_as_is
+            default:
                 break;
         }
     });
 
-    // Add new tasks
     newTasks.forEach(aiTask => {
         updatedCareTasks.push({
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -367,11 +359,11 @@ export default function PlantDetailPage() {
     }
 
     toast({ title: "Care Plan Updated", description: "Suggested changes have been applied to the care plan." });
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); // Hide suggestions after applying
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); 
   };
 
   const handleKeepCurrentCarePlan = () => {
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined })); // Hide suggestions
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined }));
     toast({ title: "Care Plan Unchanged", description: "No changes were applied to the care plan based on AI suggestions." });
   };
 
@@ -501,16 +493,13 @@ export default function PlantDetailPage() {
     setTaskIdToDelete(null);
   };
 
-  const handleChartDotClick = (data: any) => {
-    if (data && data.activePayload && data.activePayload.length > 0) {
-      const clickedDotPayload = data.activePayload[0].payload;
+  const handleChartDotClick = (clickedDotPayload: any) => {
       if (clickedDotPayload && clickedDotPayload.id && plant) {
         const clickedPhoto = plant.photos.find(p => p.id === clickedDotPayload.id);
         if (clickedPhoto) {
           openGridPhotoDialog(clickedPhoto);
         }
       }
-    }
   };
   
   const formatDateForDialog = (dateString?: string) => {
@@ -586,15 +575,14 @@ export default function PlantDetailPage() {
           onChange={handleGrowthPhotoFileChange}
         />
 
-        {/* Dialog for New Photo Analysis */}
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false});
             }
         }}>
-            <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>New Photo Analysis & Care Plan Review</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>New Photo Analysis &amp; Care Plan Review</DialogTitle>
                     <DialogDescription>
                         Review the latest diagnosis, health comparison, and care plan suggestions for your {plant.commonName}.
                     </DialogDescription>
@@ -605,7 +593,6 @@ export default function PlantDetailPage() {
                          <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt="New plant photo" width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
                     )}
 
-                    {/* Diagnosis Result */}
                     {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Latest Diagnosis</CardTitle></CardHeader>
@@ -617,7 +604,6 @@ export default function PlantDetailPage() {
                         </Card>
                     )}
 
-                    {/* Health Comparison */}
                     {newPhotoDiagnosisDialogState.healthComparisonResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Health Comparison</CardTitle></CardHeader>
@@ -642,7 +628,6 @@ export default function PlantDetailPage() {
                         </Card>
                     )}
 
-                    {/* Care Plan Review Section */}
                     {newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
                         <div className="flex items-center justify-center p-4">
                             <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -718,9 +703,12 @@ export default function PlantDetailPage() {
                 </div>
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
-                     <Button type="button" variant="secondary" onClick={addPhotoToJournal} disabled={!newPhotoDiagnosisDialogState.newPhotoPreviewUrl}>
-                        Add Diagnosed Photo to Journal
-                    </Button>
+                     {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
+                       <Button type="button" variant="secondary" onClick={addPhotoToJournal}>
+                           Add Diagnosed Photo to Journal
+                       </Button>
+                     )}
+                     {newPhotoJournaled && (<div />) /* Placeholder to keep layout consistent */}
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             Close
@@ -730,7 +718,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for Viewing Selected Grid Photo */}
         <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -753,7 +740,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for Add/Edit Care Plan Task */}
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
@@ -784,7 +770,6 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* AlertDialog for Delete Task Confirmation */}
         <AlertDialog open={showDeleteTaskDialog} onOpenChange={setShowDeleteTaskDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
