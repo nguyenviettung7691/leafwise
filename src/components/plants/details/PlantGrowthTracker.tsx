@@ -6,10 +6,10 @@ import React, { useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ImageUp, Loader2, TrendingUp, Camera } from 'lucide-react'; // Added Camera
+import { ImageUp, Loader2, TrendingUp, Camera } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip } from 'recharts';
+import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip, Dot } from 'recharts'; // Added Dot
 import { cn } from '@/lib/utils';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -50,13 +50,34 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+// Custom Dot component for the chart
+const CustomChartDot = (props: any) => {
+  const { cx, cy, stroke, payload, value, onDotClick } = props;
+  if (!payload || payload.health === undefined) { // Ensure payload and health are defined
+    return null;
+  }
+  return (
+    <Dot
+      cx={cx}
+      cy={cy}
+      r={5} // Increased radius for easier clicking
+      fill={stroke}
+      stroke={stroke}
+      strokeWidth={2}
+      onClick={() => onDotClick(payload)} // Pass the full payload to the handler
+      style={{ cursor: 'pointer' }}
+    />
+  );
+};
+
+
 interface PlantGrowthTrackerProps {
   plant: Plant;
   onOpenGridPhotoDialog: (photo: PlantPhoto) => void;
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
   growthPhotoInputRef: React.RefObject<HTMLInputElement>;
-  onChartDotClick: (data: any) => void;
+  onChartDotClick: (chartDotPayload: any) => void; // Changed to accept any for Recharts payload
 }
 
 export function PlantGrowthTracker({
@@ -64,7 +85,7 @@ export function PlantGrowthTracker({
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
-  growthPhotoInputRef,
+  growthPhotoInputRef, // This ref is for the hidden file input
   onChartDotClick,
 }: PlantGrowthTrackerProps) {
 
@@ -72,7 +93,7 @@ export function PlantGrowthTracker({
     if (!plant || !plant.photos || plant.photos.length < 1) return [];
     return [...plant.photos]
       .map(photo => ({
-        id: photo.id,
+        id: photo.id, // Keep photo ID for identifying the photo
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -92,6 +113,21 @@ export function PlantGrowthTracker({
       color: 'hsl(var(--primary))',
     },
   } satisfies ChartConfig;
+
+  // Wrapper for onChartDotClick to handle Recharts event structure
+  const handleRechartsDotClick = (event: any) => {
+    // Recharts provides the payload of the clicked dot in event.payload
+    // if it's a direct click on a Dot.
+    // If clicking the line, it might be in activePayload.
+    // For simplicity, we'll assume `CustomChartDot` provides the payload directly.
+    if (event && event.id) { // if `event` IS the payload from our custom dot
+        onChartDotClick(event);
+    } else if (event && event.activePayload && event.activePayload.length > 0 && event.activePayload[0].payload) {
+        // Fallback if the click event comes from the LineChart itself and not the custom dot
+        onChartDotClick(event.activePayload[0].payload);
+    }
+  };
+
 
   return (
     <div>
@@ -122,7 +158,7 @@ export function PlantGrowthTracker({
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 2 ? (
+          {chartData.length < 1 ? ( // Show if even 1 photo exists, but ideally 2 for a line
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one more photo with diagnosis to see a health trend.
             </p>
@@ -131,8 +167,8 @@ export function PlantGrowthTracker({
               <LineChart
                 accessibilityLayer
                 data={chartData}
-                margin={{ top: 5, right: 20, left: 10, bottom: 5 }} // Adjusted left/right margins
-                onClick={onChartDotClick}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                // Removed direct onClick from LineChart, will use dot's onClick
               >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
@@ -148,15 +184,15 @@ export function PlantGrowthTracker({
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  width={100} 
+                  width={100}
                   tickFormatter={(value) => healthScoreLabels[value as number] || ''}
                 />
                 <RechartsTooltip
                   cursor={false}
                   content={<ChartTooltipContent
                     indicator="dot"
-                    labelKey="date"
-                    formatter={(value, name, props) => (
+                    labelKey="date" // Use 'date' for the label in tooltip
+                    formatter={(value, name, props) => ( // props.payload contains the full data point
                       <div className="text-sm">
                         <p className="font-medium text-foreground">{props.payload.date}</p>
                         <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload.healthLabel}</span></p>
@@ -169,13 +205,8 @@ export function PlantGrowthTracker({
                   type="monotone"
                   stroke="var(--color-health)"
                   strokeWidth={2}
-                  dot={{
-                    fill: "var(--color-health)",
-                    r: 4,
-                  }}
-                  activeDot={{
-                    r: 6,
-                  }}
+                  dot={<CustomChartDot onDotClick={handleRechartsDotClick} />} // Use CustomChartDot
+                  activeDot={{r: 7, style: { cursor: 'pointer' }}} // Style active dot
                 />
               </LineChart>
             </ChartContainer>
@@ -225,5 +256,3 @@ export function PlantGrowthTracker({
     </div>
   );
 }
-
-    

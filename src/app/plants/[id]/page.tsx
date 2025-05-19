@@ -1,34 +1,36 @@
 
 'use client';
 
-import Link from 'next/link'; // Added for Back button
+import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData, ReviewCarePlanInput, ReviewCarePlanOutput, ExistingTaskModificationSuggestion, AIGeneratedTask } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CarePlanTaskForm, type OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge'; 
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft } from 'lucide-react'; 
+import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft, Edit3, Check, ListChecks } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
+import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates'; // New import
 import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -94,7 +96,10 @@ export default function PlantDetailPage() {
     open: boolean;
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutput;
     healthComparisonResult?: ComparePlantHealthOutput;
+    carePlanReviewResult?: ReviewCarePlanOutput; // Added
     newPhotoPreviewUrl?: string;
+    isLoadingCarePlanReview?: boolean; // Added
+    isApplyingCarePlanChanges?: boolean; // Added
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
@@ -139,8 +144,8 @@ export default function PlantDetailPage() {
       }
     }
     
-    setLoadingTaskId(taskId); 
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    setLoadingTaskId(taskId);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
@@ -153,7 +158,7 @@ export default function PlantDetailPage() {
     setLoadingTaskId(null);
 
     if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
-      const isNowPaused = !wasPausedBeforeUpdate; 
+      const isNowPaused = !wasPausedBeforeUpdate;
       toast({ title: "Task Updated", description: `Task "${taskNameForToast}" has been ${isNowPaused ? "paused" : "resumed"}.`});
     }
   };
@@ -187,7 +192,7 @@ export default function PlantDetailPage() {
     }
 
     setIsDiagnosingNewPhoto(true);
-    setNewPhotoDiagnosisDialogState({open: false});
+    setNewPhotoDiagnosisDialogState({open: false}); // Reset previous dialog state
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -200,6 +205,7 @@ export default function PlantDetailPage() {
         }
 
         try {
+            // Step 1: Diagnose the new photo
             const newPhotoDiagnosisResult = await diagnosePlantHealth({
                 photoDataUri: base64Image,
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`
@@ -215,6 +221,7 @@ export default function PlantDetailPage() {
                                    (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || 
                                     newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
+            // Step 2: Compare health
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
@@ -222,18 +229,39 @@ export default function PlantDetailPage() {
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
+            // Open dialog partially, show loading for care plan review
             setNewPhotoDiagnosisDialogState({
                 open: true,
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
-                newPhotoPreviewUrl: base64Image
+                newPhotoPreviewUrl: base64Image,
+                isLoadingCarePlanReview: true,
             });
+            setIsDiagnosingNewPhoto(false); // Diagnosis part is done
+
+            // Step 3: Review and suggest care plan updates
+            const carePlanReviewInput: ReviewCarePlanInput = {
+                plantCommonName: plant.commonName,
+                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
+                newPhotoHealthIsHealthy: newPhotoDiagnosisResult.healthAssessment.isHealthy,
+                currentCareTasks: plant.careTasks,
+            };
+            const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput);
+            
+            setNewPhotoDiagnosisDialogState(prevState => ({
+                ...prevState,
+                carePlanReviewResult,
+                isLoadingCarePlanReview: false,
+            }));
+
 
         } catch (e: any) {
-            const errorMsg = e instanceof Error ? e.message : "An error occurred during diagnosis.";
-            toast({ title: "Diagnosis Error", description: errorMsg, variant: "destructive" });
+            const errorMsg = e instanceof Error ? e.message : "An error occurred during diagnosis or care plan review.";
+            toast({ title: "Error", description: errorMsg, variant: "destructive" });
+            setIsDiagnosingNewPhoto(false); // Ensure loading stops on error
+            setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
-            setIsDiagnosingNewPhoto(false);
+             // Already set isDiagnosingNewPhoto to false, isLoadingCarePlanReview to false
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -272,8 +300,81 @@ export default function PlantDetailPage() {
     }
 
     toast({title: "Photo Added", description: "New photo and diagnosis snapshot added to Growth Monitoring."});
-    setNewPhotoDiagnosisDialogState({open: false});
+    // Dialog will be closed via onOpenChange or specific close button
   };
+
+  const handleApplyCarePlanChanges = () => {
+    if (!plant || !newPhotoDiagnosisDialogState.carePlanReviewResult) return;
+
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: true}));
+    
+    let updatedCareTasks = [...plant.careTasks];
+    const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
+
+    // Apply modifications to existing tasks
+    taskModifications.forEach(mod => {
+        const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
+        if (taskIndex === -1) return;
+
+        switch (mod.suggestedAction) {
+            case 'pause':
+                updatedCareTasks[taskIndex] = { ...updatedCareTasks[taskIndex], isPaused: true, resumeDate: null };
+                break;
+            case 'resume':
+                updatedCareTasks[taskIndex] = { ...updatedCareTasks[taskIndex], isPaused: false };
+                break;
+            case 'remove':
+                updatedCareTasks.splice(taskIndex, 1);
+                break;
+            case 'update_details':
+                if (mod.updatedDetails) {
+                    updatedCareTasks[taskIndex] = {
+                        ...updatedCareTasks[taskIndex],
+                        name: mod.updatedDetails.name || updatedCareTasks[taskIndex].name,
+                        description: mod.updatedDetails.description || updatedCareTasks[taskIndex].description,
+                        frequency: mod.updatedDetails.frequency || updatedCareTasks[taskIndex].frequency,
+                        timeOfDay: mod.updatedDetails.timeOfDay || updatedCareTasks[taskIndex].timeOfDay,
+                        level: mod.updatedDetails.level || updatedCareTasks[taskIndex].level,
+                        // Recalculate nextDueDate if frequency changed
+                        nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDate(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
+                    };
+                }
+                break;
+            default: // keep_as_is
+                break;
+        }
+    });
+
+    // Add new tasks
+    newTasks.forEach(aiTask => {
+        updatedCareTasks.push({
+            id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            plantId: plant.id,
+            name: aiTask.taskName,
+            description: aiTask.taskDescription,
+            frequency: aiTask.suggestedFrequency,
+            timeOfDay: aiTask.suggestedTimeOfDay,
+            level: aiTask.taskLevel,
+            isPaused: false,
+            nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency),
+        });
+    });
+    
+    setPlant(prev => prev ? {...prev, careTasks: updatedCareTasks} : null);
+    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
+    if (plantIndex !== -1) {
+        mockPlants[plantIndex].careTasks = updatedCareTasks;
+    }
+
+    toast({ title: "Care Plan Updated", description: "Suggested changes have been applied to the care plan." });
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); // Hide suggestions after applying
+  };
+
+  const handleKeepCurrentCarePlan = () => {
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined })); // Hide suggestions
+    toast({ title: "Care Plan Unchanged", description: "No changes were applied to the care plan based on AI suggestions." });
+  };
+
 
   const openGridPhotoDialog = (photo: PlantPhoto) => {
     setSelectedGridPhoto(photo);
@@ -301,7 +402,7 @@ export default function PlantDetailPage() {
       if (unit === 'Months') return addMonths(now, value).toISOString();
     }
     console.warn(`Next due date calculation not implemented for frequency: ${frequency}`);
-    return undefined; 
+    return undefined;
   };
 
   const handleSaveTask = (taskData: OnSaveTaskData) => {
@@ -309,10 +410,10 @@ export default function PlantDetailPage() {
     setIsSavingTask(true);
     
     let updatedTasks;
-    const baseTasks = plant.careTasks ? [...plant.careTasks] : []; 
+    const baseTasks = plant.careTasks ? [...plant.careTasks] : [];
 
-    if (taskToEdit) { 
-      updatedTasks = baseTasks.map(t => 
+    if (taskToEdit) {
+      updatedTasks = baseTasks.map(t =>
         t.id === taskToEdit.id ? {
           ...t,
           name: taskData.name,
@@ -320,11 +421,11 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: calculateNextDueDate(taskData.frequency), 
+          nextDueDate: calculateNextDueDate(taskData.frequency),
         } : t
       );
       toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
-    } else { 
+    } else {
       const newTask: CareTask = {
           id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           plantId: plant.id,
@@ -340,12 +441,17 @@ export default function PlantDetailPage() {
       toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
 
-    setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
-    
-    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
-    if (plantIndex !== -1) {
-        mockPlants[plantIndex].careTasks = updatedTasks;
-    }
+    setPlant(prevPlant => {
+      if (prevPlant) {
+        const newPlantState = { ...prevPlant, careTasks: updatedTasks };
+        const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
+        if (plantIndex !== -1) {
+            mockPlants[plantIndex] = newPlantState;
+        }
+        return newPlantState;
+      }
+      return null;
+    });
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -355,7 +461,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); 
+    setInitialTaskFormData(undefined);
     setIsTaskFormDialogOpen(true);
   };
 
@@ -377,12 +483,18 @@ export default function PlantDetailPage() {
     if (!taskToDelete) return;
 
     const updatedTasks = plant.careTasks.filter(t => t.id !== taskIdToDelete);
-    setPlant(prevPlant => prevPlant ? { ...prevPlant, careTasks: updatedTasks } : null);
     
-    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
-    if (plantIndex !== -1) {
-        mockPlants[plantIndex].careTasks = updatedTasks;
-    }
+    setPlant(prevPlant => {
+        if (prevPlant) {
+            const newPlantState = { ...prevPlant, careTasks: updatedTasks };
+            const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
+            if (plantIndex !== -1) {
+                mockPlants[plantIndex] = newPlantState;
+            }
+            return newPlantState;
+        }
+        return null;
+    });
     
     toast({ title: "Task Deleted", description: `Task "${taskToDelete.name}" has been deleted.` });
     setShowDeleteTaskDialog(false);
@@ -477,21 +589,24 @@ export default function PlantDetailPage() {
         {/* Dialog for New Photo Analysis */}
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
-                setNewPhotoDiagnosisDialogState({open: false}); 
+                setNewPhotoDiagnosisDialogState({open: false});
             }
         }}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-2xl"> {/* Increased width */}
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>New Photo Analysis</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>New Photo Analysis & Care Plan Review</DialogTitle>
                     <DialogDescription>
-                        Review the latest diagnosis and health comparison for your {plant.commonName}.
+                        Review the latest diagnosis, health comparison, and care plan suggestions for your {plant.commonName}.
                     </DialogDescription>
                 </DialogHeader>
-                {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && newPhotoDiagnosisDialogState.healthComparisonResult && (
-                    <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-                        {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
-                             <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt="New plant photo" width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
-                        )}
+                
+                <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                    {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
+                         <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt="New plant photo" width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
+                    )}
+
+                    {/* Diagnosis Result */}
+                    {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Latest Diagnosis</CardTitle></CardHeader>
                             <CardContent className="text-sm space-y-1">
@@ -500,7 +615,10 @@ export default function PlantDetailPage() {
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>Diagnosis:</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
                             </CardContent>
                         </Card>
+                    )}
 
+                    {/* Health Comparison */}
+                    {newPhotoDiagnosisDialogState.healthComparisonResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Health Comparison</CardTitle></CardHeader>
                             <CardContent className="text-sm space-y-2">
@@ -522,31 +640,92 @@ export default function PlantDetailPage() {
                                 )}
                             </CardContent>
                         </Card>
+                    )}
 
-                        {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.careRecommendations.length > 0 && (
-                             <Card>
-                                <CardHeader><CardTitle className="text-lg">Updated Care Considerations</CardTitle></CardHeader>
-                                <CardContent className="text-sm space-y-1">
-                                     <p className="text-xs text-muted-foreground mb-2">Based on this latest diagnosis, consider the following for your care routine:</p>
-                                    <ul className="list-disc list-inside space-y-1">
-                                    {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.careRecommendations.map((rec, index) => (
-                                        <li key={index}><strong>{rec.action}</strong>: {rec.details}</li>
-                                    ))}
-                                    </ul>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </div>
-                )}
-                <DialogFooter className="sm:justify-end">
-                     <DialogClose asChild>
-                        <Button type="button" variant="outline" onClick={() => setNewPhotoDiagnosisDialogState({open: false})}>
+                    {/* Care Plan Review Section */}
+                    {newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
+                        <div className="flex items-center justify-center p-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                            <p className="text-muted-foreground">Reviewing care plan...</p>
+                        </div>
+                    )}
+
+                    {newPhotoDiagnosisDialogState.carePlanReviewResult && !newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <ListChecks className="h-5 w-5 text-primary"/>
+                                    Care Plan Update Suggestions
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-sm space-y-3">
+                                <p className="italic text-muted-foreground">{newPhotoDiagnosisDialogState.carePlanReviewResult.overallAssessment}</p>
+                                
+                                {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.length > 0 && (
+                                    <div>
+                                        <h4 className="font-semibold mb-1">Suggested Modifications to Existing Tasks:</h4>
+                                        <ul className="list-disc list-inside space-y-2 pl-2">
+                                            {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.map(mod => (
+                                                <li key={mod.taskId}>
+                                                    <strong>{mod.currentTaskName}</strong>: AI suggests to <Badge variant="outline" className="capitalize">{mod.suggestedAction.replace(/_/g, ' ')}</Badge>.
+                                                    {mod.reasoning && <p className="text-xs text-muted-foreground pl-4"><em>Reason: {mod.reasoning}</em></p>}
+                                                    {mod.suggestedAction === 'update_details' && mod.updatedDetails && (
+                                                        <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
+                                                            {mod.updatedDetails.name && <p>New Name: {mod.updatedDetails.name}</p>}
+                                                            {mod.updatedDetails.description && <p>New Desc: {mod.updatedDetails.description}</p>}
+                                                            {mod.updatedDetails.frequency && <p>New Freq: {mod.updatedDetails.frequency}</p>}
+                                                            {mod.updatedDetails.timeOfDay && <p>New Time: {mod.updatedDetails.timeOfDay}</p>}
+                                                            {mod.updatedDetails.level && <p>New Level: {mod.updatedDetails.level}</p>}
+                                                        </div>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {newPhotoDiagnosisDialogState.carePlanReviewResult.newTasks.length > 0 && (
+                                    <div className="mt-3">
+                                        <h4 className="font-semibold mb-1">Suggested New Tasks:</h4>
+                                        <ul className="list-disc list-inside space-y-2 pl-2">
+                                            {newPhotoDiagnosisDialogState.carePlanReviewResult.newTasks.map((task, index) => (
+                                                <li key={`new-${index}`}>
+                                                    <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{task.taskLevel}</Badge>)
+                                                    <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
+                                                    <p className="text-xs text-muted-foreground pl-4">Freq: {task.suggestedFrequency}, Time: {task.suggestedTimeOfDay}</p>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                                {(newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.length > 0 || newPhotoDiagnosisDialogState.carePlanReviewResult.newTasks.length > 0) && (
+                                    <div className="mt-4 flex gap-2 justify-end">
+                                        <Button variant="outline" size="sm" onClick={handleKeepCurrentCarePlan} disabled={newPhotoDiagnosisDialogState.isApplyingCarePlanChanges}>
+                                            Keep Current Plan
+                                        </Button>
+                                        <Button size="sm" onClick={handleApplyCarePlanChanges} disabled={newPhotoDiagnosisDialogState.isApplyingCarePlanChanges}>
+                                            {newPhotoDiagnosisDialogState.isApplyingCarePlanChanges ? <Loader2 className="h-4 w-4 animate-spin mr-1.5"/> : <Check className="h-4 w-4 mr-1.5"/>}
+                                            Apply Suggested Changes
+                                        </Button>
+                                    </div>
+                                )}
+                                {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.length === 0 && newPhotoDiagnosisDialogState.carePlanReviewResult.newTasks.length === 0 && (
+                                     <p className="text-center text-muted-foreground py-2">No specific changes suggested for the care plan tasks based on this diagnosis.</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+
+                <DialogFooter className="sm:justify-between pt-4 border-t">
+                     <Button type="button" variant="secondary" onClick={addPhotoToJournal} disabled={!newPhotoDiagnosisDialogState.newPhotoPreviewUrl}>
+                        Add Diagnosed Photo to Journal
+                    </Button>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">
                             Close
                         </Button>
                     </DialogClose>
-                    <Button type="button" onClick={addPhotoToJournal}>
-                        Add Photo to Journal
-                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -578,8 +757,8 @@ export default function PlantDetailPage() {
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
-                setTaskToEdit(null); 
-                setInitialTaskFormData(undefined); 
+                setTaskToEdit(null);
+                setInitialTaskFormData(undefined);
             }
         }}>
             <DialogContent className="sm:max-w-lg">
@@ -598,9 +777,9 @@ export default function PlantDetailPage() {
                         setInitialTaskFormData(undefined);
                     }}
                     isLoading={isSavingTask}
-                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'} 
+                    formTitle={taskToEdit ? 'Edit Care Plan Task' : 'Add New Care Plan Task'}
                     formDescription={taskToEdit ? `Update the details for this care task for ${plant.commonName}.` : `Manually add a new care plan task for ${plant.commonName}.`}
-                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'} 
+                    submitButtonText={taskToEdit ? 'Update Task' : 'Add Task'}
                 />
             </DialogContent>
         </Dialog>
@@ -625,13 +804,8 @@ export default function PlantDetailPage() {
         
         <div className="mt-6 border-t pt-4">
              <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
-          </div>
+        </div>
       </div>
     </AppLayout>
   );
 }
-
-
-    
-
-

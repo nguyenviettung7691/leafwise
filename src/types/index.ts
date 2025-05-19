@@ -12,7 +12,7 @@ export interface CareTask {
   id: string;
   plantId: string;
   name: string; // e.g., "Watering", "Fertilizing"
-  description?: string; // New field
+  description?: string;
   frequency: string; // e.g., "Daily", "Weekly", "Every 2 weeks", "Ad-hoc"
   timeOfDay?: string; // e.g., "14:30" or "All day"
   lastCompleted?: string; // ISO string
@@ -38,7 +38,7 @@ export interface Plant {
   primaryPhotoUrl?: string;
   photos: PlantPhoto[];
   careTasks: CareTask[];
-  lastCaredDate?: string; // New field
+  lastCaredDate?: string;
 }
 
 export interface PlantFormData {
@@ -55,7 +55,7 @@ export interface PlantFormData {
 
 export type CarePlanTaskFormData = {
   name: string;
-  description?: string; // New field
+  description?: string;
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly';
   frequencyValue?: number;
   timeOfDayOption: 'specific_time' | 'all_day';
@@ -63,12 +63,11 @@ export type CarePlanTaskFormData = {
   level: 'basic' | 'advanced';
 };
 
-// For AI Generated Care Plan Flow
 export interface AIGeneratedTask {
   taskName: string;
   taskDescription: string;
-  suggestedFrequency: string; // e.g., "Daily", "Every 3 days", "Once a month"
-  suggestedTimeOfDay: string; // e.g., "Morning", "Anytime", "10:00"
+  suggestedFrequency: string;
+  suggestedTimeOfDay: string;
   taskLevel: 'basic' | 'advanced';
 }
 
@@ -77,6 +76,36 @@ export interface GenerateDetailedCarePlanOutput {
   customizableSchedulesPlaceholder: string;
   pushNotificationsPlaceholder: string;
   activityTrackingPlaceholder: string;
+}
+
+// For AI-driven care plan update suggestions
+export interface AITaskSuggestionDetails {
+    name?: string;
+    description?: string;
+    frequency?: string;
+    timeOfDay?: string;
+    level?: 'basic' | 'advanced';
+}
+
+export interface ExistingTaskModificationSuggestion {
+    taskId: string;
+    currentTaskName: string;
+    suggestedAction: 'keep_as_is' | 'pause' | 'resume' | 'remove' | 'update_details';
+    updatedDetails?: AITaskSuggestionDetails;
+    reasoning?: string;
+}
+
+export interface ReviewCarePlanOutput {
+    overallAssessment: string;
+    taskModifications: ExistingTaskModificationSuggestion[];
+    newTasks: AIGeneratedTask[];
+}
+
+export interface ReviewCarePlanInput {
+    plantCommonName: string;
+    newPhotoDiagnosisNotes: string;
+    newPhotoHealthIsHealthy: boolean;
+    currentCareTasks: CareTask[];
 }
 
 
