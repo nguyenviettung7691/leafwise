@@ -92,12 +92,12 @@ export function PlantCareManagement({
               className={cn(
                 "bg-secondary/30",
                 task.isPaused ? "opacity-70" : "",
-                isTaskToday ? "border-2 border-accent bg-accent/10 shadow-lg" : ""
+                isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : ""
               )}
             >
               <CardContent className="p-4 flex justify-between items-center">
                 <div className="flex-1 min-w-0"> {/* Added min-w-0 to allow text to wrap/truncate */}
-                  <p className="font-medium flex items-center flex-wrap gap-x-2">
+                  <p className="font-medium flex items-center flex-wrap gap-x-2 min-w-0">
                     <span className="truncate">{task.name}</span> {/* Added truncate for long names */}
                     <Badge
                       variant={task.level === 'advanced' ? 'default' : 'outline'}
