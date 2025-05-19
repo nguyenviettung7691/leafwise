@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
 import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
-import { addDays, addWeeks, addMonths, addYears, parseISO, format } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } from 'date-fns';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -41,11 +41,11 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
-  const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = { // Ensure startDate is part of the partial type
+  const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = {
     name: task.name,
     description: task.description || '',
     level: task.level,
-    startDate: task.nextDueDate || new Date().toISOString(), // Use nextDueDate as startDate
+    startDate: task.nextDueDate || new Date().toISOString(),
   };
 
   if (task.frequency === 'Ad-hoc') formData.frequencyMode = 'adhoc';
@@ -61,7 +61,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
       else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
       else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
     } else {
-      formData.frequencyMode = 'adhoc'; // Fallback
+      formData.frequencyMode = 'adhoc'; 
     }
   }
 
@@ -72,7 +72,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day'; // Fallback
+    formData.timeOfDayOption = 'all_day'; 
     formData.specificTime = '';
   }
 
@@ -128,7 +128,7 @@ export default function PlantDetailPage() {
         };
         setPlant(plantWithPhotoIds);
       } else {
-        console.error("Plant not found with id:", id);
+        // Plant not found, handled by the !plant check after loading
       }
     }
     setIsLoadingPage(false);
@@ -187,7 +187,7 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant) return;
 
-    if (file.size > 4 * 1024 * 1024) { // 4MB limit
+    if (file.size > 4 * 1024 * 1024) { 
         toast({ variant: 'destructive', title: 'Image Too Large', description: 'Please select an image file smaller than 4MB.' });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
@@ -416,7 +416,7 @@ export default function PlantDetailPage() {
                 frequency: taskData.frequency,
                 timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
-                nextDueDate: taskData.startDate, // Use startDate from form as nextDueDate
+                nextDueDate: taskData.startDate,
             } : t
         );
         toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
@@ -430,7 +430,7 @@ export default function PlantDetailPage() {
             timeOfDay: taskData.timeOfDay,
             level: taskData.level,
             isPaused: false,
-            nextDueDate: taskData.startDate, // Use startDate from form as nextDueDate
+            nextDueDate: taskData.startDate, 
         };
         updatedTasks = [...baseTasks, newTask];
         toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
@@ -452,7 +452,7 @@ export default function PlantDetailPage() {
   
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); // Ensure fresh form for new task
+    setInitialTaskFormData(undefined); 
     setIsTaskFormDialogOpen(true);
   };
 
@@ -699,12 +699,11 @@ export default function PlantDetailPage() {
                 </div>
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
-                     {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
+                     {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl ? (
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            Add Diagnosed Photo to Journal
                        </Button>
-                     )}
-                     {newPhotoJournaled && (<div className="flex-1" />) } {/* Occupy space if button is hidden */}
+                     ) : <div className="flex-1" /> }
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             Close
@@ -790,3 +789,4 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
