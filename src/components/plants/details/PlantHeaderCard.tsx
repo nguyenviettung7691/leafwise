@@ -77,9 +77,22 @@ export function PlantHeaderCard({
                 data-ai-hint="plant detail"
                 priority
               />
-              {/* Overlay for plant names */}
+              {/* Overlay for plant names & health badge */}
               <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 via-black/50 to-transparent pointer-events-none">
-                <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                        `capitalize shrink-0 text-xs px-2 py-0.5`, 
+                        healthConditionStyles[plant.healthCondition],
+                        // Adjusting for visibility on dark overlay:
+                        'dark:text-white dark:border-white/50 dark:bg-black/30'
+                    )}
+                  >
+                    {plant.healthCondition.replace('_', ' ')}
+                  </Badge>
+                </div>
                 {plant.scientificName && (
                   <p className="text-lg text-gray-200 italic drop-shadow-md">{plant.scientificName}</p>
                 )}
@@ -109,11 +122,7 @@ export function PlantHeaderCard({
         </Dialog>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 space-y-3">
-        <div className="flex justify-end">
-            <Badge variant="outline" className={`capitalize ${healthConditionStyles[plant.healthCondition]} shrink-0 text-sm px-3 py-1`}>
-                {plant.healthCondition.replace('_', ' ')}
-            </Badge>
-        </div>
+        {/* Health badge moved to overlay */}
         
         <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-3 border-t mt-3">
             <div className="flex items-center gap-x-4 gap-y-1">
