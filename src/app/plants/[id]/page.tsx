@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -192,8 +193,9 @@ export default function PlantDetailPage() {
     }
 
     setIsDiagnosingNewPhoto(true);
+    setNewPhotoJournaled(false); 
     setNewPhotoDiagnosisDialogState({open: false}); // Reset previous dialog state
-    setNewPhotoJournaled(false); // Reset journaled state for new diagnosis
+    
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -233,9 +235,9 @@ export default function PlantDetailPage() {
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
                 newPhotoPreviewUrl: base64Image,
-                isLoadingCarePlanReview: true,
+                isLoadingCarePlanReview: true, // Start loading for care plan review
             });
-            setIsDiagnosingNewPhoto(false);
+            // Don't set isDiagnosingNewPhoto to false here, keep it true until care plan review is also done or modal closes
 
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
@@ -248,15 +250,15 @@ export default function PlantDetailPage() {
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
                 carePlanReviewResult,
-                isLoadingCarePlanReview: false,
+                isLoadingCarePlanReview: false, // Care plan review done
             }));
 
         } catch (e: any) {
             const errorMsg = e instanceof Error ? e.message : "An error occurred during diagnosis or care plan review.";
             toast({ title: "Error", description: errorMsg, variant: "destructive" });
-            setIsDiagnosingNewPhoto(false);
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
+            setIsDiagnosingNewPhoto(false); // Set loading to false after everything
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -404,45 +406,45 @@ export default function PlantDetailPage() {
     let updatedTasks;
     const baseTasks = plant.careTasks ? [...plant.careTasks] : [];
 
-    if (taskToEdit) {
-      updatedTasks = baseTasks.map(t =>
-        t.id === taskToEdit.id ? {
-          ...t,
-          name: taskData.name,
-          description: taskData.description,
-          frequency: taskData.frequency,
-          timeOfDay: taskData.timeOfDay,
-          level: taskData.level,
-          nextDueDate: calculateNextDueDate(taskData.frequency),
-        } : t
-      );
-      toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
-    } else {
-      const newTask: CareTask = {
-          id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          plantId: plant.id,
-          name: taskData.name,
-          description: taskData.description,
-          frequency: taskData.frequency,
-          timeOfDay: taskData.timeOfDay,
-          level: taskData.level,
-          isPaused: false,
-          nextDueDate: calculateNextDueDate(taskData.frequency),
-      };
-      updatedTasks = [...baseTasks, newTask];
-      toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
+    if (taskToEdit) { // Editing existing task
+        updatedTasks = baseTasks.map(t =>
+            t.id === taskToEdit.id ? {
+                ...t,
+                name: taskData.name,
+                description: taskData.description,
+                frequency: taskData.frequency,
+                timeOfDay: taskData.timeOfDay,
+                level: taskData.level,
+                nextDueDate: calculateNextDueDate(taskData.frequency),
+            } : t
+        );
+        toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
+    } else { // Adding new task
+        const newTask: CareTask = {
+            id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            plantId: plant.id,
+            name: taskData.name,
+            description: taskData.description,
+            frequency: taskData.frequency,
+            timeOfDay: taskData.timeOfDay,
+            level: taskData.level,
+            isPaused: false,
+            nextDueDate: calculateNextDueDate(taskData.frequency),
+        };
+        updatedTasks = [...baseTasks, newTask];
+        toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
-
+    
     setPlant(prevPlant => {
-      if (prevPlant) {
-        const newPlantState = { ...prevPlant, careTasks: updatedTasks };
-        const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
-        if (plantIndex !== -1) {
-            mockPlants[plantIndex] = newPlantState;
+        if (prevPlant) {
+            const newPlantState = { ...prevPlant, careTasks: updatedTasks };
+            const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
+            if (plantIndex !== -1) {
+                mockPlants[plantIndex] = newPlantState;
+            }
+            return newPlantState;
         }
-        return newPlantState;
-      }
-      return null;
+        return null;
     });
 
     setIsSavingTask(false);
@@ -704,7 +706,7 @@ export default function PlantDetailPage() {
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
                      {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
-                       <Button type="button" variant="secondary" onClick={addPhotoToJournal}>
+                       <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            Add Diagnosed Photo to Journal
                        </Button>
                      )}
@@ -787,9 +789,9 @@ export default function PlantDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
         
-        <div className="mt-6 border-t pt-4">
+        <CardFooter className="mt-6 border-t pt-4">
              <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
-        </div>
+        </CardFooter>
       </div>
     </AppLayout>
   );
