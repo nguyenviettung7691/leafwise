@@ -152,15 +152,6 @@ export function PlantFilterSortControls({
                   <h3 className="text-md font-semibold mb-2 text-foreground/90">Filter By</h3>
                   <div className="space-y-3">
                     <div>
-                      <Label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</Label>
-                      <Select value={filters.ageRange} onValueChange={(value) => onFilterChange('ageRange', value)}>
-                        <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
-                        <SelectContent>
-                          {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
                       <Label htmlFor="healthCondition" className="block text-sm font-medium text-muted-foreground mb-1">Health Condition</Label>
                       <Select value={filters.healthCondition} onValueChange={(value) => onFilterChange('healthCondition', value as PlantHealthCondition | 'all')}>
                         <SelectTrigger id="healthCondition"><SelectValue placeholder="Select health condition" /></SelectTrigger>
@@ -186,6 +177,15 @@ export function PlantFilterSortControls({
                         value={filters.familyCategory}
                         onChange={(e) => onFilterChange('familyCategory', e.target.value)}
                       />
+                    </div>
+                    <div>
+                      <Label htmlFor="ageRange" className="block text-sm font-medium text-muted-foreground mb-1">Age Range</Label>
+                      <Select value={filters.ageRange} onValueChange={(value) => onFilterChange('ageRange', value)}>
+                        <SelectTrigger id="ageRange"><SelectValue placeholder="Select age range" /></SelectTrigger>
+                        <SelectContent>
+                          {ageRangeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>

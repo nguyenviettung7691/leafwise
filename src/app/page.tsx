@@ -22,8 +22,8 @@ const initialFiltersState: Filters = {
 };
 
 const initialSortConfigState: SortConfig = {
-  key: 'commonName',
-  direction: 'asc',
+  key: 'nextCareDate', // Default sort by next care task
+  direction: 'asc',   // Ascending order
 };
 
 const getNextCareTaskDate = (plant: Plant): Date | null => {
@@ -110,9 +110,10 @@ export default function MyPlantsPage() {
       if (sortConfig.key === 'nextCareDate') {
         valA = getNextCareTaskDate(a);
         valB = getNextCareTaskDate(b);
+        // Handle nulls for date sorting: tasks with no due date go last when ascending, first when descending
         if (valA === null && valB === null) return 0;
-        if (valA === null) return 1;
-        if (valB === null) return -1;
+        if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1;
       } else {
         valA = a[sortConfig.key as keyof Plant];
         valB = b[sortConfig.key as keyof Plant];
