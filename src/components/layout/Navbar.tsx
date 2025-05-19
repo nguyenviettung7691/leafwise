@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 import {
   Dialog,
+  DialogTrigger, // Added DialogTrigger
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -137,7 +138,7 @@ export function Navbar() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
                         <div className='flex items-center gap-3'>
                             <Palette className="h-5 w-5 text-primary" />
                             <Label htmlFor="themePreference-dialog" className="text-base font-medium">
@@ -187,7 +188,7 @@ export function Navbar() {
               </Dialog>
             </>
           ) : (
-            <ProgressBarLink href="/login" className={cn(buttonVariants({ variant: "ghost" }))}>
+            <ProgressBarLink href="/login" className={cn(Button.name, buttonVariants({ variant: "ghost" }))}>
               <LogIn className="h-5 w-5 mr-2" />
               Sign In
             </ProgressBarLink>
