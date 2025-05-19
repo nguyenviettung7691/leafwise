@@ -37,6 +37,8 @@ export default function DiagnosePlantPage() {
   const [isLoadingCarePlan, setIsLoadingCarePlan] = useState(false);
   const [carePlanResult, setCarePlanResult] = useState<GenerateDetailedCarePlanOutput | null>(null);
   const [carePlanError, setCarePlanError] = useState<string | null>(null);
+  const [generatedPlanMode, setGeneratedPlanMode] = useState<'basic' | 'advanced' | null>(null);
+
 
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -73,6 +75,7 @@ export default function DiagnosePlantPage() {
     setLastSavedPlantId(null);
     setCarePlanResult(null);
     setCarePlanError(null);
+    setGeneratedPlanMode(null);
     setLocationClimate('');
     setCarePlanMode('basic');
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -85,6 +88,7 @@ export default function DiagnosePlantPage() {
     setPlantSaved(false);
     setCarePlanResult(null);
     setCarePlanError(null);
+    setGeneratedPlanMode(null);
 
     const selectedFile = event.target.files?.[0];
 
@@ -126,6 +130,7 @@ export default function DiagnosePlantPage() {
     setDiagnosisError(null);
     setDiagnosisResult(null);
     setCarePlanResult(null);
+    setGeneratedPlanMode(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
     setLastSavedPlantId(null);
@@ -228,6 +233,7 @@ export default function DiagnosePlantPage() {
     setIsLoadingCarePlan(true);
     setCarePlanError(null);
     setCarePlanResult(null);
+    setGeneratedPlanMode(null);
 
     try {
       const input: GenerateDetailedCarePlanInput = {
@@ -242,6 +248,7 @@ export default function DiagnosePlantPage() {
         console.log('AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
       setCarePlanResult(result);
+      setGeneratedPlanMode(carePlanMode); // Store the mode used for this result
       toast({ title: "Care Plan Generated!", description: `Detailed ${carePlanMode} care plan ready for ${input.plantCommonName}.` });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred generating the care plan.');
@@ -350,9 +357,10 @@ export default function DiagnosePlantPage() {
             isLoadingCarePlan={isLoadingCarePlan}
             carePlanError={carePlanError}
             carePlanResult={carePlanResult}
+            resultMode={generatedPlanMode} // Pass the mode of the generated plan
             locationClimate={locationClimate}
             onLocationClimateChange={setLocationClimate}
-            carePlanMode={carePlanMode}
+            carePlanMode={carePlanMode} // This is for the radio button selection
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
             onSaveCarePlan={handleSaveCarePlan}

@@ -20,10 +20,11 @@ interface CarePlanGeneratorProps {
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;
+  resultMode: 'basic' | 'advanced' | null; // Mode of the *displayed* result
   locationClimate: string;
   onLocationClimateChange: (value: string) => void;
-  carePlanMode: 'basic' | 'advanced'; // This prop reflects the mode used for the CURRENT carePlanResult, or the selected mode if no result yet
-  onCarePlanModeChange: (mode: 'basic' | 'advanced') => void; // For the radio button
+  carePlanMode: 'basic' | 'advanced'; // Mode for *new* generation request (radio button)
+  onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
 }
@@ -33,8 +34,8 @@ const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
     <Card className="bg-muted/50 p-3">
       <h4 className="font-semibold text-sm flex items-center">
         {task.taskName}
-        <Badge 
-            variant={task.taskLevel === 'advanced' ? 'default' : 'outline'} 
+        <Badge
+            variant={task.taskLevel === 'advanced' ? 'default' : 'outline'}
             className={cn(
                 "ml-2 capitalize text-xs",
                 task.taskLevel === 'advanced' ? "bg-primary text-primary-foreground" : ""
@@ -55,10 +56,11 @@ export function CarePlanGenerator({
   isLoadingCarePlan,
   carePlanError,
   carePlanResult,
+  resultMode, // Use this for displaying the mode of the current result
   locationClimate,
   onLocationClimateChange,
-  carePlanMode, 
-  onCarePlanModeChange, 
+  carePlanMode, // This is for the radio button selection
+  onCarePlanModeChange,
   onGenerateCarePlan,
   onSaveCarePlan,
 }: CarePlanGeneratorProps) {
@@ -80,7 +82,7 @@ export function CarePlanGenerator({
       }
     }
   };
-  
+
   React.useEffect(() => {
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
@@ -142,24 +144,26 @@ export function CarePlanGenerator({
         {carePlanResult && !isLoadingCarePlan && (
           <div className="mt-6 pt-6 border-t">
             <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-lg flex items-center"> 
-                <CheckCircle className="text-primary mr-2 h-5 w-5" /> 
+              <CardTitle className="text-lg flex items-center">
+                <CheckCircle className="text-primary mr-2 h-5 w-5" />
                 Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
               </CardTitle>
-              <CardDescription>
-                Mode: 
-                <Badge 
-                  variant={carePlanMode === 'advanced' ? 'default' : 'outline'} 
-                  className={cn(
-                    "capitalize ml-1.5", 
-                    carePlanMode === 'advanced' ? "bg-primary text-primary-foreground" : ""
-                  )}
-                >
-                  {carePlanMode}
-                </Badge>
-              </CardDescription>
+              {resultMode && (
+                <CardDescription>
+                  Mode:
+                  <Badge
+                    variant={resultMode === 'advanced' ? 'default' : 'outline'}
+                    className={cn(
+                      "capitalize ml-1.5",
+                      resultMode === 'advanced' ? "bg-primary text-primary-foreground" : ""
+                    )}
+                  >
+                    {resultMode}
+                  </Badge>
+                </CardDescription>
+              )}
             </CardHeader>
-            
+
             {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
               <div className="space-y-3">
                 {carePlanResult.generatedTasks.map((task, index) => (
@@ -211,3 +215,4 @@ export function CarePlanGenerator({
     </Card>
   );
 }
+
