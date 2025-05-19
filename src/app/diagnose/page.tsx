@@ -367,7 +367,7 @@ export default function DiagnosePlantPage() {
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
             onSaveCarePlan={handleSaveCarePlan}
-            lastSavedPlantId={lastSavedPlantId} // Pass lastSavedPlantId
+            lastSavedPlantId={lastSavedPlantId} 
           />
         )}
          <div className="text-center mt-8">
