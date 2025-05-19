@@ -2,15 +2,15 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import type { User, UserPreferences } from '@/types';
+import type { User, UserPreferences, Plant } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader } from 'lucide-react';
-import { useState, useEffect, FormEvent, useRef } from 'react';
+import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download } from 'lucide-react';
+import { useState, useEffect, FormEvent, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,10 +27,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { mockPlants } from '@/lib/mock-data'; // Import for direct modification (prototype only)
+import { useRouter } from 'next/navigation'; // For navigating after import
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -38,6 +41,7 @@ export default function ProfilePage() {
   const [editedAvatarFile, setEditedAvatarFile] = useState<File | null>(null);
   const [editedAvatarPreviewUrl, setEditedAvatarPreviewUrl] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { toast } = useToast();
@@ -128,11 +132,84 @@ export default function ProfilePage() {
   const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
+    // Logout function in AuthContext handles navigation
     setIsLoggingOut(false);
   };
 
-  const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
+  const handleExportData = () => {
+    if (!authUser) {
+      toast({ title: "Error", description: "No user data to export.", variant: "destructive" });
+      return;
+    }
+    const dataToExport = {
+      userProfile: authUser,
+      plants: mockPlants, // In a real app, this would come from a user-specific data source
+    };
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = `leafwise_data_export_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+    toast({ title: "Data Exported", description: "Your data has been downloaded." });
+  };
 
+  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          throw new Error("Failed to read file content.");
+        }
+        const importedData = JSON.parse(text);
+
+        if (!importedData.userProfile || !Array.isArray(importedData.plants)) {
+          throw new Error("Invalid file format. Missing 'userProfile' or 'plants' data.");
+        }
+        
+        // Restore user profile
+        // For prototype, we assume the imported user is the current user.
+        // In a real app, you'd have more complex logic for matching users or creating new ones.
+        const { id, email, ...profileToUpdate } = importedData.userProfile;
+        await updateUser(profileToUpdate);
+
+        // Restore plants data (prototype-specific direct manipulation)
+        // This is a HACK for the prototype. In a real app, this would be an API call.
+        mockPlants.length = 0; // Clear existing mock plants
+        mockPlants.push(...(importedData.plants as Plant[])); // Add imported plants
+
+        toast({ title: "Import Successful", description: "Your data has been imported. Refresh or navigate to see changes." });
+        // Optionally, navigate to My Plants page or refresh the current page to reflect changes
+        router.push('/'); // Navigate to home to refresh plant list (due to mock data update)
+
+      } catch (error: any) {
+        toast({ title: "Import Failed", description: error.message || "Could not parse or apply the imported data.", variant: "destructive" });
+      } finally {
+        // Reset file input to allow importing the same file again
+        if (importFileInputRef.current) {
+          importFileInputRef.current.value = "";
+        }
+      }
+    };
+    reader.onerror = () => {
+      toast({ title: "Import Failed", description: "Failed to read the selected file.", variant: "destructive" });
+      if (importFileInputRef.current) {
+        importFileInputRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
+  };
+
+
+  const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
 
   if (authLoading || !user) {
     return (
@@ -279,11 +356,37 @@ export default function ProfilePage() {
                 disabled={authLoading || isLoggingOut}
               />
             </div>
-            {/* Dark Mode switch removed from here */}
           </CardContent>
            <CardFooter className="pt-6 border-t">
             <p className="text-xs text-muted-foreground">Profile changes and preferences are mock-saved to local storage.</p>
           </CardFooter>
+        </Card>
+        
+        <Card className="shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-xl">Data Management</CardTitle>
+            <CardDescription>Export your plant data or import data from a backup file.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto">
+                <Download className="mr-2 h-5 w-5" /> Export My Data
+              </Button>
+              <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto">
+                <Upload className="mr-2 h-5 w-5" /> Import Data
+              </Button>
+              <input
+                type="file"
+                ref={importFileInputRef}
+                className="hidden"
+                accept=".json"
+                onChange={handleImportFileChange}
+              />
+            </div>
+             <p className="text-xs text-muted-foreground">
+                Importing data will overwrite your current plants and profile settings with the content from the file. This action is for prototype purposes.
+             </p>
+          </CardContent>
         </Card>
 
         <Separator />
@@ -327,3 +430,5 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
+    

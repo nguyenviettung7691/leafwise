@@ -10,7 +10,8 @@ const sixMonthsAgo = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
 const oneYearAgo = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
 const twoYearsAgo = new Date(now.getTime() - 2 * 12 * 30 * 24 * 60 * 60 * 1000);
 
-export const mockPlants: Plant[] = [
+// Changed from const to let to allow reassignment for import feature
+export let mockPlants: Plant[] = [
   {
     id: '1',
     commonName: 'Monstera Deliciosa',
@@ -108,3 +109,5 @@ export const mockUser: User = {
     pushNotifications: false,
   },
 };
+
+    
