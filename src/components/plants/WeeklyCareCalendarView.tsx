@@ -20,10 +20,10 @@ import {
   isWithinInterval,
   getDay,
   isSameWeek,
-  addDays, 
-  addMonths, 
-  addYears, 
-  isToday, // Added isToday
+  addDays,
+  addMonths,
+  addYears,
+  isToday,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -40,13 +40,16 @@ const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
     const [hours, minutes] = timeOfDay.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
   } else {
-    newDate.setHours(0, 0, 0, 0);
+    newDate.setHours(0, 0, 0, 0); // Default to start of the day for 'All day' or invalid time
   }
   return newDate;
 };
 
-const addFrequency = (date: Date, frequency: string, multiplier: number = 1): Date => {
+const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 1): Date => {
   const newDate = new Date(date);
+  if (frequency.toLowerCase() === 'ad-hoc') { // Ad-hoc tasks don't recur based on adding frequency.
+    return newDate; // Return the same date, recurrence is handled by nextDueDate only.
+  }
   if (frequency === 'Daily') return addDays(newDate, 1 * multiplier);
   if (frequency === 'Weekly') return addWeeks(newDate, 1 * multiplier);
   if (frequency === 'Monthly') return addMonths(newDate, 1 * multiplier);
@@ -60,8 +63,9 @@ const addFrequency = (date: Date, frequency: string, multiplier: number = 1): Da
     if (unit.toLowerCase() === 'weeks') return addWeeks(newDate, value * multiplier);
     if (unit.toLowerCase() === 'months') return addMonths(newDate, value * multiplier);
   }
+  // Fallback for unknown frequencies if trying to iterate
   if (multiplier !== 1) return new Date(multiplier > 0 ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER);
-  return newDate; 
+  return newDate;
 };
 
 interface WeeklyCareCalendarViewProps {
@@ -72,7 +76,7 @@ interface WeeklyCareCalendarViewProps {
 
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true); // Default to true
+  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
@@ -89,7 +93,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         return date >= parseISO(task.resumeDate);
       } catch { return false; }
     }
-    return false; 
+    return false; // Paused indefinitely
   };
 
   useEffect(() => {
@@ -99,65 +103,58 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       rangeEndDate: Date
     ): DisplayableTaskOccurrence[] => {
       const occurrences: DisplayableTaskOccurrence[] = [];
-
-      if (task.frequency.toLowerCase() === 'ad-hoc') {
-        if (task.nextDueDate) {
-          try {
-            const adhocDate = setTimeToTaskTime(parseISO(task.nextDueDate), task.timeOfDay);
-            if (isWithinInterval(adhocDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, adhocDate)) {
-              occurrences.push({ originalTask: task, occurrenceDate: adhocDate });
-            }
-          } catch (e) {
-            console.error("Error parsing ad-hoc task due date:", task.nextDueDate, e);
-          }
-        }
-        return occurrences;
-      }
-
-      if (!task.nextDueDate) {
-        return occurrences;
-      }
+      if (!task.nextDueDate) return occurrences;
 
       let seedDate: Date;
       try {
         seedDate = parseISO(task.nextDueDate);
-        seedDate = setTimeToTaskTime(seedDate, task.timeOfDay);
       } catch (e) {
-        console.error("Invalid nextDueDate for recurring task:", task.name, task.nextDueDate, e);
+        console.error("Invalid nextDueDate for task:", task.name, task.nextDueDate, e);
+        return occurrences;
+      }
+      seedDate = setTimeToTaskTime(seedDate, task.timeOfDay);
+
+
+      if (task.frequency.toLowerCase() === 'ad-hoc') {
+        if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
+          occurrences.push({ originalTask: task, occurrenceDate: seedDate });
+        }
         return occurrences;
       }
 
-      // Add seedDate if it's in range and active
-      if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
-        occurrences.push({ originalTask: task, occurrenceDate: new Date(seedDate) });
-      }
-
-      let currentOccurrenceBackward = addFrequency(new Date(seedDate), task.frequency, -1);
-      let backwardCount = 0;
-      const safetyLimit = 365 * 2; // Approx 2 years worth of daily tasks
-
-      while (currentOccurrenceBackward >= rangeStartDate && backwardCount < safetyLimit) { 
-        if (currentOccurrenceBackward <= rangeEndDate && isActive(task, currentOccurrenceBackward)) {
-          occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceBackward) });
+      // Check forward from seedDate
+      let currentOccurrenceForward = new Date(seedDate);
+      let safetyForward = 0;
+      while (currentOccurrenceForward <= rangeEndDate && safetyForward < 100) { // Limit iterations
+        if (currentOccurrenceForward >= rangeStartDate && isActive(task, currentOccurrenceForward)) {
+          occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceForward) });
         }
-        currentOccurrenceBackward = addFrequency(currentOccurrenceBackward, task.frequency, -1);
-        if (isNaN(currentOccurrenceBackward.getTime())) break;
-        backwardCount++;
-      }
-
-      let currentOccurrenceForward = addFrequency(new Date(seedDate), task.frequency, 1);
-      let forwardCount = 0;
-      while (currentOccurrenceForward <= rangeEndDate && forwardCount < safetyLimit) { 
-        if (isActive(task, currentOccurrenceForward)) {
-           occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceForward) });
-        }
-        currentOccurrenceForward = addFrequency(currentOccurrenceForward, task.frequency, 1);
+        currentOccurrenceForward = addFrequencyHelper(currentOccurrenceForward, task.frequency, 1);
         if (isNaN(currentOccurrenceForward.getTime())) break;
-        forwardCount++;
+        safetyForward++;
+      }
+
+      // Check backward from seedDate (but not before seedDate itself if seedDate is after rangeStart)
+      let currentOccurrenceBackward = addFrequencyHelper(new Date(seedDate), task.frequency, -1);
+      let safetyBackward = 0;
+      while (currentOccurrenceBackward >= rangeStartDate && safetyBackward < 100) { // Limit iterations
+         if (currentOccurrenceBackward <= rangeEndDate && isActive(task, currentOccurrenceBackward)) {
+           occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceBackward) });
+         }
+        currentOccurrenceBackward = addFrequencyHelper(currentOccurrenceBackward, task.frequency, -1);
+        if (isNaN(currentOccurrenceBackward.getTime())) break;
+        safetyBackward++;
       }
       
+      // Ensure seed date is added if it's in range and active, and not already picked up by forward check
+      if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
+        if (!occurrences.find(o => o.occurrenceDate.getTime() === seedDate.getTime())) {
+           occurrences.push({ originalTask: task, occurrenceDate: new Date(seedDate) });
+        }
+      }
+
       const uniqueOccurrencesMap = new Map<string, DisplayableTaskOccurrence>();
-      occurrences.forEach(o => uniqueOccurrencesMap.set(o.occurrenceDate.toISOString(), o));
+      occurrences.forEach(o => uniqueOccurrencesMap.set(o.occurrenceDate.toISOString() + o.originalTask.id, o));
       
       return Array.from(uniqueOccurrencesMap.values()).sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());
     };
@@ -170,20 +167,20 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     });
     setDisplayedOccurrences(allOccurrences);
 
-  }, [tasks, currentDate, currentWeekStart, currentWeekEnd]); 
+  }, [tasks, currentDate, currentWeekStart, currentWeekEnd]);
 
 
   const getTasksForDay = (day: Date): DisplayableTaskOccurrence[] => {
     return displayedOccurrences.filter(occurrence =>
       isSameDay(occurrence.occurrenceDate, day)
-    ).sort((a,b) => a.occurrenceDate.getHours() - b.occurrenceDate.getHours()); // Sort by hour
+    ).sort((a,b) => a.occurrenceDate.getHours() - b.occurrenceDate.getHours());
   };
 
   const hoursToDisplay = useMemo(() => {
     if (!showOnlyHoursWithTasks) {
       return DEFAULT_HOURS;
     }
-    const tasksThisWeek = displayedOccurrences; 
+    const tasksThisWeek = displayedOccurrences;
 
     const uniqueHoursWithTasks = new Set<number>();
     tasksThisWeek.forEach(occurrence => {
@@ -196,7 +193,11 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
 
-    if (uniqueHoursWithTasks.size === 0) return [];
+    if (uniqueHoursWithTasks.size === 0 && tasksThisWeek.length > 0) { // Show default if filter on but no timed tasks
+        // This might be too noisy. If no timed tasks, and filter is on, maybe show nothing for hours.
+        // return DEFAULT_HOURS; // Or return empty to hide hour rows
+        return [];
+    }
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
   }, [showOnlyHoursWithTasks, displayedOccurrences]);
@@ -237,7 +238,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
           <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
           {daysInWeek.map(day => {
             const dayOfWeek = getDay(day);
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const today = isToday(day);
             const dayNameClassName = cn(
               "font-semibold",
@@ -245,8 +246,8 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
               today ? "text-primary dark:text-primary" : ""
             );
             return (
-              <div 
-                key={day.toISOString()} 
+              <div
+                key={day.toISOString()}
                 className={cn(
                   "p-2 border-r border-b text-center text-xs h-10 flex flex-col justify-center items-center",
                   today ? "bg-primary/10" : ""
@@ -278,8 +279,8 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                       } catch { return false; }
                   });
                   return (
-                    <div 
-                        key={`${day.toISOString()}-hour-${hour}`} 
+                    <div
+                        key={`${day.toISOString()}-hour-${hour}`}
                         className={cn(
                             "p-0.5 border-r border-b min-h-[3.5rem] relative text-[10px] leading-tight space-y-0.5",
                             isToday(day) ? "bg-primary/5" : ""
@@ -303,7 +304,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
                               aria-label="Delete task"
                             >
-                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive-foreground/80 hover:text-destructive-foreground' : 'text-destructive')} />
+                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive' : 'text-destructive')} />
                             </Button>
                         </div>
                       ))}
@@ -321,8 +322,8 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
              });
              return (
-                <div 
-                    key={`all-day-tasks-${day.toISOString()}`} 
+                <div
+                    key={`all-day-tasks-${day.toISOString()}`}
                     className={cn(
                         "p-0.5 border-r border-b border-t min-h-[3.5rem] text-[10px] leading-tight space-y-0.5 h-14",
                         isToday(day) ? "bg-primary/5" : ""
@@ -346,7 +347,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
                               aria-label="Delete task"
                             >
-                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive-foreground/80 hover:text-destructive-foreground' : 'text-destructive')} />
+                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive' : 'text-destructive')} />
                             </Button>
                         </div>
                     ))}
