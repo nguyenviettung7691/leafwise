@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import type { Plant, PlantHealthCondition } from '@/types';
-import { Card, CardContent, CardHeader } from '@/components/ui/card'; // Removed CardFooter, CardDescription, CardTitle as they are not directly used from here
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -86,7 +86,6 @@ export function PlantHeaderCard({
                     className={cn(
                         `capitalize shrink-0 text-xs px-2 py-0.5`, 
                         healthConditionStyles[plant.healthCondition]
-                        // Removed specific dark mode overlay styles to let healthConditionStyles handle it
                     )}
                   >
                     {plant.healthCondition.replace('_', ' ')}
@@ -121,8 +120,7 @@ export function PlantHeaderCard({
         </Dialog>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 space-y-3">
-        {/* "Cared for", "Last Cared", and action buttons */}
-        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-3 mt-3"> {/* Removed border-t */}
+        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground pt-3"> {/* mt-3 removed here */}
             <div className="flex items-center gap-x-4 gap-y-1">
                 {caredForDuration && (
                 <span className="flex items-center gap-1">
