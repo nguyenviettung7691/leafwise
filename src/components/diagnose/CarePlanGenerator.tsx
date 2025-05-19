@@ -14,21 +14,21 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // New import
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; 
 
 interface CarePlanGeneratorProps {
   diagnosisResult: DiagnosePlantHealthOutput | null;
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;
-  resultMode: 'basic' | 'advanced' | null; // Mode of the *displayed* result
+  resultMode: 'basic' | 'advanced' | null; 
   locationClimate: string;
   onLocationClimateChange: (value: string) => void;
-  carePlanMode: 'basic' | 'advanced'; // Mode for *new* generation request (radio button)
+  carePlanMode: 'basic' | 'advanced'; 
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
-  lastSavedPlantId?: string | null; // New prop
+  lastSavedPlantId?: string | null; 
 }
 
 const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
@@ -65,7 +65,7 @@ export function CarePlanGenerator({
   onCarePlanModeChange,
   onGenerateCarePlan,
   onSaveCarePlan,
-  lastSavedPlantId, // New prop used here
+  lastSavedPlantId, 
 }: CarePlanGeneratorProps) {
   const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
   const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
@@ -87,7 +87,6 @@ export function CarePlanGenerator({
   };
 
   React.useEffect(() => {
-    // Reset saved state if the care plan result changes (e.g., a new plan is generated)
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
 
@@ -167,7 +166,7 @@ export function CarePlanGenerator({
                 </CardDescription>
               )}
             </CardHeader>
-
+            
             {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
               <div className="space-y-3">
                 {carePlanResult.generatedTasks.map((task, index) => (
@@ -193,18 +192,17 @@ export function CarePlanGenerator({
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-6 text-center">
                 {carePlanEffectivelySaved && lastSavedPlantId ? (
                   <ProgressBarLink
                     href={`/plants/${lastSavedPlantId}`}
-                    className={cn(Button.name, "w-full bg-green-600 hover:bg-green-700 text-white")} // Using buttonVariants directly might be cleaner but this works
+                    className="text-sm text-primary hover:underline"
                   >
-                    <Eye className="mr-2 h-4 w-4" />
                     View {plantNameForButton}'s Details
                   </ProgressBarLink>
                 ) : (
                   <Button
-                    variant="default" // Changed to default for primary styling
+                    variant="default" 
                     className="w-full"
                     onClick={handleSaveClick}
                     disabled={
@@ -233,3 +231,4 @@ export function CarePlanGenerator({
     </Card>
   );
 }
+
