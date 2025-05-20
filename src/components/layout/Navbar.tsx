@@ -76,6 +76,8 @@ export function Navbar() {
     ))
   );
 
+  const isProfileActive = pathname === '/profile';
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -114,7 +116,12 @@ export function Navbar() {
           ) : user ? (
             <>
               <ProgressBarLink href="/profile">
-                <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-primary transition-colors">
+                <Avatar 
+                  className={cn(
+                    "h-9 w-9 cursor-pointer border-2 hover:border-primary transition-colors",
+                    isProfileActive ? "border-primary" : "border-transparent"
+                  )}
+                >
                   <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name} data-ai-hint="person avatar" />
                   <AvatarFallback className="text-sm bg-muted">
                     {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
