@@ -7,10 +7,10 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'; // Added ChartTooltip
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import { cn } from '@/lib/utils';
 
@@ -23,9 +23,9 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))', // Yellow
-  sick: 'hsl(var(--destructive))', // Red
-  unknown: 'hsl(var(--muted-foreground))', // Grey
+  needs_attention: 'hsl(var(--chart-4))',
+  sick: 'hsl(var(--destructive))',
+  unknown: 'hsl(var(--muted-foreground))',
 };
 
 
@@ -111,7 +111,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url, // Added for tooltip
+        photoUrl: photo.url,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -258,8 +258,9 @@ export function PlantGrowthTracker({
                       </div>
                   )}
                   <div className={cn(
-                      "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none flex flex-col items-center text-center",
-                       isManagingPhotos && isSelected ? 'opacity-75' : ''
+                      "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
+                       isManagingPhotos && isSelected ? 'opacity-75' : '',
+                       "flex flex-col items-center text-center" 
                   )}>
                     <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
                     <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
@@ -308,7 +309,7 @@ export function PlantGrowthTracker({
                 width={100}
                 tickFormatter={(value) => healthScoreLabels[value as number] || ''}
               />
-              <RechartsTooltip
+              <ChartTooltip
                 cursor={false}
                 content={
                   <ChartTooltipContent
@@ -354,3 +355,4 @@ export function PlantGrowthTracker({
     </div>
   );
 }
+
