@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Loader2, Filter } from 'lucide-react'; // Added Filter
+import { Loader2, Filter } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { useState, useEffect, useMemo } from 'react';
 import type { Plant, CareTask } from '@/types';
@@ -34,7 +34,7 @@ export default function CalendarPage() {
     setSelectedPlantIds(newSelectedIds);
   };
 
-  const handleNavigateWeek = (newDate: Date) => {
+  const handleNavigatePeriod = (newDate: Date) => { // Renamed from handleNavigateWeek
     setCurrentCalendarDate(newDate);
   };
 
@@ -60,7 +60,6 @@ export default function CalendarPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Filter Pane - Removed Card wrapper here */}
         <div className="lg:w-1/4 lg:max-w-xs xl:max-w-sm flex-shrink-0">
           <PlantFilterControls
             allPlants={allPlants}
@@ -69,12 +68,11 @@ export default function CalendarPage() {
           />
         </div>
 
-        {/* Calendar View */}
         <div className="flex-grow">
           <CareCalendarView
             plants={filteredPlants}
             currentDate={currentCalendarDate}
-            onNavigateWeek={handleNavigateWeek}
+            onNavigatePeriod={handleNavigatePeriod} // Updated prop name
             onTaskAction={handleTaskAction}
           />
         </div>
