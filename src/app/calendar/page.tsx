@@ -2,12 +2,11 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, Check, Filter, Loader2 } from 'lucide-react';
+import { Loader2, Filter } from 'lucide-react'; // Added Filter
 import { useLanguage } from '@/context/LanguageContext';
 import { useState, useEffect, useMemo } from 'react';
 import type { Plant, CareTask } from '@/types';
-import { mockPlants } from '@/lib/mock-data'; // Assuming mockPlants is mutable for prototype
+import { mockPlants } from '@/lib/mock-data';
 import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
 import { CareCalendarView } from '@/components/calendar/CareCalendarView';
 
@@ -19,16 +18,14 @@ export default function CalendarPage() {
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
 
   useEffect(() => {
-    // Simulate fetching plants
     setAllPlants(mockPlants);
-    // Initially select all plants
     setSelectedPlantIds(new Set(mockPlants.map(p => p.id)));
     setIsLoading(false);
   }, []);
 
   const filteredPlants = useMemo(() => {
     if (selectedPlantIds.size === allPlants.length) {
-      return allPlants; // Optimization: if all are selected, return all
+      return allPlants;
     }
     return allPlants.filter(plant => selectedPlantIds.has(plant.id));
   }, [allPlants, selectedPlantIds]);
@@ -44,8 +41,6 @@ export default function CalendarPage() {
   const handleTaskAction = (task: CareTask, plantId: string) => {
     console.log(`Placeholder: Mark task "${task.name}" for plant "${plantId}" as complete.`);
     // Future: Implement actual task completion logic
-    // This might involve updating task.lastCompleted and task.nextDueDate
-    // and then re-calculating occurrences for the calendar.
   };
 
   if (isLoading) {
@@ -65,23 +60,13 @@ export default function CalendarPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Filter Pane */}
+        {/* Filter Pane - Removed Card wrapper here */}
         <div className="lg:w-1/4 lg:max-w-xs xl:max-w-sm flex-shrink-0">
-          <Card className="shadow-md">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                Filter by Plant
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <PlantFilterControls
-                allPlants={allPlants}
-                selectedPlantIds={selectedPlantIds}
-                onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
-              />
-            </CardContent>
-          </Card>
+          <PlantFilterControls
+            allPlants={allPlants}
+            selectedPlantIds={selectedPlantIds}
+            onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
+          />
         </div>
 
         {/* Calendar View */}
