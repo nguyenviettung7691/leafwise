@@ -6,10 +6,10 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge'; // Added Badge import
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ListChecks, ListX } from 'lucide-react'; // Added ListChecks and ListX icons
+import { ListChecks, ListX } from 'lucide-react';
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -40,32 +40,41 @@ export function PlantFilterControls({
     }
   };
 
-  const isAllSelected = selectedPlantIds.size === allPlants.length && allPlants.length > 0;
   const selectedCount = selectedPlantIds.size;
+  const isAllSelected = allPlants.length > 0 && selectedCount === allPlants.length;
+  const totalPlants = allPlants.length;
+
+  let tooltipText = "Select All Plants";
+  if (isAllSelected) {
+    tooltipText = `Deselect All (${selectedCount} plants)`;
+  } else if (selectedCount > 0) {
+    tooltipText = `Select All (${selectedCount} of ${totalPlants} plants currently selected)`;
+  }
+
 
   return (
-    <div className="space-y-3"> {/* Reduced overall spacing */}
-      <div className="flex items-center justify-end"> {/* Changed from justify-between */}
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
-                size="sm" // Keep size small for better fit with badge
+                size="sm"
                 onClick={handleToggleSelectAll}
                 disabled={allPlants.length === 0}
-                className="flex items-center gap-1.5" // Added gap for icon and badge
+                className="flex items-center" // Removed gap-1.5 to manually control badge margin
               >
                 {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
-                {isAllSelected && (
-                  <Badge variant="secondary" className="px-1.5 text-xs">
+                {selectedCount > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
                     {selectedCount}
                   </Badge>
                 )}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{isAllSelected ? `Deselect All (${selectedCount} selected)` : 'Select All'}</p>
+              <p>{tooltipText}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
