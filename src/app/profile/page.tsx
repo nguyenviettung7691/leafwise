@@ -137,7 +137,7 @@ export default function ProfilePage() {
   const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
-    // Logout function in AuthContext handles navigation
+    // Navigation is handled within the logout function
     setIsLoggingOut(false);
   };
 
@@ -476,8 +476,8 @@ export default function ProfilePage() {
               <AlertTriangle className="h-6 w-6" /> Are you absolutely sure?
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.</p>
-              <p>To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.</p>
+              <div>This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.</div>
+              <div>To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.</div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
