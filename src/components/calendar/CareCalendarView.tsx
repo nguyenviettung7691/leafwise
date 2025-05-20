@@ -90,9 +90,9 @@ export function CareCalendarView({
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
-  const [viewMode, setViewMode = useState<'week' | 'month'>('week');
-  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks = useState(true);
-  const [displayedOccurrences, setDisplayedOccurrences = useState<DisplayableTaskOccurrence[]>([]);
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
+  const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
 
@@ -181,7 +181,7 @@ export function CareCalendarView({
 
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < (viewMode === 'week' ? 100 : 400) ) { // Increased safety for month view
+      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < (viewMode === 'week' ? 100 : 400) ) { 
         if (currentOccurrenceForward >= calcRangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(currentOccurrenceForward) });
         }
@@ -236,7 +236,7 @@ export function CareCalendarView({
             if (timeCategory === 'allday') {
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
             }
-            if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false; // Exclude all-day from specific time categories
+            if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false; 
             if (timeCategory === 'daytime') return hour >= 7 && hour < 19; // 7 AM to 6:59 PM
             if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; // 7 PM to 6:59 AM
             return false;
@@ -381,7 +381,7 @@ export function CareCalendarView({
               <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
               {daysInWeek.map(day => {
                 const dayOfWeek = getDay(day);
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday is 0, Saturday is 6
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
                 const today = isToday(day);
                 return (
                   <div
@@ -482,13 +482,13 @@ export function CareCalendarView({
                                     
                                     <div className={cn(
                                         "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
-                                        isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-900/30" : "bg-muted/20"
+                                        isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
                                         "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
-                                        isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-900/30" : "bg-muted/10"
+                                        isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
                                     </div>
