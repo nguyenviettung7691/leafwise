@@ -42,7 +42,7 @@ const healthScoreLabels: Record<number, string> = {
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))',
+  needs_attention: 'hsl(var(--chart-4))', // Assuming chart-4 is a yellow/orange
   sick: 'hsl(var(--destructive))',
   unknown: 'hsl(var(--muted-foreground))',
 };
@@ -116,7 +116,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url,
+        photoUrl: photo.url, // Added for tooltip
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -153,7 +153,7 @@ export function PlantGrowthTracker({
   };
 
   const handleCheckboxClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Prevent card click (navigation) when clicking checkbox directly
+    e.stopPropagation(); 
   };
 
 
@@ -237,7 +237,7 @@ export function PlantGrowthTracker({
                     "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
                     plant.primaryPhotoUrl === photo.url && !isManagingPhotos ? 'ring-2 ring-primary ring-offset-1' : '',
                     isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
-                    healthConditionRingStyles[photo.healthCondition]
+                    !isManagingPhotos ? healthConditionRingStyles[photo.healthCondition] : '' // Apply health ring only if not managing
                   )}
                   data-ai-hint="plant growth"
                 />
@@ -249,10 +249,10 @@ export function PlantGrowthTracker({
                     </div>
                 )}
                 <div className={cn(
-                    "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none",
+                    "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none flex flex-col items-center text-center", // Added flex flex-col items-center text-center
                      isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'opacity-75' : ''
                 )}>
-                  <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
+                  <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
                   <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
                     {photo.healthCondition.replace('_', ' ')}
                   </Badge>
@@ -279,8 +279,8 @@ export function PlantGrowthTracker({
                 accessibilityLayer
                 data={chartData}
                 margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                onClick={(e) => {
-                    if (e && e.activePayload && e.activePayload.length > 0) {
+                onClick={(e: any) => { // Added type annotation for e
+                    if (e && e.activePayload && e.activePayload.length > 0 && e.activePayload[0].payload) {
                         handleRechartsDotClick(e.activePayload[0].payload);
                     }
                 }}
@@ -309,22 +309,24 @@ export function PlantGrowthTracker({
                     <ChartTooltipContent
                         indicator="dot"
                         labelKey="date"
-                        formatter={(value, name, props) => (
-                            <div className="text-sm">
-                                {props.payload?.photoUrl && (
-                                    <Image
-                                        src={props.payload.photoUrl}
-                                        alt="Plant diagnosis"
-                                        width={64}
-                                        height={64}
-                                        className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
-                                        data-ai-hint="plant chart thumbnail"
-                                    />
-                                )}
-                                <p className="font-medium text-foreground">{props.payload?.date}</p>
-                                <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
-                            </div>
-                        )}
+                        formatter={(value, name, props: any) => { // Added type annotation for props
+                            return (
+                                <div className="text-sm">
+                                    {props.payload?.photoUrl && (
+                                        <Image
+                                            src={props.payload.photoUrl}
+                                            alt="Plant diagnosis"
+                                            width={64}
+                                            height={64}
+                                            className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
+                                            data-ai-hint="plant chart thumbnail"
+                                        />
+                                    )}
+                                    <p className="font-medium text-foreground">{props.payload?.date}</p>
+                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
+                                </div>
+                            )
+                        }}
                     />
                   }
                 />
@@ -348,6 +350,3 @@ export function PlantGrowthTracker({
     </div>
   );
 }
-
-
-    
