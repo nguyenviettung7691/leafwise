@@ -11,11 +11,11 @@ import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
 import { CareCalendarView } from '@/components/calendar/CareCalendarView';
 
 export default function CalendarPage() {
-  const { t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(true);
-  const [allPlants, setAllPlants] = useState<Plant[]>([]);
-  const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
-  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const { t = useLanguage();
+  const [isLoading, setIsLoading = useState(true);
+  const [allPlants, setAllPlants = useState<Plant[]>([]);
+  const [selectedPlantIds, setSelectedPlantIds = useState<Set<string>>(new Set());
+  const [currentCalendarDate, setCurrentCalendarDate = useState(new Date());
 
   useEffect(() => {
     setAllPlants(mockPlants);
@@ -34,7 +34,7 @@ export default function CalendarPage() {
     setSelectedPlantIds(newSelectedIds);
   };
 
-  const handleNavigatePeriod = (newDate: Date) => { // Renamed from handleNavigateWeek
+  const handleNavigatePeriod = (newDate: Date) => { 
     setCurrentCalendarDate(newDate);
   };
 
@@ -60,7 +60,7 @@ export default function CalendarPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-1/4 lg:max-w-xs xl:max-w-sm flex-shrink-0">
+        <div className="lg:w-1/5 lg:max-w-[280px] xl:max-w-xs flex-shrink-0">
           <PlantFilterControls
             allPlants={allPlants}
             selectedPlantIds={selectedPlantIds}
@@ -72,7 +72,7 @@ export default function CalendarPage() {
           <CareCalendarView
             plants={filteredPlants}
             currentDate={currentCalendarDate}
-            onNavigatePeriod={handleNavigatePeriod} // Updated prop name
+            onNavigatePeriod={handleNavigatePeriod} 
             onTaskAction={handleTaskAction}
           />
         </div>
