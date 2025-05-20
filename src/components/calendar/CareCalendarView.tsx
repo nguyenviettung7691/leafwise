@@ -96,9 +96,15 @@ export function CareCalendarView({
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
 
-  const currentWeekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
-  const currentWeekEnd = useMemo(() => endOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
-  const daysInWeek = useMemo(() => eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd }), [currentWeekStart, currentWeekEnd]);
+  const currentPeriodStart = useMemo(() => {
+    return viewMode === 'week' ? startOfWeek(currentDate, { weekStartsOn }) : startOfMonth(currentDate);
+  }, [currentDate, viewMode, weekStartsOn]);
+
+  const currentPeriodEnd = useMemo(() => {
+    return viewMode === 'week' ? endOfWeek(currentDate, { weekStartsOn }) : endOfMonth(currentDate);
+  }, [currentDate, viewMode, weekStartsOn]);
+  
+  const daysInWeek = useMemo(() => eachDayOfInterval({ start: currentPeriodStart, end: currentPeriodEnd }), [currentPeriodStart, currentPeriodEnd]);
   
   const currentMonth = useMemo(() => startOfMonth(currentDate), [currentDate]);
   const daysForMonthGrid = useMemo(() => {
@@ -137,8 +143,8 @@ export function CareCalendarView({
   };
 
   useEffect(() => {
-    const rangeStart = viewMode === 'week' ? currentWeekStart : startOfMonth(currentDate);
-    const rangeEnd = viewMode === 'week' ? currentWeekEnd : endOfMonth(currentDate);
+    const rangeStart = viewMode === 'week' ? startOfWeek(currentDate, { weekStartsOn }) : startOfWeek(startOfMonth(currentDate), { weekStartsOn });
+    const rangeEnd = viewMode === 'week' ? endOfWeek(currentDate, { weekStartsOn }) : endOfWeek(endOfMonth(currentDate), { weekStartsOn });
 
     const getTaskOccurrencesInRange = (
       task: CareTask,
@@ -217,7 +223,7 @@ export function CareCalendarView({
     });
     setDisplayedOccurrences(allOccurrences);
 
-  }, [plants, currentDate, currentWeekStart, currentWeekEnd, viewMode]);
+  }, [plants, currentDate, viewMode, weekStartsOn]);
 
   const getTasksForDay = (day: Date, timeCategory?: 'daytime' | 'nighttime' | 'allday'): DisplayableTaskOccurrence[] => {
     let tasks = displayedOccurrences.filter(occurrence =>
@@ -231,8 +237,8 @@ export function CareCalendarView({
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
             }
             if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false; // Exclude all-day from specific time categories
-            if (timeCategory === 'daytime') return hour >= 7 && hour < 19;
-            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7;
+            if (timeCategory === 'daytime') return hour >= 7 && hour < 19; // 7 AM to 6:59 PM
+            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; // 7 PM to 6:59 AM
             return false;
         });
     }
@@ -341,7 +347,7 @@ export function CareCalendarView({
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm font-medium w-auto text-center tabular-nums px-1 whitespace-nowrap">
-                    {viewMode === 'week' ? `${format(currentWeekStart, 'MMM d')} - ${format(currentWeekEnd, 'MMM d, yyyy')}` : format(currentMonth, 'MMMM yyyy')}
+                    {viewMode === 'week' ? `${format(currentPeriodStart, 'MMM d')} - ${format(currentPeriodEnd, 'MMM d, yyyy')}` : format(currentMonth, 'MMMM yyyy')}
                     {isCurrentActualPeriod && <span className="text-primary font-semibold"> (Current)</span>}
                 </span>
                 <Button variant="outline" size="icon" onClick={goToNextPeriod} aria-label={viewMode === 'week' ? "Next week" : "Next month"}>
@@ -448,22 +454,36 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1 border-r border-b min-h-[100px] flex flex-col",
-                                    today ? "bg-primary/10 border-primary" : "",
-                                    !isCurrentMonthDay ? "bg-muted/30" : "bg-background"
+                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative",
+                                    today ? "border-2 border-primary" : "",
+                                    !isCurrentMonthDay ? "bg-muted/10" : ""
                                 )}
                             >
-                                <div className={cn("text-xs self-end mb-0.5", !isCurrentMonthDay ? "text-muted-foreground/70" : "text-foreground")}>{getDate(day)}</div>
-                                <div className="flex-grow space-y-0.5 overflow-y-auto text-[9px] leading-tight">
-                                    {/* All day tasks - could be combined with daytime or shown separately */}
-                                    {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
+                                <div className={cn(
+                                    "text-xs self-end mb-0.5 absolute top-1 right-1.5", 
+                                    !isCurrentMonthDay ? "text-muted-foreground/50" : "text-foreground",
+                                    today ? "text-primary font-semibold" : ""
+                                )}>
+                                  {getDate(day)}
+                                </div>
+                                <div className="flex-grow flex flex-col space-y-0.5 overflow-hidden text-[9px] leading-tight pt-4">
+                                    {/* All day tasks (optional: can be integrated into daytime) */}
+                                    {dayTasksAllDay.length > 0 && (
+                                        <div className={cn("p-0.5 rounded-sm mb-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
+                                           {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
+                                        </div>
+                                    )}
                                     
-                                    {/* Daytime Tasks Area */}
-                                    <div className={cn("p-0.5 rounded-sm min-h-[30px]", isCurrentMonthDay ? "bg-background" : "bg-muted/20")}>
+                                    <div className={cn(
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
+                                        isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
+                                    )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
-                                    {/* Nighttime Tasks Area */}
-                                    <div className={cn("p-0.5 rounded-sm min-h-[30px]", isCurrentMonthDay ? "bg-secondary/20" : "bg-muted/10")}>
+                                    <div className={cn(
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
+                                        isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
+                                    )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                 </div>
@@ -478,3 +498,4 @@ export function CareCalendarView({
     </Card>
   );
 }
+
