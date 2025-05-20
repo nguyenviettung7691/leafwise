@@ -11,14 +11,14 @@ export interface PlantPhoto {
 export interface CareTask {
   id: string;
   plantId: string;
-  name: string; 
+  name: string;
   description?: string;
-  frequency: string; 
-  timeOfDay?: string; 
-  lastCompleted?: string; 
-  nextDueDate?: string; 
+  frequency: string;
+  timeOfDay?: string;
+  lastCompleted?: string;
+  nextDueDate?: string;
   isPaused: boolean;
-  resumeDate?: string | null; 
+  resumeDate?: string | null;
   level: 'basic' | 'advanced';
 }
 
@@ -67,8 +67,8 @@ export type CarePlanTaskFormData = {
 export interface AIGeneratedTask {
   taskName: string;
   taskDescription: string;
-  suggestedFrequency: string; // AI Should use "Daily", "Weekly", "Every X Days" etc.
-  suggestedTimeOfDay: string; // AI Should use "All day" or "HH:MM"
+  suggestedFrequency: string;
+  suggestedTimeOfDay: string;
   taskLevel: 'basic' | 'advanced';
 }
 
@@ -79,7 +79,6 @@ export interface GenerateDetailedCarePlanOutput {
   activityTrackingPlaceholder: string;
 }
 
-// For AI-driven care plan update suggestions
 export interface AITaskSuggestionDetails {
     name?: string;
     description?: string;
@@ -102,8 +101,6 @@ export interface ReviewCarePlanOutput {
     newTasks: AIGeneratedTask[];
 }
 
-// Re-defining CareTaskForAI here to avoid circular dependency issues with the AI flow file.
-// This is slightly redundant but safer for separation of concerns.
 export interface CareTaskForAIReview {
     id: string;
     name: string;
@@ -118,19 +115,18 @@ export interface ReviewCarePlanInput {
     plantCommonName: string;
     newPhotoDiagnosisNotes: string;
     newPhotoHealthIsHealthy: boolean;
-    currentCareTasks: CareTaskForAIReview[]; // Use the specifically defined type here
+    currentCareTasks: CareTaskForAIReview[];
 }
 
-
 export interface NavItemConfig {
-  titleKey: string; // Key for translation
+  titleKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
 export interface NavItem {
-  title: string; // Translated title
+  title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
@@ -139,8 +135,6 @@ export interface NavItem {
 export interface UserPreferences {
   emailNotifications?: boolean;
   pushNotifications?: boolean;
-  // language?: 'en' | 'vi'; // Managed by LanguageContext now
-  // darkMode?: boolean; // Managed by next-themes now
 }
 
 export interface User {
@@ -151,11 +145,10 @@ export interface User {
   preferences?: UserPreferences;
 }
 
-// Diagnose flow types, can be expanded
 export interface ComparePlantHealthInput {
   currentPlantHealth: PlantHealthCondition;
-  newPhotoDiagnosisNotes?: string; // textual diagnosis
-  newPhotoHealthStatus: PlantHealthCondition; // 'healthy', 'needs_attention', 'sick' from new photo
+  newPhotoDiagnosisNotes?: string;
+  newPhotoHealthStatus: PlantHealthCondition;
 }
 
 export interface ComparePlantHealthOutput {
@@ -164,9 +157,8 @@ export interface ComparePlantHealthOutput {
   suggestedOverallHealth?: PlantHealthCondition;
 }
 
-// Explicit types for DiagnosePlantHealth flow
 export type DiagnosePlantHealthInput = {
-    photoDataUri: string; // Data URI
+    photoDataUri: string;
     description?: string;
 };
 
@@ -184,16 +176,25 @@ export type DiagnosePlantHealthOutput = {
         confidence?: 'low' | 'medium' | 'high';
     };
     careRecommendations: Array<{
-        action: string; // e.g., "Adjust Watering", "Pest Control"
+        action: string;
         details?: string;
     }>;
 };
 
-export type OnSaveTaskData = { // Type for data passed from CarePlanTaskForm
+export type OnSaveTaskData = {
     name: string;
     description?: string;
-    startDate: string; // This will be used as the nextDueDate
+    startDate: string;
     frequency: string;
     timeOfDay: string;
     level: 'basic' | 'advanced';
 };
+
+// This specific type for the global calendar component
+export interface GlobalCalendarTaskOccurrence {
+  originalTask: CareTask;
+  occurrenceDate: Date;
+  plantId: string;
+  plantName: string;
+  plantPrimaryPhotoUrl?: string;
+}
