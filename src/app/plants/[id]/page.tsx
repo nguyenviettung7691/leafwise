@@ -106,7 +106,7 @@ export default function PlantDetailPage() {
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogValidd, setIsGridPhotoDialogValid] = useState(false); // Typo fixed here
+  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false); // Corrected variable name
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -250,7 +250,15 @@ export default function PlantDetailPage() {
                 plantCommonName: plant.commonName,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
                 newPhotoHealthIsHealthy: newPhotoDiagnosisResult.healthAssessment.isHealthy,
-                currentCareTasks: plant.careTasks,
+                currentCareTasks: plant.careTasks.map(ct => ({
+                  id: ct.id,
+                  name: ct.name,
+                  description: ct.description,
+                  frequency: ct.frequency,
+                  timeOfDay: ct.timeOfDay,
+                  isPaused: ct.isPaused,
+                  level: ct.level,
+                })),
             };
             const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput);
 
@@ -461,11 +469,9 @@ export default function PlantDetailPage() {
         toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
     
-    // Create a new plant object with the updated tasks to trigger re-render
     const newPlantState = { ...plant, careTasks: updatedTasks };
     setPlant(newPlantState);
 
-    // Update mockPlants (for persistence in prototype)
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex] = newPlantState;
@@ -840,5 +846,7 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
 
     
