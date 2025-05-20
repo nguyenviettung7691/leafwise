@@ -12,7 +12,6 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { parseISO, compareAsc } from 'date-fns';
 import { PlantFilterSortControls, type Filters, type SortConfig } from '@/components/plants/PlantFilterSortControls';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,9 +25,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader, // Added DialogHeader
-  DialogTitle as DialogTitlePrimitive, // Added DialogTitle
-  DialogDescription as DialogDescriptionPrimitive, // Added DialogDescription
+  DialogHeader,
+  DialogTitle as DialogTitlePrimitive,
+  DialogDescription as DialogDescriptionPrimitive,
 } from "@/components/ui/dialog";
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +72,6 @@ export default function MyPlantsPage() {
   const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
 
-  // State for Edit Plant Dialog
   const [isEditPlantDialogOpen, setIsEditPlantDialogOpen] = useState(false);
   const [plantToEdit, setPlantToEdit] = useState<Plant | null>(null);
   const [initialEditFormData, setInitialEditFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
@@ -81,7 +79,6 @@ export default function MyPlantsPage() {
 
 
   useEffect(() => {
-    // Simulating fetching plants
     setPlants(mockPlants);
     setIsLoading(false);
   }, []);
@@ -122,7 +119,7 @@ export default function MyPlantsPage() {
     if (!plantToEdit) return;
     setIsSavingEditedPlant(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     const plantIndex = mockPlants.findIndex(p => p.id === plantToEdit.id);
     if (plantIndex !== -1) {
@@ -138,8 +135,8 @@ export default function MyPlantsPage() {
         });
         if (newPrimaryPhotoUrl) {
           const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
-          if (existingPhotoIndex === -1) { // It's a new photo from upload
-            updatedPhotos.unshift({ // Add to the beginning as it's the newest "primary"
+          if (existingPhotoIndex === -1) { 
+            updatedPhotos.unshift({ 
               id: `p-${plantToEdit.id}-new-${Date.now()}`,
               url: newPrimaryPhotoUrl,
               dateTaken: new Date().toISOString(),
@@ -155,7 +152,7 @@ export default function MyPlantsPage() {
         ...mockPlants[plantIndex],
         commonName: data.commonName,
         scientificName: data.scientificName || undefined,
-        familyCategory: data.familyCategory,
+        familyCategory: data.familyCategory || '',
         ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
         ageEstimateYears: data.ageEstimateYears,
         healthCondition: data.healthCondition,
@@ -164,7 +161,7 @@ export default function MyPlantsPage() {
         primaryPhotoUrl: newPrimaryPhotoUrl || mockPlants[plantIndex].primaryPhotoUrl,
         photos: updatedPhotos,
       };
-      setPlants([...mockPlants]); // Update the local state to re-render the grid
+      setPlants([...mockPlants]); 
       toast({ title: "Plant Updated!", description: `${data.commonName} has been updated.` });
     } else {
       toast({ title: "Error", description: "Could not find plant to update.", variant: "destructive" });
@@ -408,10 +405,9 @@ export default function MyPlantsPage() {
       </AlertDialog>
 
       <Dialog open={isEditPlantDialogOpen} onOpenChange={setIsEditPlantDialogOpen}>
-        <DialogContent className="sm:max-w-2xl p-0"> {/* Remove padding from DialogContent */}
+        <DialogContent className="sm:max-w-2xl p-0">
           {plantToEdit && initialEditFormData && (
             <>
-              {/* Add DialogHeader, DialogTitle, and DialogDescription here */}
               <DialogHeader className="p-6 pb-0">
                 <DialogTitlePrimitive>Edit Plant</DialogTitlePrimitive>
                 <DialogDescriptionPrimitive>
@@ -424,9 +420,7 @@ export default function MyPlantsPage() {
                 onSave={handleSaveEditedPlant}
                 onCancel={handleCancelEditPlantDialog}
                 isLoading={isSavingEditedPlant}
-                // These props are now effectively for the Card inside SavePlantForm, Dialog handles main title
-                formTitle={`Edit ${plantToEdit.commonName}`} 
-                formDescription="Make your changes below."
+                hideInternalHeader={true} 
                 submitButtonText="Update Plant"
               />
             </>

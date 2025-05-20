@@ -22,10 +22,10 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))', 
-  sick: 'hsl(var(--destructive))',
-  unknown: 'hsl(var(--muted-foreground))',
+  healthy: 'hsl(var(--primary))', // Lime
+  needs_attention: 'hsl(var(--chart-4))', // Yellow
+  sick: 'hsl(var(--destructive))', // Red
+  unknown: 'hsl(var(--muted-foreground))', // Grey
 };
 
 
@@ -96,6 +96,7 @@ export function PlantGrowthTracker({
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
+  growthPhotoInputRef,
   onChartDotClick,
   isManagingPhotos,
   onToggleManagePhotos,
@@ -245,7 +246,7 @@ export function PlantGrowthTracker({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Current Primary Photo</p>
+                          <p>Primary Photo</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -294,7 +295,7 @@ export function PlantGrowthTracker({
               accessibilityLayer
               data={chartData}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              onClick={(data) => { // Using recharts direct onClick on LineChart
+              onClick={(data) => { 
                 if (data && data.activePayload && data.activePayload.length > 0) {
                   handleRechartsDotClick(data.activePayload[0].payload);
                 }
@@ -319,31 +320,31 @@ export function PlantGrowthTracker({
                 tickFormatter={(value) => healthScoreLabels[value as number] || ''}
               />
               <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                      indicator="dot"
-                      labelKey="date"
-                      formatter={(value, name, props: any) => {
-                          return (
-                              <div className="text-sm">
-                                  {props.payload?.photoUrl && (
-                                      <Image
-                                          src={props.payload.photoUrl}
-                                          alt="Plant diagnosis"
-                                          width={64}
-                                          height={64}
-                                          className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
-                                          data-ai-hint="plant chart thumbnail"
-                                      />
-                                  )}
-                                  <p className="font-medium text-foreground">{props.payload?.date}</p>
-                                  <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
-                              </div>
-                          )
-                      }}
-                  />
-                }
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent
+                        indicator="dot"
+                        labelKey="date"
+                        formatter={(value, name, props: any) => {
+                            return (
+                                <div className="text-sm">
+                                    {props.payload?.photoUrl && (
+                                        <Image
+                                            src={props.payload.photoUrl}
+                                            alt="Plant diagnosis"
+                                            width={64}
+                                            height={64}
+                                            className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
+                                            data-ai-hint="plant chart thumbnail"
+                                        />
+                                    )}
+                                    <p className="font-medium text-foreground">{props.payload?.date}</p>
+                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
+                                </div>
+                            )
+                        }}
+                    />
+                  }
               />
               <Line
                 dataKey="health"
@@ -364,4 +365,3 @@ export function PlantGrowthTracker({
     </div>
   );
 }
-

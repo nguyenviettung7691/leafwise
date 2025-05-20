@@ -68,7 +68,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
       else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
       else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
     } else {
-      formData.frequencyMode = 'adhoc'; // Default if parsing fails
+      formData.frequencyMode = 'adhoc'; 
     }
   }
 
@@ -79,7 +79,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day'; // Default for safety
+    formData.timeOfDayOption = 'all_day'; 
     formData.specificTime = '';
   }
 
@@ -126,7 +126,6 @@ export default function PlantDetailPage() {
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [showDeletePhotosDialog, setShowDeletePhotosDialog] = useState(false);
 
-  // State for editing photo details
   const [isEditPhotoDialogVisible, setIsEditPhotoDialogVisible] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<PlantPhoto | null>(null);
   const [editedPhotoDate, setEditedPhotoDate] = useState<Date | undefined>(new Date());
@@ -168,7 +167,7 @@ export default function PlantDetailPage() {
     }
 
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
@@ -208,7 +207,7 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant) return;
 
-    if (file.size > 4 * 1024 * 1024) { // 4MB limit
+    if (file.size > 4 * 1024 * 1024) { 
         toast({ variant: 'destructive', title: 'Image Too Large', description: 'Please select an image file smaller than 4MB.' });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
@@ -447,7 +446,7 @@ export default function PlantDetailPage() {
         mockPlants[plantIndex].primaryPhotoUrl = photoUrl;
     }
     setPlant(prev => prev ? { ...prev, primaryPhotoUrl: photoUrl } : null);
-    toast({ title: "Primary Photo Updated", description: "The plant's main photo has been changed." });
+    toast({ title: "Primary Photo Updated", description: "The plant's primary photo has been changed." });
     closeGridPhotoDialog();
   };
 
@@ -460,17 +459,22 @@ export default function PlantDetailPage() {
     let updatedTasks: CareTask[];
 
     if (taskToEdit) { 
-        updatedTasks = currentTasks.map(t =>
-            t.id === taskToEdit.id ? {
-                ...t,
-                name: taskData.name,
-                description: taskData.description,
-                frequency: taskData.frequency,
-                timeOfDay: taskData.timeOfDay,
-                level: taskData.level,
-                nextDueDate: taskData.startDate, 
-            } : t
-        );
+        const taskIndex = currentTasks.findIndex(t => t.id === taskToEdit.id);
+        if (taskIndex !== -1) {
+            updatedTasks = currentTasks.map(t =>
+                t.id === taskToEdit.id ? {
+                    ...t,
+                    name: taskData.name,
+                    description: taskData.description,
+                    frequency: taskData.frequency,
+                    timeOfDay: taskData.timeOfDay,
+                    level: taskData.level,
+                    nextDueDate: taskData.startDate, 
+                } : t
+            );
+        } else {
+             updatedTasks = [...currentTasks]; // Should not happen if taskToEdit is set
+        }
         toast({ title: "Task Updated", description: `Task "${taskData.name}" has been updated.` });
     } else { 
         const newTask: CareTask = {
@@ -637,7 +641,7 @@ export default function PlantDetailPage() {
   const handleSaveEditedPhotoDetails = async () => {
     if (!plant || !photoToEdit) return;
     setIsSavingPhotoDetails(true);
-    await new Promise(resolve => setTimeout(resolve, 700)); // Simulate save
+    await new Promise(resolve => setTimeout(resolve, 700)); 
 
     const updatedPhotos = plant.photos.map(p =>
       p.id === photoToEdit.id
@@ -676,7 +680,7 @@ export default function PlantDetailPage() {
     );
   }
 
-  if (!plant) {
+  if (!plant) { 
     notFound();
     return null; 
   }
@@ -900,7 +904,7 @@ export default function PlantDetailPage() {
                 <DialogFooter>
                     {selectedGridPhoto && plant && selectedGridPhoto.url !== plant.primaryPhotoUrl && (
                         <Button variant="default" onClick={() => handleSetAsPrimaryPhoto(selectedGridPhoto.url)}>
-                            Set as Current Photo
+                            Set as Primary Photo
                         </Button>
                     )}
                     <DialogClose asChild>
@@ -1077,4 +1081,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-

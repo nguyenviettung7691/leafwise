@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { Leaf, UploadCloud, Save, Edit, ImagePlus } from 'lucide-react';
+import { Leaf, UploadCloud, Save, Edit } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +47,7 @@ interface SavePlantFormProps {
   formTitle?: string;
   formDescription?: string;
   submitButtonText?: string;
+  hideInternalHeader?: boolean; // New prop
 }
 
 export function SavePlantForm({
@@ -57,7 +58,8 @@ export function SavePlantForm({
   isLoading,
   formTitle,
   formDescription,
-  submitButtonText
+  submitButtonText,
+  hideInternalHeader = false, // Default to false
 }: SavePlantFormProps) {
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
@@ -79,11 +81,9 @@ export function SavePlantForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Pre-fill image preview from initialData
     if (initialData?.diagnosedPhotoDataUrl && !imagePreview) {
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
-        // Also ensure the form field for diagnosedPhotoDataUrl is set if initialData has it
         form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
     }
   }, [initialData, form, imagePreview]);
@@ -93,8 +93,6 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        // diagnosedPhotoDataUrl will hold the URL of the image to be saved,
-        // whether it's from a new upload (via imagePreview) or gallery selection.
         diagnosedPhotoDataUrl: imagePreview 
     };
     await onSave(formDataToSave);
@@ -108,24 +106,26 @@ export function SavePlantForm({
     setImagePreview(photo.url);
     setSelectedGalleryPhotoUrl(photo.url);
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null); // Clear any selected file in input
+    form.setValue('primaryPhoto', null); 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Reset file input UI
+      fileInputRef.current.value = ""; 
     }
   };
   
   return (
     <Card className="shadow-lg animate-in fade-in-50">
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <FormIcon className="h-6 w-6 text-primary" />
-          {currentFormTitle}
-        </CardTitle>
-        {formDescription && <CardDescription>{formDescription}</CardDescription>}
-      </CardHeader>
+      {!hideInternalHeader && (
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <FormIcon className="h-6 w-6 text-primary" />
+            {currentFormTitle}
+          </CardTitle>
+          {formDescription && <CardDescription>{formDescription}</CardDescription>}
+        </CardHeader>
+      )}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 pt-6"> {/* Ensure pt-6 if header is hidden */}
             {imagePreview && (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
                 <Image
@@ -141,9 +141,9 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => ( // `ref` from field is form's ref
+              render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => (
                 <FormItem>
-                  <FormLabel>Current Photo (Optional)</FormLabel>
+                  <FormLabel>Primary Photo (Optional)</FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -165,13 +165,13 @@ export function SavePlantForm({
                                 accept="image/png, image/jpeg, image/gif, image/webp"
                                 name={name}
                                 ref={(e) => {
-                                  formRefSetter(e); // Set react-hook-form's ref
-                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e; // Also set local ref
+                                  formRefSetter(e); 
+                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e; 
                                 }}
                                 onBlur={onBlur}
                                 onChange={(e) => {
                                     const files = e.target.files;
-                                    onChange(files); // react-hook-form's onChange
+                                    onChange(files); 
                                     if (files && files[0]) {
                                         if (files[0].size > 4 * 1024 * 1024) { 
                                             form.setError("primaryPhoto", { type: "manual", message: "Image too large, max 4MB."});
@@ -185,10 +185,9 @@ export function SavePlantForm({
                                                 form.setValue('diagnosedPhotoDataUrl', reader.result as string, {shouldDirty: true});
                                             };
                                             reader.readAsDataURL(files[0]);
-                                            setSelectedGalleryPhotoUrl(null); // Unselect gallery photo if new file is chosen
+                                            setSelectedGalleryPhotoUrl(null); 
                                         }
                                     } else {
-                                        // If file selection is cleared, revert to selected gallery photo or initial
                                         setImagePreview(selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl || null);
                                         form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl || null);
                                     }
