@@ -5,14 +5,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantHealthCondition } from '@/types';
+import type { Plant, PlantHealthCondition, PlantFormData } from '@/types';
 import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { parseISO, compareAsc } from 'date-fns';
 import { PlantFilterSortControls, type Filters, type SortConfig } from '@/components/plants/PlantFilterSortControls';
-import { Checkbox } from '@/components/ui/checkbox'; 
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,8 +22,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
 
 
@@ -66,6 +73,12 @@ export default function MyPlantsPage() {
   const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
 
+  // State for Edit Plant Dialog
+  const [isEditPlantDialogOpen, setIsEditPlantDialogOpen] = useState(false);
+  const [plantToEdit, setPlantToEdit] = useState<Plant | null>(null);
+  const [initialEditFormData, setInitialEditFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
+  const [isSavingEditedPlant, setIsSavingEditedPlant] = useState(false);
+
 
   useEffect(() => {
     // Simulating fetching plants
@@ -78,9 +91,96 @@ export default function MyPlantsPage() {
     router.push('/plants/new');
   };
 
-  const handleNavigateToEditPlant = (plantId: string) => {
-    router.push(`/plants/${plantId}/edit`);
+  const handleOpenEditPlantDialog = useCallback((plantId: string) => {
+    const foundPlant = mockPlants.find(p => p.id === plantId);
+    if (foundPlant) {
+      setPlantToEdit(foundPlant);
+      let ageYears: number | undefined = undefined;
+      if (foundPlant.ageEstimate) {
+        const match = foundPlant.ageEstimate.match(/(\d+(\.\d+)?)/);
+        if (match && match[1]) {
+          ageYears = parseFloat(match[1]);
+        }
+      }
+      setInitialEditFormData({
+        commonName: foundPlant.commonName,
+        scientificName: foundPlant.scientificName || '',
+        familyCategory: foundPlant.familyCategory || '',
+        ageEstimateYears: ageYears,
+        healthCondition: foundPlant.healthCondition,
+        location: foundPlant.location || '',
+        customNotes: foundPlant.customNotes || '',
+        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
+      });
+      setIsEditPlantDialogOpen(true);
+    } else {
+      toast({ title: "Error", description: "Plant not found for editing.", variant: "destructive" });
+    }
+  }, [toast]);
+
+  const handleSaveEditedPlant = async (data: PlantFormData) => {
+    if (!plantToEdit) return;
+    setIsSavingEditedPlant(true);
+
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+
+    const plantIndex = mockPlants.findIndex(p => p.id === plantToEdit.id);
+    if (plantIndex !== -1) {
+      let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+      let updatedPhotos = [...mockPlants[plantIndex].photos];
+
+      if (data.primaryPhoto && data.primaryPhoto[0]) {
+        newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(data.primaryPhoto![0]);
+        });
+        if (newPrimaryPhotoUrl) {
+          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
+          if (existingPhotoIndex === -1) {
+            updatedPhotos.unshift({
+              id: `p-${plantToEdit.id}-new-${Date.now()}`,
+              url: newPrimaryPhotoUrl,
+              dateTaken: new Date().toISOString(),
+              healthCondition: data.healthCondition,
+              diagnosisNotes: "Primary photo updated via edit form."
+            });
+          }
+        }
+      }
+
+      mockPlants[plantIndex] = {
+        ...mockPlants[plantIndex],
+        commonName: data.commonName,
+        scientificName: data.scientificName || undefined,
+        familyCategory: data.familyCategory,
+        ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
+        ageEstimateYears: data.ageEstimateYears,
+        healthCondition: data.healthCondition,
+        location: data.location || undefined,
+        customNotes: data.customNotes || undefined,
+        primaryPhotoUrl: newPrimaryPhotoUrl || mockPlants[plantIndex].primaryPhotoUrl,
+        photos: updatedPhotos,
+      };
+      setPlants([...mockPlants]); // Update the local state to re-render the grid
+      toast({ title: "Plant Updated!", description: `${data.commonName} has been updated.` });
+    } else {
+      toast({ title: "Error", description: "Could not find plant to update.", variant: "destructive" });
+    }
+
+    setIsSavingEditedPlant(false);
+    setIsEditPlantDialogOpen(false);
+    setPlantToEdit(null);
+    setInitialEditFormData(undefined);
   };
+
+  const handleCancelEditPlantDialog = () => {
+    setIsEditPlantDialogOpen(false);
+    setPlantToEdit(null);
+    setInitialEditFormData(undefined);
+  };
+
 
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -110,7 +210,7 @@ export default function MyPlantsPage() {
   };
 
   const filteredAndSortedPlants = useMemo(() => {
-    let processedPlants = [...plants]; 
+    let processedPlants = [...plants];
 
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
@@ -194,7 +294,7 @@ export default function MyPlantsPage() {
 
   const toggleManagePlantsMode = () => {
     setIsManagingPlants(prev => {
-      if (prev) { 
+      if (prev) {
         setSelectedPlantIds(new Set());
       }
       return !prev;
@@ -216,9 +316,9 @@ export default function MyPlantsPage() {
   const handleDeleteSelectedPlants = () => {
     const numSelected = selectedPlantIds.size;
     const updatedPlants = mockPlants.filter(p => !selectedPlantIds.has(p.id));
-    mockPlants.length = 0; 
-    mockPlants.push(...updatedPlants); 
-    setPlants(updatedPlants); 
+    mockPlants.length = 0;
+    mockPlants.push(...updatedPlants);
+    setPlants(updatedPlants);
 
     toast({
       title: "Plants Deleted",
@@ -285,7 +385,7 @@ export default function MyPlantsPage() {
           isManaging={isManagingPlants}
           selectedPlantIds={selectedPlantIds}
           onToggleSelect={handleTogglePlantSelection}
-          onEdit={handleNavigateToEditPlant} 
+          onEdit={handleOpenEditPlantDialog}
         />
       )}
 
@@ -306,6 +406,26 @@ export default function MyPlantsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={isEditPlantDialogOpen} onOpenChange={setIsEditPlantDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          {/* DialogHeader can be part of SavePlantForm or here */}
+          {plantToEdit && initialEditFormData && (
+            <SavePlantForm
+              initialData={initialEditFormData}
+              galleryPhotos={plantToEdit.photos}
+              onSave={handleSaveEditedPlant}
+              onCancel={handleCancelEditPlantDialog}
+              isLoading={isSavingEditedPlant}
+              formTitle="Edit Plant"
+              formDescription={`Update the details for ${plantToEdit.commonName}.`}
+              submitButtonText="Update Plant"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
     </AppLayout>
   );
 }
+
+    
