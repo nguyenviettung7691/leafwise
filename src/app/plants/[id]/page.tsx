@@ -10,15 +10,15 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'; // Added CardFooter
 import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge'; // Added Badge import
 import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox'; 
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
@@ -46,7 +46,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     name: task.name,
     description: task.description || '',
     level: task.level,
-    startDate: task.nextDueDate || new Date().toISOString(), 
+    startDate: task.nextDueDate || new Date().toISOString(),
   };
 
   if (task.frequency === 'Ad-hoc') formData.frequencyMode = 'adhoc';
@@ -62,7 +62,7 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
       else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
       else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
     } else {
-      formData.frequencyMode = 'adhoc'; 
+      formData.frequencyMode = 'adhoc';
     }
   }
 
@@ -106,7 +106,7 @@ export default function PlantDetailPage() {
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false); // Corrected variable name
+  const [isGridPhotoDialogVisible, setIsGridPhotoDialogVisible] = useState(false);
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -115,6 +115,10 @@ export default function PlantDetailPage() {
 
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
   const [showDeleteSelectedTasksDialog, setShowDeleteSelectedTasksDialog] = useState(false);
+
+  const [isManagingPhotos, setIsManagingPhotos] = useState(false);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [showDeletePhotosDialog, setShowDeletePhotosDialog] = useState(false);
 
 
   useEffect(() => {
@@ -189,7 +193,7 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant) return;
 
-    if (file.size > 4 * 1024 * 1024) { 
+    if (file.size > 4 * 1024 * 1024) {
         toast({ variant: 'destructive', title: 'Image Too Large', description: 'Please select an image file smaller than 4MB.' });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
@@ -414,13 +418,13 @@ export default function PlantDetailPage() {
 
   const openGridPhotoDialog = (photo: PlantPhoto) => {
     setSelectedGridPhoto(photo);
-    setIsGridPhotoDialogValid(true);
+    setIsGridPhotoDialogVisible(true);
   };
   const closeGridPhotoDialog = () => {
-    setIsGridPhotoDialogValid(false);
-    setTimeout(() => setSelectedGridPhoto(null), 300); 
+    setIsGridPhotoDialogVisible(false);
+    setTimeout(() => setSelectedGridPhoto(null), 300);
   };
-  
+
   const handleSetAsPrimaryPhoto = (photoUrl: string) => {
     if (!plant) return;
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
@@ -468,7 +472,7 @@ export default function PlantDetailPage() {
         updatedTasks = [...currentTasks, newTask];
         toast({ title: "Task Added", description: `New task "${newTask.name}" added to ${plant.commonName}.` });
     }
-    
+
     const newPlantState = { ...plant, careTasks: updatedTasks };
     setPlant(newPlantState);
 
@@ -496,7 +500,7 @@ export default function PlantDetailPage() {
   };
 
   const handleOpenDeleteSingleTaskDialog = (taskId: string) => {
-    setSelectedTaskIds(new Set([taskId])); 
+    setSelectedTaskIds(new Set([taskId]));
     setShowDeleteSelectedTasksDialog(true);
   };
 
@@ -520,7 +524,7 @@ export default function PlantDetailPage() {
 
     toast({ title: "Task(s) Deleted", description: `Task(s) "${tasksToDeleteNames}" deleted.` });
     setShowDeleteSelectedTasksDialog(false);
-    setSelectedTaskIds(new Set()); 
+    setSelectedTaskIds(new Set());
   };
 
   const handleToggleTaskSelection = useCallback((taskId: string) => {
@@ -534,6 +538,58 @@ export default function PlantDetailPage() {
       return newSelected;
     });
   }, []);
+
+  const toggleManagePhotosMode = useCallback(() => {
+    setIsManagingPhotos(prev => {
+      if (prev) { // Exiting manage mode
+        setSelectedPhotoIds(new Set());
+      }
+      return !prev;
+    });
+  }, []);
+
+  const handleTogglePhotoSelection = useCallback((photoId: string) => {
+    setSelectedPhotoIds(prevSelected => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(photoId)) {
+        newSelected.delete(photoId);
+      } else {
+        newSelected.add(photoId);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  const handleDeleteSelectedPhotosConfirm = () => {
+    if (!plant || selectedPhotoIds.size === 0) return;
+
+    let updatedPhotos = plant.photos.filter(p => !selectedPhotoIds.has(p.id));
+    let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
+
+    // If the primary photo was deleted, find a new one
+    if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.photos.find(p => p.url === plant.primaryPhotoUrl)?.id || '')) {
+      if (updatedPhotos.length > 0) {
+        // Sort remaining photos by dateTaken descending and pick the newest
+        const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
+        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url;
+      } else {
+        newPrimaryPhotoUrl = undefined; // Or a placeholder
+      }
+    }
+
+    const newPlantState = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
+    setPlant(newPlantState);
+
+    const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
+    if (plantIndex !== -1) {
+      mockPlants[plantIndex] = newPlantState;
+    }
+
+    toast({ title: "Photos Deleted", description: `${selectedPhotoIds.size} photo(s) deleted.` });
+    setSelectedPhotoIds(new Set());
+    setIsManagingPhotos(false);
+    setShowDeletePhotosDialog(false);
+  };
 
 
   const handleChartDotClick = (clickedDotPayload: any) => {
@@ -569,7 +625,7 @@ export default function PlantDetailPage() {
 
   if (!plant) {
     notFound();
-    return null; 
+    return null;
   }
 
   return (
@@ -598,7 +654,7 @@ export default function PlantDetailPage() {
           loadingTaskId={loadingTaskId}
           onToggleTaskPause={handleToggleTaskPause}
           onOpenEditTaskDialog={openEditTaskDialog}
-          onOpenDeleteTaskDialog={handleOpenDeleteSingleTaskDialog} 
+          onOpenDeleteTaskDialog={handleOpenDeleteSingleTaskDialog}
           onOpenAddTaskDialog={openAddTaskDialog}
           selectedTaskIds={selectedTaskIds}
           onToggleTaskSelection={handleToggleTaskSelection}
@@ -613,6 +669,11 @@ export default function PlantDetailPage() {
           growthPhotoInputRef={growthPhotoInputRef}
           onChartDotClick={handleChartDotClick}
           onSetAsPrimaryPhoto={handleSetAsPrimaryPhoto}
+          isManagingPhotos={isManagingPhotos}
+          onToggleManagePhotos={toggleManagePhotosMode}
+          selectedPhotoIds={selectedPhotoIds}
+          onTogglePhotoSelection={handleTogglePhotoSelection}
+          onDeleteSelectedPhotos={() => setShowDeletePhotosDialog(true)}
         />
         <input
           type="file"
@@ -765,7 +826,7 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
+        <Dialog open={isGridPhotoDialogVisible} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Photo Details - {selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''}</DialogTitle>
@@ -839,6 +900,25 @@ export default function PlantDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
+        <AlertDialog open={showDeletePhotosDialog} onOpenChange={setShowDeletePhotosDialog}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the selected {selectedPhotoIds.size} photo{selectedPhotoIds.size > 1 ? 's' : ''}.
+                    Associated diagnosis data will also be removed.
+                </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setSelectedPhotoIds(new Set())}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelectedPhotosConfirm} className="bg-destructive hover:bg-destructive/90">
+                    Delete Photo{selectedPhotoIds.size > 1 ? 's' : ''}
+                </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+
+
         <CardFooter className="mt-6 border-t pt-4">
              <p className="text-xs text-muted-foreground">Last updated: {formatDateForDialog(new Date().toISOString())} (Simulated - reflects last interaction)</p>
         </CardFooter>
@@ -846,7 +926,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
-    
-
-    
