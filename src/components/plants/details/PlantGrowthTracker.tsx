@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2 } from 'lucide-react';
+import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck } from 'lucide-react'; // Added BookmarkCheck
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip, Dot } from 'recharts';
@@ -20,12 +20,13 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
   unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
 };
 
-const healthConditionRingStyles: Record<PlantHealthCondition, string> = {
-  healthy: 'ring-green-500',
-  needs_attention: 'ring-yellow-500',
-  sick: 'ring-red-500',
-  unknown: 'ring-gray-500',
+const healthConditionDotColors: Record<PlantHealthCondition, string> = {
+  healthy: 'hsl(var(--primary))',
+  needs_attention: 'hsl(var(--chart-4))',
+  sick: 'hsl(var(--destructive))',
+  unknown: 'hsl(var(--muted-foreground))',
 };
+
 
 const healthScoreMapping: Record<PlantHealthCondition, number> = {
   unknown: 0,
@@ -38,13 +39,6 @@ const healthScoreLabels: Record<number, string> = {
   1: 'Sick',
   2: 'Needs Attention',
   3: 'Healthy',
-};
-
-const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))', // Assuming chart-4 is a yellow/orange
-  sick: 'hsl(var(--destructive))',
-  unknown: 'hsl(var(--muted-foreground))',
 };
 
 
@@ -116,7 +110,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url, // Added for tooltip
+        photoUrl: photo.url,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -198,7 +192,6 @@ export function PlantGrowthTracker({
         </div>
       </div>
 
-      {/* Photo Gallery moved above Health Trend */}
       {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
         <div className="mt-4 pt-4 border-t">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
@@ -206,141 +199,142 @@ export function PlantGrowthTracker({
             Photo Gallery
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {sortedPhotosForGallery.map((photo) => (
-              <div
-                key={photo.id}
-                className={cn(
-                  "group relative aspect-square block w-full overflow-hidden rounded-lg focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
-                  isManagingPhotos ? "cursor-pointer" : ""
-                )}
-                onClick={() => handlePhotoContainerClick(photo)}
-                role={isManagingPhotos ? "button" : undefined}
-                tabIndex={isManagingPhotos ? 0 : -1}
-                onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') handlePhotoContainerClick(photo); } : undefined}
-              >
-                {isManagingPhotos && (
-                  <div className="absolute top-1.5 right-1.5 z-10 p-0.5 bg-card/80 rounded-full">
-                    <Checkbox
-                      checked={selectedPhotoIds.has(photo.id)}
-                      onCheckedChange={() => onTogglePhotoSelection(photo.id)}
-                      onClick={handleCheckboxClick}
-                      aria-label={`Select photo from ${formatDate(photo.dateTaken)}`}
-                      className="h-5 w-5"
-                    />
-                  </div>
-                )}
-                <Image
-                  src={photo.url}
-                  alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
-                  width={200} height={200}
+            {sortedPhotosForGallery.map((photo) => {
+              const isPrimary = plant.primaryPhotoUrl === photo.url;
+              const isSelected = selectedPhotoIds.has(photo.id);
+              return (
+                <div
+                  key={photo.id}
                   className={cn(
-                    "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
-                    plant.primaryPhotoUrl === photo.url && !isManagingPhotos ? 'ring-2 ring-primary ring-offset-1' : '',
-                    isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
-                    !isManagingPhotos ? healthConditionRingStyles[photo.healthCondition] : '' // Apply health ring only if not managing
+                    "group relative aspect-square block w-full overflow-hidden rounded-lg focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
+                    isManagingPhotos ? "cursor-pointer" : ""
                   )}
-                  data-ai-hint="plant growth"
-                />
-                {!isManagingPhotos && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                         onClick={() => onOpenGridPhotoDialog(photo)}
-                    >
-                        <span className="text-white text-xs font-semibold">View Details</span>
+                  onClick={() => handlePhotoContainerClick(photo)}
+                  role={isManagingPhotos ? "button" : undefined}
+                  tabIndex={isManagingPhotos ? 0 : -1}
+                  onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') handlePhotoContainerClick(photo); } : undefined}
+                >
+                  {isManagingPhotos && (
+                    <div className="absolute top-1.5 right-1.5 z-10 p-0.5 bg-card/80 rounded-full">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onTogglePhotoSelection(photo.id)}
+                        onClick={handleCheckboxClick}
+                        aria-label={`Select photo from ${formatDate(photo.dateTaken)}`}
+                        className="h-5 w-5"
+                      />
                     </div>
-                )}
-                <div className={cn(
-                    "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none flex flex-col items-center text-center", // Added flex flex-col items-center text-center
-                     isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'opacity-75' : ''
-                )}>
-                  <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
-                  <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                    {photo.healthCondition.replace('_', ' ')}
-                  </Badge>
+                  )}
+                  {isPrimary && !isManagingPhotos && (
+                    <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
+                      <BookmarkCheck className="h-3.5 w-3.5" />
+                    </div>
+                  )}
+                  <Image
+                    src={photo.url}
+                    alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
+                    width={200} height={200}
+                    className={cn(
+                      "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
+                      isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : ''
+                    )}
+                    data-ai-hint="plant growth"
+                  />
+                  {!isManagingPhotos && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                           onClick={() => onOpenGridPhotoDialog(photo)}
+                      >
+                          <span className="text-white text-xs font-semibold">View Details</span>
+                      </div>
+                  )}
+                  <div className={cn(
+                      "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none flex flex-col items-center text-center",
+                       isManagingPhotos && isSelected ? 'opacity-75' : ''
+                  )}>
+                    <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
+                    <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
+                      {photo.healthCondition.replace('_', ' ')}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {chartData.length > 0 && (
-        <div className="mt-4 mb-6 pt-4 border-t"> {/* Added pt-4 and border-t for separation if Photo Gallery exists */}
+        <div className="mt-4 mb-6 pt-4 border-t"> 
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 1 ? ( // This condition might be redundant if chartData.length > 0 is already checked
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Add at least one photo with diagnosis to see a health trend.
-            </p>
-          ) : (
-            <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <LineChart
-                accessibilityLayer
-                data={chartData}
-                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                onClick={(e: any) => { // Added type annotation for e
-                    if (e && e.activePayload && e.activePayload.length > 0 && e.activePayload[0].payload) {
-                        handleRechartsDotClick(e.activePayload[0].payload);
-                    }
-                }}
-              >
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 6)}
-                />
-                <YAxis
-                  dataKey="health"
-                  domain={[0, 3]}
-                  ticks={[0, 1, 2, 3]}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  width={100}
-                  tickFormatter={(value) => healthScoreLabels[value as number] || ''}
-                />
-                <RechartsTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                        indicator="dot"
-                        labelKey="date"
-                        formatter={(value, name, props: any) => { // Added type annotation for props
-                            return (
-                                <div className="text-sm">
-                                    {props.payload?.photoUrl && (
-                                        <Image
-                                            src={props.payload.photoUrl}
-                                            alt="Plant diagnosis"
-                                            width={64}
-                                            height={64}
-                                            className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
-                                            data-ai-hint="plant chart thumbnail"
-                                        />
-                                    )}
-                                    <p className="font-medium text-foreground">{props.payload?.date}</p>
-                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
-                                </div>
-                            )
-                        }}
-                    />
+          <ChartContainer config={chartConfig} className="h-[250px] w-full">
+            <LineChart
+              accessibilityLayer
+              data={chartData}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              onClick={(e: any) => {
+                  if (e && e.activePayload && e.activePayload.length > 0 && e.activePayload[0].payload) {
+                      handleRechartsDotClick(e.activePayload[0].payload);
                   }
-                />
-                <Line
-                  dataKey="health"
-                  type="monotone"
-                  stroke="var(--color-health)"
-                  strokeWidth={2}
-                  dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
-                  activeDot={{r: 7, style: { cursor: 'pointer' }}}
-                />
-              </LineChart>
-            </ChartContainer>
-          )}
+              }}
+            >
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => value.slice(0, 6)}
+              />
+              <YAxis
+                dataKey="health"
+                domain={[0, 3]}
+                ticks={[0, 1, 2, 3]}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                width={100}
+                tickFormatter={(value) => healthScoreLabels[value as number] || ''}
+              />
+              <RechartsTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                      indicator="dot"
+                      labelKey="date"
+                      formatter={(value, name, props: any) => {
+                          return (
+                              <div className="text-sm">
+                                  {props.payload?.photoUrl && (
+                                      <Image
+                                          src={props.payload.photoUrl}
+                                          alt="Plant diagnosis"
+                                          width={64}
+                                          height={64}
+                                          className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
+                                          data-ai-hint="plant chart thumbnail"
+                                      />
+                                  )}
+                                  <p className="font-medium text-foreground">{props.payload?.date}</p>
+                                  <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
+                              </div>
+                          )
+                      }}
+                  />
+                }
+              />
+              <Line
+                dataKey="health"
+                type="monotone"
+                stroke="var(--color-health)"
+                strokeWidth={2}
+                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
+                activeDot={{r: 7, style: { cursor: 'pointer' }}}
+              />
+            </LineChart>
+          </ChartContainer>
         </div>
       )}
 
@@ -350,3 +344,4 @@ export function PlantGrowthTracker({
     </div>
   );
 }
+
