@@ -64,28 +64,36 @@ export default function CalendarPage() {
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.careCalendar')}</h1>
       </div>
 
-      <Card className="mb-6 shadow-md">
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Filter className="h-5 w-5 text-primary" />
-            Filter by Plant
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PlantFilterControls
-            allPlants={allPlants}
-            selectedPlantIds={selectedPlantIds}
-            onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
-          />
-        </CardContent>
-      </Card>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Filter Pane */}
+        <div className="lg:w-1/4 lg:max-w-xs xl:max-w-sm flex-shrink-0">
+          <Card className="shadow-md">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Filter className="h-5 w-5 text-primary" />
+                Filter by Plant
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PlantFilterControls
+                allPlants={allPlants}
+                selectedPlantIds={selectedPlantIds}
+                onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
+              />
+            </CardContent>
+          </Card>
+        </div>
 
-      <CareCalendarView
-        plants={filteredPlants}
-        currentDate={currentCalendarDate}
-        onNavigateWeek={handleNavigateWeek}
-        onTaskAction={handleTaskAction}
-      />
+        {/* Calendar View */}
+        <div className="flex-grow">
+          <CareCalendarView
+            plants={filteredPlants}
+            currentDate={currentCalendarDate}
+            onNavigateWeek={handleNavigateWeek}
+            onTaskAction={handleTaskAction}
+          />
+        </div>
+      </div>
     </AppLayout>
   );
 }
