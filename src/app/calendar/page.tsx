@@ -11,11 +11,11 @@ import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
 import { CareCalendarView } from '@/components/calendar/CareCalendarView';
 
 export default function CalendarPage() {
-  const { t = useLanguage();
-  const [isLoading, setIsLoading = useState(true);
-  const [allPlants, setAllPlants = useState<Plant[]>([]);
-  const [selectedPlantIds, setSelectedPlantIds = useState<Set<string>>(new Set());
-  const [currentCalendarDate, setCurrentCalendarDate = useState(new Date());
+  const { t } = useLanguage();
+  const [isLoading, setIsLoading] = useState(true);
+  const [allPlants, setAllPlants] = useState<Plant[]>([]);
+  const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
+  const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
 
   useEffect(() => {
     setAllPlants(mockPlants);
