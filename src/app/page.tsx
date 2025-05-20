@@ -26,9 +26,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+  DialogHeader, // Added DialogHeader
+  DialogTitle as DialogTitlePrimitive, // Added DialogTitle
+  DialogDescription as DialogDescriptionPrimitive, // Added DialogDescription
 } from "@/components/ui/dialog";
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
@@ -138,8 +138,8 @@ export default function MyPlantsPage() {
         });
         if (newPrimaryPhotoUrl) {
           const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
-          if (existingPhotoIndex === -1) {
-            updatedPhotos.unshift({
+          if (existingPhotoIndex === -1) { // It's a new photo from upload
+            updatedPhotos.unshift({ // Add to the beginning as it's the newest "primary"
               id: `p-${plantToEdit.id}-new-${Date.now()}`,
               url: newPrimaryPhotoUrl,
               dateTaken: new Date().toISOString(),
@@ -149,6 +149,7 @@ export default function MyPlantsPage() {
           }
         }
       }
+
 
       mockPlants[plantIndex] = {
         ...mockPlants[plantIndex],
@@ -407,19 +408,28 @@ export default function MyPlantsPage() {
       </AlertDialog>
 
       <Dialog open={isEditPlantDialogOpen} onOpenChange={setIsEditPlantDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          {/* DialogHeader can be part of SavePlantForm or here */}
+        <DialogContent className="sm:max-w-2xl p-0"> {/* Remove padding from DialogContent */}
           {plantToEdit && initialEditFormData && (
-            <SavePlantForm
-              initialData={initialEditFormData}
-              galleryPhotos={plantToEdit.photos}
-              onSave={handleSaveEditedPlant}
-              onCancel={handleCancelEditPlantDialog}
-              isLoading={isSavingEditedPlant}
-              formTitle="Edit Plant"
-              formDescription={`Update the details for ${plantToEdit.commonName}.`}
-              submitButtonText="Update Plant"
-            />
+            <>
+              {/* Add DialogHeader, DialogTitle, and DialogDescription here */}
+              <DialogHeader className="p-6 pb-0">
+                <DialogTitlePrimitive>Edit Plant</DialogTitlePrimitive>
+                <DialogDescriptionPrimitive>
+                  Update the details for {plantToEdit.commonName}.
+                </DialogDescriptionPrimitive>
+              </DialogHeader>
+              <SavePlantForm
+                initialData={initialEditFormData}
+                galleryPhotos={plantToEdit.photos}
+                onSave={handleSaveEditedPlant}
+                onCancel={handleCancelEditPlantDialog}
+                isLoading={isSavingEditedPlant}
+                // These props are now effectively for the Card inside SavePlantForm, Dialog handles main title
+                formTitle={`Edit ${plantToEdit.commonName}`} 
+                formDescription="Make your changes below."
+                submitButtonText="Update Plant"
+              />
+            </>
           )}
         </DialogContent>
       </Dialog>
@@ -427,5 +437,3 @@ export default function MyPlantsPage() {
     </AppLayout>
   );
 }
-
-    
