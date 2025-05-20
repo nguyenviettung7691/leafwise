@@ -198,13 +198,78 @@ export function PlantGrowthTracker({
         </div>
       </div>
 
+      {/* Photo Gallery moved above Health Trend */}
+      {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
+        <div className="mt-4 pt-4 border-t">
+          <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
+            Photo Gallery
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {sortedPhotosForGallery.map((photo) => (
+              <div
+                key={photo.id}
+                className={cn(
+                  "group relative aspect-square block w-full overflow-hidden rounded-lg focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
+                  isManagingPhotos ? "cursor-pointer" : ""
+                )}
+                onClick={() => handlePhotoContainerClick(photo)}
+                role={isManagingPhotos ? "button" : undefined}
+                tabIndex={isManagingPhotos ? 0 : -1}
+                onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') handlePhotoContainerClick(photo); } : undefined}
+              >
+                {isManagingPhotos && (
+                  <div className="absolute top-1.5 right-1.5 z-10 p-0.5 bg-card/80 rounded-full">
+                    <Checkbox
+                      checked={selectedPhotoIds.has(photo.id)}
+                      onCheckedChange={() => onTogglePhotoSelection(photo.id)}
+                      onClick={handleCheckboxClick}
+                      aria-label={`Select photo from ${formatDate(photo.dateTaken)}`}
+                      className="h-5 w-5"
+                    />
+                  </div>
+                )}
+                <Image
+                  src={photo.url}
+                  alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
+                  width={200} height={200}
+                  className={cn(
+                    "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
+                    plant.primaryPhotoUrl === photo.url && !isManagingPhotos ? 'ring-2 ring-primary ring-offset-1' : '',
+                    isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
+                    healthConditionRingStyles[photo.healthCondition]
+                  )}
+                  data-ai-hint="plant growth"
+                />
+                {!isManagingPhotos && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                         onClick={() => onOpenGridPhotoDialog(photo)}
+                    >
+                        <span className="text-white text-xs font-semibold">View Details</span>
+                    </div>
+                )}
+                <div className={cn(
+                    "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none",
+                     isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'opacity-75' : ''
+                )}>
+                  <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
+                  <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
+                    {photo.healthCondition.replace('_', ' ')}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {chartData.length > 0 && (
-        <div className="mt-4 mb-6">
+        <div className="mt-4 mb-6 pt-4 border-t"> {/* Added pt-4 and border-t for separation if Photo Gallery exists */}
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 1 ? (
+          {chartData.length < 1 ? ( // This condition might be redundant if chartData.length > 0 is already checked
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one photo with diagnosis to see a health trend.
             </p>
@@ -277,73 +342,12 @@ export function PlantGrowthTracker({
         </div>
       )}
 
-      {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
-        <div className="mt-4 pt-4 border-t">
-          <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
-            Photo Gallery
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {sortedPhotosForGallery.map((photo) => (
-              <div
-                key={photo.id}
-                className={cn(
-                  "group relative aspect-square block w-full overflow-hidden rounded-lg focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
-                  isManagingPhotos ? "cursor-pointer" : ""
-                )}
-                onClick={() => handlePhotoContainerClick(photo)}
-                role={isManagingPhotos ? "button" : undefined}
-                tabIndex={isManagingPhotos ? 0 : -1}
-                onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') handlePhotoContainerClick(photo); } : undefined}
-              >
-                {isManagingPhotos && (
-                  <div className="absolute top-1.5 right-1.5 z-10 p-0.5 bg-card/80 rounded-full">
-                    <Checkbox
-                      checked={selectedPhotoIds.has(photo.id)}
-                      onCheckedChange={() => onTogglePhotoSelection(photo.id)}
-                      onClick={handleCheckboxClick}
-                      aria-label={`Select photo from ${formatDate(photo.dateTaken)}`}
-                      className="h-5 w-5"
-                    />
-                  </div>
-                )}
-                <Image
-                  src={photo.url}
-                  alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
-                  width={200} height={200}
-                  className={cn(
-                    "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
-                    plant.primaryPhotoUrl === photo.url && !isManagingPhotos ? 'ring-2 ring-primary ring-offset-1' : '',
-                    isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
-                    healthConditionRingStyles[photo.healthCondition]
-                  )}
-                  data-ai-hint="plant growth"
-                />
-                {!isManagingPhotos && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                         onClick={() => onOpenGridPhotoDialog(photo)}
-                    >
-                        <span className="text-white text-xs font-semibold">View Details</span>
-                    </div>
-                )}
-                <div className={cn(
-                    "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-md pointer-events-none",
-                     isManagingPhotos && selectedPhotoIds.has(photo.id) ? 'opacity-75' : ''
-                )}>
-                  <p className="text-white text-xs truncate">{formatDate(photo.dateTaken)}</p>
-                  <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                    {photo.healthCondition.replace('_', ' ')}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {(!sortedPhotosForGallery || sortedPhotosForGallery.length === 0) && chartData.length === 0 && (
          <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
       )}
     </div>
   );
 }
+
+
+    
