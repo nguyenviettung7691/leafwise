@@ -7,9 +7,10 @@ interface PlantGridProps {
   isManaging?: boolean;
   selectedPlantIds?: Set<string>;
   onToggleSelect?: (plantId: string) => void;
+  onEdit?: (plantId: string) => void; // Added onEdit prop
 }
 
-export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect }: PlantGridProps) {
+export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect, onEdit }: PlantGridProps) {
   if (plants.length === 0) {
     return (
       <div className="text-center py-12">
@@ -28,6 +29,7 @@ export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect
           isManaging={isManaging}
           isSelected={selectedPlantIds?.has(plant.id)}
           onToggleSelect={onToggleSelect}
+          onEdit={onEdit} // Pass onEdit prop
         />
       ))}
     </div>

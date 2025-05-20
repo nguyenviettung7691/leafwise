@@ -6,13 +6,13 @@ import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantHealthCondition } from '@/types';
-import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/context/LanguageContext';
 import { parseISO, compareAsc } from 'date-fns';
 import { PlantFilterSortControls, type Filters, type SortConfig } from '@/components/plants/PlantFilterSortControls';
-import { Checkbox } from '@/components/ui/checkbox'; // Added for multi-select
+import { Checkbox } from '@/components/ui/checkbox'; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,6 +78,10 @@ export default function MyPlantsPage() {
     router.push('/plants/new');
   };
 
+  const handleNavigateToEditPlant = (plantId: string) => {
+    router.push(`/plants/${plantId}/edit`);
+  };
+
   const handleFilterChange = (filterName: keyof Filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
@@ -106,7 +110,7 @@ export default function MyPlantsPage() {
   };
 
   const filteredAndSortedPlants = useMemo(() => {
-    let processedPlants = [...plants]; // Use the 'plants' state which reflects deletions
+    let processedPlants = [...plants]; 
 
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
@@ -190,7 +194,7 @@ export default function MyPlantsPage() {
 
   const toggleManagePlantsMode = () => {
     setIsManagingPlants(prev => {
-      if (prev) { // Exiting manage mode
+      if (prev) { 
         setSelectedPlantIds(new Set());
       }
       return !prev;
@@ -212,9 +216,9 @@ export default function MyPlantsPage() {
   const handleDeleteSelectedPlants = () => {
     const numSelected = selectedPlantIds.size;
     const updatedPlants = mockPlants.filter(p => !selectedPlantIds.has(p.id));
-    mockPlants.length = 0; // Clear original array
-    mockPlants.push(...updatedPlants); // Repopulate with filtered plants
-    setPlants(updatedPlants); // Update local state for UI re-render
+    mockPlants.length = 0; 
+    mockPlants.push(...updatedPlants); 
+    setPlants(updatedPlants); 
 
     toast({
       title: "Plants Deleted",
@@ -281,6 +285,7 @@ export default function MyPlantsPage() {
           isManaging={isManagingPlants}
           selectedPlantIds={selectedPlantIds}
           onToggleSelect={handleTogglePlantSelection}
+          onEdit={handleNavigateToEditPlant} 
         />
       )}
 

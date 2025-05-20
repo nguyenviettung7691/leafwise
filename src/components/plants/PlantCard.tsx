@@ -5,16 +5,18 @@ import type { Plant, CareTask } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History } from 'lucide-react';
+import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import React from 'react';
+import { Button } from '@/components/ui/button';
 
 interface PlantCardProps {
   plant: Plant;
   isManaging?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (plantId: string) => void;
+  onEdit?: (plantId: string) => void;
 }
 
 const healthConditionStyles = {
@@ -63,31 +65,50 @@ const formatDateSimple = (dateString?: string) => {
     return format(parseISO(dateString), 'MMM d, yyyy');
 };
 
-export function PlantCard({ plant, isManaging, isSelected, onToggleSelect }: PlantCardProps) {
+export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
   const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {
-      e.preventDefault(); // Prevent navigation if in manage mode and clicking to select
+      e.preventDefault(); 
       onToggleSelect(plant.id);
     }
   };
 
   const handleCheckboxClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Prevent card click (navigation) when clicking checkbox directly
+    e.stopPropagation(); 
+  };
+
+  const handleEditClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(plant.id);
+    }
   };
 
 
   return (
     <div className="relative">
-      {isManaging && onToggleSelect && (
-        <div className="absolute top-2 right-2 z-10 p-1 bg-card/80 rounded-full">
-          <Checkbox
-            checked={isSelected}
-            onCheckedChange={() => onToggleSelect(plant.id)}
-            onClick={handleCheckboxClick}
-            aria-label={`Select ${plant.commonName}`}
-          />
+      {isManaging && (
+        <div className="absolute top-2 right-2 z-10 p-1 bg-card/80 rounded-md flex items-center gap-1 shadow">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-1 hover:bg-accent/50"
+            onClick={handleEditClick}
+            aria-label={`Edit ${plant.commonName}`}
+          >
+            <Edit3 className="h-4 w-4" />
+          </Button>
+          {onToggleSelect && (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggleSelect(plant.id)}
+              onClick={handleCheckboxClick}
+              aria-label={`Select ${plant.commonName}`}
+              className="h-5 w-5"
+            />
+          )}
         </div>
       )}
       <Link href={isManaging ? '#' : `/plants/${plant.id}`} className={cn("block group", isManaging ? "cursor-pointer" : "")}>
