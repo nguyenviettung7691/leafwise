@@ -6,9 +6,10 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge'; // Added Badge import
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ListChecks, ListX } from 'lucide-react'; // Added ListChecks and ListX icons
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -40,26 +41,39 @@ export function PlantFilterControls({
   };
 
   const isAllSelected = selectedPlantIds.size === allPlants.length && allPlants.length > 0;
+  const selectedCount = selectedPlantIds.size;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium text-muted-foreground">
-          Showing tasks for {selectedPlantIds.size} of {allPlants.length} plant(s)
-        </Label>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleToggleSelectAll}
-          disabled={allPlants.length === 0}
-        >
-          {isAllSelected ? 'Deselect All' : 'Select All'}
-        </Button>
+    <div className="space-y-3"> {/* Reduced overall spacing */}
+      <div className="flex items-center justify-end"> {/* Changed from justify-between */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm" // Keep size small for better fit with badge
+                onClick={handleToggleSelectAll}
+                disabled={allPlants.length === 0}
+                className="flex items-center gap-1.5" // Added gap for icon and badge
+              >
+                {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                {isAllSelected && (
+                  <Badge variant="secondary" className="px-1.5 text-xs">
+                    {selectedCount}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isAllSelected ? `Deselect All (${selectedCount} selected)` : 'Select All'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {allPlants.length > 0 ? (
-        <ScrollArea className="w-full rounded-md border max-h-80"> {/* Adjusted max-height */}
-          <div className="p-3 space-y-2"> {/* Changed to vertical stacking */}
+        <ScrollArea className="w-full rounded-md border max-h-80">
+          <div className="p-3 space-y-2">
             {allPlants.map(plant => (
               <TooltipProvider key={plant.id} delayDuration={200}>
                 <Tooltip>
@@ -94,7 +108,7 @@ export function PlantFilterControls({
               </TooltipProvider>
             ))}
           </div>
-          <ScrollBar orientation="vertical" /> {/* Changed to vertical */}
+          <ScrollBar orientation="vertical" />
         </ScrollArea>
       ) : (
         <p className="text-sm text-muted-foreground text-center py-4">No plants available to filter.</p>
