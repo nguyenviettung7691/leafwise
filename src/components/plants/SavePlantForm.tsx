@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { PlantFormData, PlantHealthCondition } from '@/types';
+import type { PlantFormData, PlantHealthCondition, PlantPhoto } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
-import { Leaf, UploadCloud, Save, Edit } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Leaf, UploadCloud, Save, Edit, ImagePlus } from 'lucide-react';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 const primaryPhotoSchema = typeof window !== 'undefined'
   ? z.instanceof(FileList).optional().nullable()
@@ -38,6 +40,7 @@ type SavePlantFormValues = z.infer<typeof plantFormSchema>;
 
 interface SavePlantFormProps {
   initialData?: Partial<PlantFormData>;
+  galleryPhotos?: PlantPhoto[];
   onSave: (data: PlantFormData) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
@@ -48,6 +51,7 @@ interface SavePlantFormProps {
 
 export function SavePlantForm({
   initialData,
+  galleryPhotos,
   onSave,
   onCancel,
   isLoading,
@@ -70,39 +74,46 @@ export function SavePlantForm({
     },
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.diagnosedPhotoDataUrl || null);
+  const [selectedGalleryPhotoUrl, setSelectedGalleryPhotoUrl] = useState<string | null>(initialData?.diagnosedPhotoDataUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const currentPhotoValue = form.watch('primaryPhoto');
-    if (currentPhotoValue && currentPhotoValue[0]) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setImagePreview(reader.result as string);
-        };
-        reader.readAsDataURL(currentPhotoValue[0]);
-    } else if (initialData?.diagnosedPhotoDataUrl) {
+    // Pre-fill image preview from initialData
+    if (initialData?.diagnosedPhotoDataUrl && !imagePreview) {
         setImagePreview(initialData.diagnosedPhotoDataUrl);
-    } else {
-        setImagePreview(null);
+        setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
+        // Also ensure the form field for diagnosedPhotoDataUrl is set if initialData has it
+        form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
     }
-  }, [initialData?.diagnosedPhotoDataUrl, form.watch('primaryPhoto')]);
+  }, [initialData, form, imagePreview]);
 
 
   const onSubmit = async (data: SavePlantFormValues) => {
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        // Use imagePreview as diagnosedPhotoDataUrl if no new photo is explicitly uploaded via primaryPhoto
-        // This helps retain the initially diagnosed photo if not changed.
-        diagnosedPhotoDataUrl: (data.primaryPhoto && data.primaryPhoto.length > 0) ? imagePreview : initialData?.diagnosedPhotoDataUrl || imagePreview
+        // diagnosedPhotoDataUrl will hold the URL of the image to be saved,
+        // whether it's from a new upload (via imagePreview) or gallery selection.
+        diagnosedPhotoDataUrl: imagePreview 
     };
     await onSave(formDataToSave);
   };
 
   const currentFormTitle = formTitle || "Save Plant Details";
-  const currentSubmitButtonText = submitButtonText || "Save";
+  const currentSubmitButtonText = submitButtonText || "Save Plant";
   const FormIcon = currentFormTitle.toLowerCase().includes("edit") ? Edit : Leaf;
 
+  const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
+    setImagePreview(photo.url);
+    setSelectedGalleryPhotoUrl(photo.url);
+    form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
+    form.setValue('primaryPhoto', null); // Clear any selected file in input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Reset file input UI
+    }
+  };
+  
   return (
     <Card className="shadow-lg animate-in fade-in-50">
       <CardHeader>
@@ -110,9 +121,7 @@ export function SavePlantForm({
           <FormIcon className="h-6 w-6 text-primary" />
           {currentFormTitle}
         </CardTitle>
-        <CardDescription>
-          {formDescription || 'Please fill in the details for your plant below.'}
-        </CardDescription>
+        {formDescription && <CardDescription>{formDescription}</CardDescription>}
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -132,7 +141,7 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onChange, onBlur, name, ref, value: fieldValue } }) => (
+              render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => ( // `ref` from field is form's ref
                 <FormItem>
                   <FormLabel>Current Photo (Optional)</FormLabel>
                   <FormControl>
@@ -147,7 +156,7 @@ export function SavePlantForm({
                                     <span className="font-semibold">Click to upload</span> or drag and drop
                                 </p>
                                 <p className="text-xs text-muted-foreground">PNG, JPG, GIF, WEBP (MAX. 4MB)</p>
-                                {fieldValue?.[0] && <p className="text-xs text-primary mt-1">{fieldValue[0].name}</p>}
+                                {form.getValues('primaryPhoto')?.[0] && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
                             </div>
                             <Input
                                 id="primaryPhoto-input"
@@ -155,26 +164,33 @@ export function SavePlantForm({
                                 className="hidden"
                                 accept="image/png, image/jpeg, image/gif, image/webp"
                                 name={name}
-                                ref={ref}
+                                ref={(e) => {
+                                  formRefSetter(e); // Set react-hook-form's ref
+                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e; // Also set local ref
+                                }}
                                 onBlur={onBlur}
                                 onChange={(e) => {
                                     const files = e.target.files;
-                                    onChange(files);
+                                    onChange(files); // react-hook-form's onChange
                                     if (files && files[0]) {
-                                        if (files[0].size > 4 * 1024 * 1024) { // 4MB limit
+                                        if (files[0].size > 4 * 1024 * 1024) { 
                                             form.setError("primaryPhoto", { type: "manual", message: "Image too large, max 4MB."});
-                                            setImagePreview(initialData?.diagnosedPhotoDataUrl || null); // Revert to initial if new is too large
-                                            e.target.value = ''; // Clear file input
+                                            setImagePreview(initialData?.diagnosedPhotoDataUrl || null); 
+                                            e.target.value = ''; 
                                         } else {
                                             form.clearErrors("primaryPhoto");
                                             const reader = new FileReader();
                                             reader.onloadend = () => {
                                                 setImagePreview(reader.result as string);
+                                                form.setValue('diagnosedPhotoDataUrl', reader.result as string, {shouldDirty: true});
                                             };
                                             reader.readAsDataURL(files[0]);
+                                            setSelectedGalleryPhotoUrl(null); // Unselect gallery photo if new file is chosen
                                         }
                                     } else {
-                                        setImagePreview(initialData?.diagnosedPhotoDataUrl || null);
+                                        // If file selection is cleared, revert to selected gallery photo or initial
+                                        setImagePreview(selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl || null);
+                                        form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl || null);
                                     }
                                 }}
                             />
@@ -185,6 +201,37 @@ export function SavePlantForm({
                 </FormItem>
               )}
             />
+
+            {galleryPhotos && galleryPhotos.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Or Select from Gallery (Optional)</Label>
+                <ScrollArea className="w-full whitespace-nowrap rounded-md border">
+                  <div className="flex space-x-3 p-3">
+                    {galleryPhotos.map((photo) => (
+                      <button
+                        type="button"
+                        key={photo.id}
+                        className={cn(
+                          "flex-shrink-0 rounded-md w-20 h-20 overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                          selectedGalleryPhotoUrl === photo.url ? "border-primary ring-2 ring-primary ring-offset-1" : "border-transparent hover:border-muted-foreground/50"
+                        )}
+                        onClick={() => handleGalleryPhotoSelect(photo)}
+                      >
+                        <Image
+                          src={photo.url}
+                          alt={`Gallery photo ${photo.id}`}
+                          width={80}
+                          height={80}
+                          className="object-cover w-full h-full"
+                          data-ai-hint="plant gallery thumbnail"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </div>
+            )}
 
             <FormField
               control={form.control}
@@ -206,7 +253,7 @@ export function SavePlantForm({
                 <FormItem>
                   <FormLabel>Scientific Name (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Monstera deliciosa" {...field} />
+                    <Input placeholder="e.g., Monstera deliciosa" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -219,7 +266,7 @@ export function SavePlantForm({
                 <FormItem>
                   <FormLabel>Family Category <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Araceae" {...field} />
+                    <Input placeholder="e.g., Araceae" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -268,7 +315,7 @@ export function SavePlantForm({
                 <FormItem>
                   <FormLabel>Location (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Living Room Window" {...field} />
+                    <Input placeholder="e.g., Living Room Window" {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -281,7 +328,7 @@ export function SavePlantForm({
                 <FormItem>
                   <FormLabel>Custom Notes (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., Water when top inch is dry." {...field} rows={3}/>
+                    <Textarea placeholder="e.g., Water when top inch is dry." {...field} rows={3} value={field.value ?? ''}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

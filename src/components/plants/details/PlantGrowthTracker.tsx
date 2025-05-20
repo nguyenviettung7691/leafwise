@@ -40,10 +40,10 @@ const healthScoreLabels: Record<number, string> = {
 };
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))', // Lime Green
-  needs_attention: 'hsl(var(--chart-4))', // Typically a yellow/orange in ShadCN
-  sick: 'hsl(var(--destructive))', // Red
-  unknown: 'hsl(var(--muted-foreground))', // Grey
+  healthy: 'hsl(var(--primary))', 
+  needs_attention: 'hsl(var(--chart-4))', 
+  sick: 'hsl(var(--destructive))', 
+  unknown: 'hsl(var(--muted-foreground))', 
 };
 
 
@@ -59,7 +59,7 @@ const formatDate = (dateString?: string) => {
 };
 
 const CustomChartDot = (props: any) => {
-  const { cx, cy, stroke, payload, onDotClick } = props; // Removed fill, as we'll use healthCondition for color
+  const { cx, cy, payload, onDotClick } = props; 
   if (!payload || payload.healthCondition === undefined) {
     return null;
   }
@@ -72,7 +72,7 @@ const CustomChartDot = (props: any) => {
       r={5}
       fill={dotColor}
       stroke={dotColor} 
-      strokeWidth={1} // Can be adjusted
+      strokeWidth={1}
       onClick={() => onDotClick(payload)}
       style={{ cursor: 'pointer' }}
     />
@@ -87,6 +87,7 @@ interface PlantGrowthTrackerProps {
   isDiagnosingNewPhoto: boolean;
   growthPhotoInputRef: React.RefObject<HTMLInputElement>;
   onChartDotClick: (chartDotPayload: any) => void;
+  onSetAsPrimaryPhoto?: (photoUrl: string) => void; // Optional prop
 }
 
 export function PlantGrowthTracker({
@@ -96,6 +97,7 @@ export function PlantGrowthTracker({
   isDiagnosingNewPhoto,
   growthPhotoInputRef,
   onChartDotClick,
+  onSetAsPrimaryPhoto, // Destructure the new prop
 }: PlantGrowthTrackerProps) {
 
   const chartData = useMemo(() => {
@@ -108,7 +110,7 @@ export function PlantGrowthTracker({
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
         healthLabel: photo.healthCondition.replace(/_/g, ' '),
-        healthCondition: photo.healthCondition, // Pass original healthCondition for dot coloring
+        healthCondition: photo.healthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
   }, [plant]);
@@ -121,12 +123,12 @@ export function PlantGrowthTracker({
   const chartConfig = {
     health: {
       label: 'Health Status',
-      color: 'hsl(var(--primary))', // Main line color
+      color: 'hsl(var(--primary))', 
     },
   } satisfies ChartConfig;
 
   const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload && dotPayload.id) { // dotPayload here is the data point of the chart
+    if (dotPayload && dotPayload.id) { 
         onChartDotClick(dotPayload);
     }
   };
@@ -161,7 +163,7 @@ export function PlantGrowthTracker({
             <TrendingUp className="h-5 w-5 text-primary" />
             Health Trend
           </h4>
-          {chartData.length < 1 ? ( // Should be chartData.length < 2 for a trend, but 1 point can be shown
+          {chartData.length < 1 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one more photo with diagnosis to see a health trend.
             </p>
@@ -170,7 +172,7 @@ export function PlantGrowthTracker({
               <LineChart
                 accessibilityLayer
                 data={chartData}
-                margin={{ top: 5, right: 30, left: 20, bottom: 5 }} // Increased left/right margin
+                margin={{ top: 5, right: 20, left: 20, bottom: 5 }} 
               >
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis

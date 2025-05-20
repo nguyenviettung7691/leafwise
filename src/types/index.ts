@@ -11,14 +11,14 @@ export interface PlantPhoto {
 export interface CareTask {
   id: string;
   plantId: string;
-  name: string; // e.g., "Watering", "Fertilizing"
+  name: string; 
   description?: string;
-  frequency: string; // e.g., "Daily", "Weekly", "Every 2 weeks", "Ad-hoc"
-  timeOfDay?: string; // e.g., "14:30" or "All day"
-  lastCompleted?: string; // ISO string
-  nextDueDate?: string; // ISO string
+  frequency: string; 
+  timeOfDay?: string; 
+  lastCompleted?: string; 
+  nextDueDate?: string; 
   isPaused: boolean;
-  resumeDate?: string | null; // ISO string, date to resume notifications/task visibility
+  resumeDate?: string | null; 
   level: 'basic' | 'advanced';
 }
 
@@ -33,12 +33,12 @@ export interface Plant {
   ageEstimateYears?: number;
   healthCondition: PlantHealthCondition;
   location?: string;
-  plantingDate?: string;
+  plantingDate?: string; // ISO String
   customNotes?: string;
   primaryPhotoUrl?: string;
   photos: PlantPhoto[];
   careTasks: CareTask[];
-  lastCaredDate?: string;
+  lastCaredDate?: string; // ISO String
 }
 
 export interface PlantFormData {
@@ -50,7 +50,7 @@ export interface PlantFormData {
   location?: string;
   customNotes?: string;
   primaryPhoto?: FileList | null;
-  diagnosedPhotoDataUrl?: string | null;
+  diagnosedPhotoDataUrl?: string | null; // Used for pre-filling or when a gallery photo is selected
 }
 
 export type CarePlanTaskFormData = {
@@ -67,8 +67,8 @@ export type CarePlanTaskFormData = {
 export interface AIGeneratedTask {
   taskName: string;
   taskDescription: string;
-  suggestedFrequency: string;
-  suggestedTimeOfDay: string;
+  suggestedFrequency: string; // AI Should use "Daily", "Weekly", "Every X Days" etc.
+  suggestedTimeOfDay: string; // AI Should use "All day" or "HH:MM"
   taskLevel: 'basic' | 'advanced';
 }
 
@@ -102,23 +102,35 @@ export interface ReviewCarePlanOutput {
     newTasks: AIGeneratedTask[];
 }
 
+// Re-defining CareTaskForAI here to avoid circular dependency issues with the AI flow file.
+// This is slightly redundant but safer for separation of concerns.
+export interface CareTaskForAIReview {
+    id: string;
+    name: string;
+    description?: string;
+    frequency: string;
+    timeOfDay?: string;
+    isPaused: boolean;
+    level: 'basic' | 'advanced';
+}
+
 export interface ReviewCarePlanInput {
     plantCommonName: string;
     newPhotoDiagnosisNotes: string;
     newPhotoHealthIsHealthy: boolean;
-    currentCareTasks: CareTask[];
+    currentCareTasks: CareTaskForAIReview[]; // Use the specifically defined type here
 }
 
 
 export interface NavItemConfig {
-  titleKey: string;
+  titleKey: string; // Key for translation
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
 }
 
 export interface NavItem {
-  title: string;
+  title: string; // Translated title
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
@@ -127,6 +139,8 @@ export interface NavItem {
 export interface UserPreferences {
   emailNotifications?: boolean;
   pushNotifications?: boolean;
+  // language?: 'en' | 'vi'; // Managed by LanguageContext now
+  // darkMode?: boolean; // Managed by next-themes now
 }
 
 export interface User {
@@ -137,10 +151,11 @@ export interface User {
   preferences?: UserPreferences;
 }
 
+// Diagnose flow types, can be expanded
 export interface ComparePlantHealthInput {
   currentPlantHealth: PlantHealthCondition;
-  newPhotoDiagnosisNotes?: string;
-  newPhotoHealthStatus: PlantHealthCondition;
+  newPhotoDiagnosisNotes?: string; // textual diagnosis
+  newPhotoHealthStatus: PlantHealthCondition; // 'healthy', 'needs_attention', 'sick' from new photo
 }
 
 export interface ComparePlantHealthOutput {
@@ -149,8 +164,9 @@ export interface ComparePlantHealthOutput {
   suggestedOverallHealth?: PlantHealthCondition;
 }
 
+// Explicit types for DiagnosePlantHealth flow
 export type DiagnosePlantHealthInput = {
-    photoDataUri: string;
+    photoDataUri: string; // Data URI
     description?: string;
 };
 
@@ -168,7 +184,7 @@ export type DiagnosePlantHealthOutput = {
         confidence?: 'low' | 'medium' | 'high';
     };
     careRecommendations: Array<{
-        action: string;
+        action: string; // e.g., "Adjust Watering", "Pest Control"
         details?: string;
     }>;
 };
