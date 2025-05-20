@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download } from 'lucide-react';
+import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, FormEvent, useRef, ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/context/LanguageContext';
@@ -27,13 +27,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { mockPlants } from '@/lib/mock-data'; // Import for direct modification (prototype only)
-import { useRouter } from 'next/navigation'; // For navigating after import
+import { mockPlants } from '@/lib/mock-data';
+import { useRouter } from 'next/navigation';
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
-  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -43,6 +43,11 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const [isDestroyConfirmOpen, setIsDestroyConfirmOpen] = useState(false);
+  const [destroyEmailInput, setDestroyEmailInput] = useState('');
+  const [isDestroyingData, setIsDestroyingData] = useState(false);
+
 
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -143,7 +148,7 @@ export default function ProfilePage() {
     }
     const dataToExport = {
       userProfile: authUser,
-      plants: mockPlants, // In a real app, this would come from a user-specific data source
+      plants: mockPlants, 
     };
     const jsonString = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -175,25 +180,18 @@ export default function ProfilePage() {
           throw new Error("Invalid file format. Missing 'userProfile' or 'plants' data.");
         }
         
-        // Restore user profile
-        // For prototype, we assume the imported user is the current user.
-        // In a real app, you'd have more complex logic for matching users or creating new ones.
         const { id, email, ...profileToUpdate } = importedData.userProfile;
         await updateUser(profileToUpdate);
 
-        // Restore plants data (prototype-specific direct manipulation)
-        // This is a HACK for the prototype. In a real app, this would be an API call.
-        mockPlants.length = 0; // Clear existing mock plants
-        mockPlants.push(...(importedData.plants as Plant[])); // Add imported plants
+        mockPlants.length = 0; 
+        mockPlants.push(...(importedData.plants as Plant[])); 
 
         toast({ title: "Import Successful", description: "Your data has been imported. Refresh or navigate to see changes." });
-        // Optionally, navigate to My Plants page or refresh the current page to reflect changes
-        router.push('/'); // Navigate to home to refresh plant list (due to mock data update)
+        router.push('/'); 
 
       } catch (error: any) {
         toast({ title: "Import Failed", description: error.message || "Could not parse or apply the imported data.", variant: "destructive" });
       } finally {
-        // Reset file input to allow importing the same file again
         if (importFileInputRef.current) {
           importFileInputRef.current.value = "";
         }
@@ -208,6 +206,24 @@ export default function ProfilePage() {
     reader.readAsText(file);
   };
 
+  const handleDestroyDataConfirmed = async () => {
+    if (!user || destroyEmailInput !== user.email) {
+      toast({ title: "Error", description: "Email confirmation failed.", variant: "destructive" });
+      return;
+    }
+    setIsDestroyingData(true);
+    // Simulate data destruction
+    mockPlants.length = 0; // Clear plants array
+
+    // Log out the user (this will also clear their profile from localStorage via AuthContext)
+    await logout();
+    
+    toast({ title: "Data Destroyed", description: "All your personal data has been removed.", variant: "destructive" });
+    setIsDestroyConfirmOpen(false);
+    setDestroyEmailInput('');
+    setIsDestroyingData(false);
+    // Navigation to login page is handled by logout()
+  };
 
   const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
 
@@ -320,7 +336,6 @@ export default function ProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            {/* Future content like bio, join date, etc. can go here */}
           </CardContent>
         </Card>
 
@@ -391,44 +406,105 @@ export default function ProfilePage() {
 
         <Separator />
 
-        <Card className="shadow-xl">
+        <Card className="shadow-xl border-destructive">
             <CardHeader>
-                <CardTitle className="text-xl">Account Actions</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Danger Zone
+                </CardTitle>
             </CardHeader>
-            <CardContent>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <p className="text-sm font-medium">Log Out</p>
+                    <p className="text-xs text-muted-foreground">End your current session.</p>
+                    <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            disabled={isLoggingOut || authLoading}
+                        >
+                            {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
+                            {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            You will be returned to the login page.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                            {isLoggingOut ? <AuthLoader className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Log Out
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                    </AlertDialog>
+                </div>
+                <Separator />
+                 <div className="space-y-2">
+                    <p className="text-sm font-medium text-destructive">DESTROY All My Data</p>
+                    <p className="text-xs text-muted-foreground">Permanently remove all your plants, care plans, and profile settings. This action cannot be undone.</p>
                     <Button
                         variant="destructive"
                         className="w-full sm:w-auto"
-                        disabled={isLoggingOut || authLoading}
+                        onClick={() => setIsDestroyConfirmOpen(true)}
+                        disabled={isDestroyingData || authLoading}
                     >
-                        {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
-                        {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                        {isDestroyingData ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <AlertTriangle className="mr-2 h-5 w-5" />}
+                        DESTROY All My Data
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        You will be returned to the login page.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut} className="bg-destructive hover:bg-destructive/90">
-                        {isLoggingOut ? <AuthLoader className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Log Out
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                </div>
             </CardContent>
         </Card>
 
       </div>
+
+      <AlertDialog open={isDestroyConfirmOpen} onOpenChange={(isOpen) => {
+          if (!isOpen) {
+              setIsDestroyConfirmOpen(false);
+              setDestroyEmailInput(''); // Reset input when dialog closes
+          }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-6 w-6" /> Are you absolutely sure?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.</p>
+              <p>To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Label htmlFor="destroy-confirm-email" className="sr-only">Confirm Email</Label>
+            <Input
+              id="destroy-confirm-email"
+              type="email"
+              placeholder="Enter your email to confirm"
+              value={destroyEmailInput}
+              onChange={(e) => setDestroyEmailInput(e.target.value)}
+              className="border-destructive focus-visible:ring-destructive"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsDestroyConfirmOpen(false)} disabled={isDestroyingData}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDestroyDataConfirmed}
+              disabled={destroyEmailInput !== user?.email || isDestroyingData}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground focus-visible:ring-destructive"
+            >
+              {isDestroyingData ? <AuthLoader className="h-4 w-4 mr-2 animate-spin" /> : null}
+              DESTROY
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </AppLayout>
   );
 }
-
-    
