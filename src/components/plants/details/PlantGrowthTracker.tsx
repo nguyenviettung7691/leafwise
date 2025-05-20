@@ -7,10 +7,11 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck } from 'lucide-react'; // Added BookmarkCheck
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, CartesianGrid, XAxis, YAxis, Line, Tooltip as RechartsTooltip, Dot } from 'recharts';
+import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import { cn } from '@/lib/utils';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
@@ -22,9 +23,9 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))',
-  sick: 'hsl(var(--destructive))',
-  unknown: 'hsl(var(--muted-foreground))',
+  needs_attention: 'hsl(var(--chart-4))', // Yellow
+  sick: 'hsl(var(--destructive))', // Red
+  unknown: 'hsl(var(--muted-foreground))', // Grey
 };
 
 
@@ -110,7 +111,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url,
+        photoUrl: photo.url, // Added for tooltip
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -184,14 +185,14 @@ export function PlantGrowthTracker({
                 </>
               ) : (
                 <>
-                  <ImageUp className="h-4 w-4 mr-2" /> Add Photo &amp; Diagnose
+                  <ImageUp className="h-4 w-4 mr-2" /> Add Photo & Diagnose
                 </>
               )}
             </Button>
           )}
         </div>
       </div>
-
+      
       {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
         <div className="mt-4 pt-4 border-t">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
@@ -226,9 +227,18 @@ export function PlantGrowthTracker({
                     </div>
                   )}
                   {isPrimary && !isManagingPhotos && (
-                    <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
-                      <BookmarkCheck className="h-3.5 w-3.5" />
-                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
+                            <BookmarkCheck className="h-3.5 w-3.5" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Current Primary Photo</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                   <Image
                     src={photo.url}
@@ -344,4 +354,3 @@ export function PlantGrowthTracker({
     </div>
   );
 }
-
