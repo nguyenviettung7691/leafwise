@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'; // Added ChartTooltip
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))',
+  needs_attention: 'hsl(var(--chart-4))', // Assuming chart-4 is a yellow/orange
   sick: 'hsl(var(--destructive))',
   unknown: 'hsl(var(--muted-foreground))',
 };
@@ -81,9 +81,9 @@ interface PlantGrowthTrackerProps {
   onOpenGridPhotoDialog: (photo: PlantPhoto) => void;
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
-  growthPhotoInputRef: React.RefObject<HTMLInputElement>;
+  growthPhotoInputRef: React.RefObject<HTMLInputElement>; // Not used directly here, but parent needs it
   onChartDotClick: (chartDotPayload: any) => void;
-  onSetAsPrimaryPhoto?: (photoUrl: string) => void;
+  onSetAsPrimaryPhoto?: (photoUrl: string) => void; // Made optional as it's only used in photo detail dialog
   isManagingPhotos: boolean;
   onToggleManagePhotos: () => void;
   selectedPhotoIds: Set<string>;
@@ -96,9 +96,9 @@ export function PlantGrowthTracker({
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
-  growthPhotoInputRef,
+  // growthPhotoInputRef, // Not used directly
   onChartDotClick,
-  onSetAsPrimaryPhoto,
+  // onSetAsPrimaryPhoto, // Not used directly
   isManagingPhotos,
   onToggleManagePhotos,
   selectedPhotoIds,
@@ -111,7 +111,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url,
+        photoUrl: photo.url, // Include for tooltip
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -129,7 +129,7 @@ export function PlantGrowthTracker({
   const chartConfig = {
     health: {
       label: 'Health Status',
-      color: 'hsl(var(--primary))',
+      color: 'hsl(var(--primary))', // Default line color, dots will have their own
     },
   } satisfies ChartConfig;
 
@@ -226,7 +226,7 @@ export function PlantGrowthTracker({
                       />
                     </div>
                   )}
-                  {isPrimary && !isManagingPhotos && (
+                  {isPrimary && ( // Always show if primary
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -257,10 +257,9 @@ export function PlantGrowthTracker({
                           <span className="text-white text-xs font-semibold">View Details</span>
                       </div>
                   )}
-                  <div className={cn(
+                   <div className={cn(
                       "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
-                       isManagingPhotos && isSelected ? 'opacity-75' : '',
-                       "flex flex-col items-center text-center" 
+                       isManagingPhotos && isSelected ? 'opacity-75' : ''
                   )}>
                     <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
                     <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
@@ -285,11 +284,6 @@ export function PlantGrowthTracker({
               accessibilityLayer
               data={chartData}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              onClick={(e: any) => {
-                  if (e && e.activePayload && e.activePayload.length > 0 && e.activePayload[0].payload) {
-                      handleRechartsDotClick(e.activePayload[0].payload);
-                  }
-              }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis
@@ -297,7 +291,7 @@ export function PlantGrowthTracker({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 6)}
+                tickFormatter={(value) => value.slice(0, 6)} // Show "MMM yy"
               />
               <YAxis
                 dataKey="health"
@@ -341,7 +335,7 @@ export function PlantGrowthTracker({
                 type="monotone"
                 stroke="var(--color-health)"
                 strokeWidth={2}
-                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
+                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />} // Use custom dot
                 activeDot={{r: 7, style: { cursor: 'pointer' }}}
               />
             </LineChart>
