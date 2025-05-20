@@ -106,7 +106,7 @@ export default function PlantDetailPage() {
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
+  const [isGridPhotoDialogValidd, setIsGridPhotoDialogValid] = useState(false); // Typo fixed here
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -759,8 +759,7 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        <Dialog open={isGridPhotoDialogVali
-d} onOpenChange={closeGridPhotoDialog}>
+        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Photo Details - {selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''}</DialogTitle>
@@ -841,3 +840,5 @@ d} onOpenChange={closeGridPhotoDialog}>
     </AppLayout>
   );
 }
+
+    
