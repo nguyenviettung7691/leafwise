@@ -475,9 +475,11 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> Are you absolutely sure?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <div>This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.</div>
-              <div>To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.</div>
+            <AlertDialogDescription>
+              This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.
+            </AlertDialogDescription>
+            <AlertDialogDescription className="mt-2">
+              To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -498,7 +500,7 @@ export default function ProfilePage() {
               disabled={destroyEmailInput !== user?.email || isDestroyingData}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground focus-visible:ring-destructive"
             >
-              {isDestroyingData ? <AuthLoader className="h-4 w-4 mr-2 animate-spin" /> : null}
+              {isDestroyingData ? <AuthLoader className="h-4 w-4 animate-spin" /> : null}
               DESTROY
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -508,3 +510,5 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
+    
