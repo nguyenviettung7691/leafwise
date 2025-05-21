@@ -3,7 +3,7 @@
   "name": "leafwise-frontend-prototype",
   "version": "0.1.0",
   "private": true,
-  "author": "Your Name <youremail@example.com>",
+  "author": "Nguyen Viet Tung <nvtung@gmail.com>",
   "description": "LeafWise - A Next.js frontend UI prototype for a plant care management system with AI-powered diagnosis and care plan generation.",
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
