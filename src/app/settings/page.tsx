@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings as SettingsIcon, Languages } from 'lucide-react'; // Renamed Settings to SettingsIcon, added Languages
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/context/LanguageContext'; // New import
+import { useLanguage } from '@/contexts/LanguageContext'; // New import
 
 export default function SettingsPage() {
   const { language, setLanguage, t } = useLanguage();

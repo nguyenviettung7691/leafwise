@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/context/LanguageContext'; // Assuming you might want to translate
+import { useLanguage } from '@/contexts/LanguageContext'; // Assuming you might want to translate
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
