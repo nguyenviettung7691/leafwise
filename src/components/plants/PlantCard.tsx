@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3 } from 'lucide-react';
-import { format, parseISO, differenceInDays, Locale } from 'date-fns';
+import { format, parseISO, differenceInDays, Locale, isToday as fnsIsToday } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import React from 'react';
 import { Button } from '@/components/ui/button';
@@ -53,8 +53,8 @@ const formatDueDate = (dueDate: string, locale: Locale, t: Function): string => 
   const today = new Date(now.setHours(0,0,0,0));
   const tomorrow = new Date(new Date(today).setDate(today.getDate() + 1));
 
-  if (date.getTime() === today.getTime()) return t('plantCard.dueToday');
-  if (date.getTime() === tomorrow.getTime()) return t('plantCard.dueTomorrow');
+  if (fnsIsToday(date)) return t('plantCard.dueToday');
+  if (date.getTime() === tomorrow.getTime()) return t('plantCard.dueTomorrow'); // Using getTime for exact match
 
   const diff = differenceInDays(date, today);
   if (diff > 0 && diff <= 7) {
@@ -79,13 +79,13 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {
-      e.preventDefault(); 
+      e.preventDefault();
       onToggleSelect(plant.id);
     }
   };
 
   const handleCheckboxClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
   };
 
   const handleEditClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -95,7 +95,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
     }
   };
 
-  const healthConditionText = t(`common.${plant.healthCondition.replace('_', '')}`, plant.healthCondition.replace('_', ' '));
+  const healthConditionText = t(`common.${plant.healthCondition}`);
 
 
   return (
