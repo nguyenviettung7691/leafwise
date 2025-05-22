@@ -9,37 +9,30 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
+import { usePlantData } from '@/contexts/PlantDataContext';
 
 export default function NewPlantPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { addPlant } = usePlantData(); // Use PlantDataContext
+  const { addPlant } = usePlantData();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: PlantFormData) => {
     setIsSaving(true);
-    
-    // Simulate network delay (optional, but good for UX)
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
-    let newPhotoUrl: string | undefined = undefined;
+    let finalPhotoUrl: string;
 
-    if (data.primaryPhoto && data.primaryPhoto[0]) {
-      const file = data.primaryPhoto[0];
-      newPhotoUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = (error) => {
-          console.error("Error reading file for data URL:", error);
-          resolve(undefined);
-        }
-        reader.readAsDataURL(file);
-      });
-    } else if (data.diagnosedPhotoDataUrl) { // This case might not be relevant for manual add, but good to keep if form supports it
-      newPhotoUrl = data.diagnosedPhotoDataUrl;
+    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      // If diagnosedPhotoDataUrl is a data URL (from new upload via SavePlantForm), replace with placeholder
+      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+    } else if (data.diagnosedPhotoDataUrl) {
+      // If it's already a placeholder or other non-data URL (e.g., selected from gallery in edit mode)
+      finalPhotoUrl = data.diagnosedPhotoDataUrl;
+    } else {
+      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
     }
     
     const newPlant: Plant = {
@@ -52,20 +45,20 @@ export default function NewPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: newPhotoUrl || `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName)}`,
-      photos: newPhotoUrl ? [{
+      primaryPhotoUrl: finalPhotoUrl,
+      photos: [{
         id: `p-${newPlantId}-initial-${Date.now()}`,
-        url: newPhotoUrl,
+        url: finalPhotoUrl,
         dateTaken: new Date().toISOString(),
-        healthCondition: data.healthCondition, // Use form's health condition
+        healthCondition: data.healthCondition,
         diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),
-      }] : [],
+      }],
       careTasks: [],
       plantingDate: new Date().toISOString(),
-      lastCaredDate: undefined, // New plants don't have a last cared date
+      lastCaredDate: undefined,
     };
 
-    addPlant(newPlant); // Use context function to add plant
+    addPlant(newPlant);
 
     toast({
       title: t('addNewPlantPage.toastPlantAddedTitle'),
@@ -95,7 +88,7 @@ export default function NewPlantPage() {
             formTitle={t('addNewPlantPage.formTitle')}
             formDescription={t('addNewPlantPage.formDescription')}
             submitButtonText={t('addNewPlantPage.submitButtonText')}
-            hideInternalHeader={false} // Show the form's own header here
+            hideInternalHeader={false}
           />
         )}
       </div>

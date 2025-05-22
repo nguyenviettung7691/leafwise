@@ -9,7 +9,7 @@ import type { Plant, PlantFormData, PlantPhoto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
+import { usePlantData } from '@/contexts/PlantDataContext';
 
 export default function EditPlantPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function EditPlantPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { getPlantById, updatePlant } = usePlantData(); // Use PlantDataContext
+  const { getPlantById, updatePlant } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
   const [initialFormData, setInitialFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
@@ -27,7 +27,7 @@ export default function EditPlantPage() {
 
   useEffect(() => {
     if (id) {
-      const foundPlant = getPlantById(id); // Get plant from context
+      const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(foundPlant);
         setGalleryPhotos(foundPlant.photos || []);
@@ -43,7 +43,7 @@ export default function EditPlantPage() {
           diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, 
         });
       } else {
-        notFound(); // Or redirect if preferred
+        notFound();
       }
     }
     setIsLoadingPage(false);
@@ -55,35 +55,36 @@ export default function EditPlantPage() {
         return;
     }
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+    let finalPrimaryPhotoUrl: string;
     let updatedPhotos = [...plant.photos];
 
-    if (data.primaryPhoto && data.primaryPhoto[0]) {
-        newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(data.primaryPhoto![0]);
-        });
-
-        // If a new photo was uploaded and URL successfully created, add/update it in the gallery
-        if (newPrimaryPhotoUrl) {
-          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
-          if (existingPhotoIndex === -1) { // New photo to add to gallery
-            updatedPhotos.unshift({
-                id: `p-${plant.id}-new-${Date.now()}`,
-                url: newPrimaryPhotoUrl,
-                dateTaken: new Date().toISOString(),
-                healthCondition: data.healthCondition, // Use form's health for new photo
-                diagnosisNotes: "Primary photo updated via edit form (new upload)."
+    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      // New image uploaded via form, replace data URL with placeholder
+      finalPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+      // Add this new placeholder to gallery if it's truly a new image (not just a re-selection causing a data URL)
+      // This logic assumes diagnosedPhotoDataUrl becomes a data URL ONLY IF a new file was selected via the "primaryPhoto" FileList input
+      if (data.primaryPhoto && data.primaryPhoto[0]) { // Check if a new file was actually selected
+         const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === finalPrimaryPhotoUrl); // Unlikely to match placeholder
+          if (existingPhotoIndex === -1) { 
+            updatedPhotos.unshift({ 
+              id: `p-${plant.id}-new-${Date.now()}`,
+              url: finalPrimaryPhotoUrl, // Save placeholder URL
+              dateTaken: new Date().toISOString(),
+              healthCondition: data.healthCondition,
+              diagnosisNotes: "Primary photo updated via edit form (new upload)."
             });
           }
-          // If it exists, it's just being re-selected as primary, no change to gallery item needed here.
-        }
+      }
+    } else if (data.diagnosedPhotoDataUrl) {
+      // Existing placeholder or gallery selection
+      finalPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+    } else {
+      // No photo selected, or old one removed and no new one. Use a generic placeholder.
+      finalPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
     }
-
+    
     const updatedPlantData: Plant = {
       ...plant,
       commonName: data.commonName,
@@ -94,12 +95,11 @@ export default function EditPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: newPrimaryPhotoUrl || plant.primaryPhotoUrl, 
+      primaryPhotoUrl: finalPrimaryPhotoUrl, 
       photos: updatedPhotos,
-      // plantingDate, lastCaredDate, careTasks are preserved from the original plant object
     };
   
-    updatePlant(plant.id, updatedPlantData); // Use context function to update plant
+    updatePlant(plant.id, updatedPlantData);
 
     toast({
       title: t('editPlantPage.toastPlantUpdatedTitle'),
@@ -120,7 +120,7 @@ export default function EditPlantPage() {
     );
   }
 
-  if (!plant) { // Should be caught by initial loading and notFound(), but as a safeguard
+  if (!plant) {
     return notFound();
   }
 
@@ -136,7 +136,7 @@ export default function EditPlantPage() {
           formTitle={t('editPlantPage.formTitle')}
           formDescription={t('editPlantPage.formDescription', { plantName: plant.commonName })}
           submitButtonText={t('editPlantPage.submitButtonText')}
-          hideInternalHeader={false} // Show the form's own header here
+          hideInternalHeader={false}
         />
       </div>
     </AppLayout>

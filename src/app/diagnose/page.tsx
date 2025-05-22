@@ -5,7 +5,7 @@ import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput, type DiagnosePlantHealthInput as DiagnoseInput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
-import type { GenerateDetailedCarePlanOutput, AIGeneratedTask } from '@/types';
+import type { GenerateDetailedCarePlanOutput, AIGeneratedTask, PlantHealthCondition } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { CheckCircle } from 'lucide-react';
@@ -17,10 +17,10 @@ import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDis
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Added import
+import { usePlantData } from '@/contexts/PlantDataContext';
 
 export default function DiagnosePlantPage() {
-  const { addPlant, updatePlant } = usePlantData(); // Using context
+  const { addPlant, updatePlant, getPlantById } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -84,38 +84,41 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Clear previous results but not the file itself yet
     setDiagnosisResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setLastSavedPlantId(null); 
+    setLastSavedPlantId(null);
     setCarePlanResult(null);
     setCarePlanError(null);
     setGeneratedPlanMode(null);
+    // Do not reset description here, user might want to keep it for a new image
 
     const selectedFile = event.target.files?.[0];
 
     if (selectedFile) {
-      if (selectedFile.size > 4 * 1024 * 1024) { 
+      if (selectedFile.size > 4 * 1024 * 1024) {
         toast({
           variant: 'destructive',
           title: t('diagnosePage.toasts.imageTooLargeTitle'),
           description: t('diagnosePage.toasts.imageTooLargeDesc'),
         });
-        setFile(null);
-        setPreviewUrl(null);
+        setFile(null); // Clear the invalid file
+        setPreviewUrl(null); // Clear preview for invalid file
         if (fileInputRef.current) {
-          fileInputRef.current.value = '';
+          fileInputRef.current.value = ''; // Reset the file input field
         }
         return;
       }
-      setFile(selectedFile);
+      setFile(selectedFile); // Set the new valid file
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
+        setPreviewUrl(reader.result as string); // Set preview for the new valid file
       };
       reader.readAsDataURL(selectedFile);
     } else {
+      // If no file is selected (e.g., user cancelled dialog), clear file and preview
       setFile(null);
       setPreviewUrl(null);
     }
@@ -131,12 +134,12 @@ export default function DiagnosePlantPage() {
 
     setIsLoadingDiagnosis(true);
     setDiagnosisError(null);
-    setDiagnosisResult(null);
-    setCarePlanResult(null);
+    setDiagnosisResult(null); // Clear previous diagnosis result
+    setCarePlanResult(null); // Clear previous care plan
     setGeneratedPlanMode(null);
-    setShowSavePlantForm(false);
-    setPlantSaved(false);
-    setLastSavedPlantId(null);
+    setShowSavePlantForm(false); // Hide save form if it was open
+    setPlantSaved(false); // Reset plant saved state
+    setLastSavedPlantId(null); // Reset last saved plant ID
 
     const readFileAsDataURL = (fileToRead: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -152,8 +155,8 @@ export default function DiagnosePlantPage() {
       if (!base64Image.startsWith('data:image/')) {
         throw new Error(t('diagnosePage.toasts.invalidFileType'));
       }
-      const diagnosisInput: DiagnoseInput = { 
-        photoDataUri: base64Image, 
+      const diagnosisInput: DiagnoseInput = {
+        photoDataUri: base64Image,
         description,
         languageCode: language
       };
@@ -163,6 +166,12 @@ export default function DiagnosePlantPage() {
         title: t('diagnosePage.toasts.diagnosisCompleteTitle'),
         description: result.identification.commonName ? t('diagnosePage.toasts.diagnosisCompleteDesc', { plantName: result.identification.commonName }) : t('diagnosePage.toasts.analysisCompleteDesc'),
       });
+      
+      // Determine if care plan generator should be shown: if plant identified but maybe not enough info to save
+      if (result.identification.isPlant && !result.identification.commonName) {
+        // No specific action to show care plan generator immediately if plant is not fully identified
+      }
+
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.toasts.diagnosisErrorTitle'));
       setDiagnosisError(errorMessage);
@@ -174,27 +183,21 @@ export default function DiagnosePlantPage() {
 
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
-    
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
-    let newPhotoUrl: string | undefined = undefined;
+    let finalPhotoUrl: string;
 
-    if (data.primaryPhoto && data.primaryPhoto[0]) {
-      const fileToSave = data.primaryPhoto[0];
-      newPhotoUrl = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = (error) => {
-          console.error("Error reading file for data URL:", error);
-          resolve(undefined);
-        }
-        reader.readAsDataURL(fileToSave);
-      });
+    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      // If diagnosedPhotoDataUrl is a data URL (from new upload or diagnosis preview), replace with placeholder
+      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
     } else if (data.diagnosedPhotoDataUrl) {
-      newPhotoUrl = data.diagnosedPhotoDataUrl;
+      // If it's already a placeholder or other non-data URL (e.g., selected from gallery in edit mode)
+      finalPhotoUrl = data.diagnosedPhotoDataUrl;
+    } else {
+      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
     }
-
+    
     const newPlant: Plant = {
       id: newPlantId,
       commonName: data.commonName,
@@ -205,20 +208,20 @@ export default function DiagnosePlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: newPhotoUrl || `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName)}`,
-      photos: newPhotoUrl ? [{
+      primaryPhotoUrl: finalPhotoUrl,
+      photos: [{
         id: `p-${newPlantId}-initial-${Date.now()}`,
-        url: newPhotoUrl,
+        url: finalPhotoUrl,
         dateTaken: new Date().toISOString(),
         healthCondition: data.healthCondition,
         diagnosisNotes: t('diagnosePage.resultDisplay.initialDiagnosisNotes'),
-      }] : [],
+      }],
       careTasks: [],
       plantingDate: new Date().toISOString(),
       lastCaredDate: undefined,
     };
 
-    addPlant(newPlant); // Use context function
+    addPlant(newPlant);
     setLastSavedPlantId(newPlantId);
 
     toast({
@@ -274,7 +277,7 @@ export default function DiagnosePlantPage() {
       return;
     }
     
-    const currentPlant = usePlantData().getPlantById(lastSavedPlantId); // Get current plant from context
+    const currentPlant = getPlantById(lastSavedPlantId);
     if (!currentPlant) {
       toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNotFound'), variant: "destructive" });
       return;
@@ -298,7 +301,7 @@ export default function DiagnosePlantPage() {
       ...currentPlant,
       careTasks: [...currentPlant.careTasks, ...newCareTasks]
     };
-    updatePlant(lastSavedPlantId, updatedPlant); // Use context function to update the plant
+    updatePlant(lastSavedPlantId, updatedPlant);
 
     toast({
       title: t('diagnosePage.toasts.carePlanSavedTitle'),
@@ -307,13 +310,13 @@ export default function DiagnosePlantPage() {
   };
 
 
-  const initialPlantFormData = diagnosisResult ? {
+  const initialPlantFormData: PlantFormData | undefined = diagnosisResult?.identification.isPlant ? {
     commonName: diagnosisResult.identification.commonName || '',
     scientificName: diagnosisResult.identification.scientificName || '',
     familyCategory: diagnosisResult.identification.familyCategory || '',
     ageEstimateYears: diagnosisResult.identification.ageEstimateYears,
-    healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' as PlantFormData['healthCondition'],
-    diagnosedPhotoDataUrl: previewUrl,
+    healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' as PlantHealthCondition,
+    diagnosedPhotoDataUrl: previewUrl, // This previewUrl is a data URL from the diagnosis file input
   } : undefined;
 
   const shouldShowCarePlanGenerator = diagnosisResult?.identification.isPlant && plantSaved;
@@ -365,7 +368,7 @@ export default function DiagnosePlantPage() {
           />
         )}
 
-        {shouldShowCarePlanGenerator && (
+        {shouldShowCarePlanGenerator && diagnosisResult && (
           <CarePlanGenerator
             diagnosisResult={diagnosisResult}
             isLoadingCarePlan={isLoadingCarePlan}
