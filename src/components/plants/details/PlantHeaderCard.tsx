@@ -31,7 +31,7 @@ interface PlantHeaderCardProps {
   isDeleting: boolean;
 }
 
-const getCaredForDuration = (plantingDate?: string, t?: Function): string | null => {
+const getCaredForDuration = (plantingDate?: string, t?: (key: string, replacements?: {[key: string]: string | number}) => string): string | null => {
   if (!plantingDate || !t) return null;
   const startDate = parseISO(plantingDate);
   if (!isValid(startDate)) return null;
@@ -44,12 +44,13 @@ const getCaredForDuration = (plantingDate?: string, t?: Function): string | null
   if (months > 0) return t('plantDetail.headerCard.durationMonths', { count: months });
 
   const days = differenceInDays(now, startDate);
-  if (days >= 0) return t('plantDetail.headerCard.durationDays', { count: days });
+  // Ensure days is not negative if plantingDate is in the future, although unlikely for "cared for"
+  if (days >= 0) return t('plantDetail.headerCard.durationDays', { count: days }); 
 
   return null;
 };
 
-const formatDateSimple = (dateString?: string, t?: Function) => {
+const formatDateSimple = (dateString?: string, t?: (key: string) => string) => {
     if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
     try {
       return format(parseISO(dateString), 'MMM d, yyyy');
@@ -115,7 +116,7 @@ export function PlantHeaderCard({
             </DialogHeader>
             <Image
               src={plant.primaryPhotoUrl || 'https://placehold.co/1200x675.png'}
-              alt={`${plant.commonName} - ${t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix')}`}
+              alt={t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix', { plantName: plant.commonName })}
               width={1200}
               height={675}
               className="rounded-md object-contain max-h-[80vh] w-full"
@@ -129,11 +130,11 @@ export function PlantHeaderCard({
       </div>
       <CardContent className="p-4 sm:p-6 space-y-3">
          <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-x-4 gap-y-1">
+            <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
                 {caredForDuration && (
                 <span className="flex items-center gap-1">
                     <HeartPulse className="h-4 w-4 text-primary/80" />
-                    {t('plantDetail.headerCard.caredForDurationPrefix')} {caredForDuration}
+                    {t('plantDetail.headerCard.caredForDurationPrefix')}{caredForDuration}
                 </span>
                 )}
                 {plant.lastCaredDate && (

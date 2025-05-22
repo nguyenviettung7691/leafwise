@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle as DialogTitlePrimitive, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'; // Added CardFooter
 import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -54,30 +54,35 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     name: task.name,
     description: task.description || '',
     level: task.level,
-    startDate: task.nextDueDate || new Date().toISOString(), // Use nextDueDate as startDate for editing
+    startDate: task.nextDueDate || new Date().toISOString(), 
   };
 
   // Simplified frequency parsing - assumes format "Every X Unit" or direct keywords
-  if (task.frequency === 'Ad-hoc') formData.frequencyMode = 'adhoc';
-  else if (task.frequency === 'Daily') formData.frequencyMode = 'daily';
-  else if (task.frequency === 'Weekly') formData.frequencyMode = 'weekly';
-  else if (task.frequency === 'Monthly') formData.frequencyMode = 'monthly';
-  else if (task.frequency === 'Yearly') formData.frequencyMode = 'yearly';
+  // This part needs to be robust and match how frequencies are stored/translated
+  // For prototype, simple direct mapping. Real app might need more complex parsing or store structured frequency.
+  const freqLower = task.frequency.toLowerCase();
+  if (freqLower === 'ad-hoc' || freqLower === 'theo nhu cầu (khi cần)') formData.frequencyMode = 'adhoc';
+  else if (freqLower === 'daily' || freqLower === 'hàng ngày') formData.frequencyMode = 'daily';
+  else if (freqLower === 'weekly' || freqLower === 'hàng tuần') formData.frequencyMode = 'weekly';
+  else if (freqLower === 'monthly' || freqLower === 'hàng tháng') formData.frequencyMode = 'monthly';
+  else if (freqLower === 'yearly' || freqLower === 'hàng năm') formData.frequencyMode = 'yearly';
   else {
-    const everyXMatch = task.frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+    const everyXMatch = task.frequency.match(/(?:Every|Mỗi) (\d+) (?:Days|Weeks|Months|ngày|tuần|tháng)/i);
     if (everyXMatch) {
       formData.frequencyValue = parseInt(everyXMatch[1], 10);
-      if (everyXMatch[2] === 'Days') formData.frequencyMode = 'every_x_days';
-      else if (everyXMatch[2] === 'Weeks') formData.frequencyMode = 'every_x_weeks';
-      else if (everyXMatch[2] === 'Months') formData.frequencyMode = 'every_x_months';
+      const unit = everyXMatch[2].toLowerCase();
+      if (unit.includes('days') || unit.includes('ngày')) formData.frequencyMode = 'every_x_days';
+      else if (unit.includes('weeks') || unit.includes('tuần')) formData.frequencyMode = 'every_x_weeks';
+      else if (unit.includes('months') || unit.includes('tháng')) formData.frequencyMode = 'every_x_months';
+      else formData.frequencyMode = 'adhoc'; // Fallback
     } else {
-      // Fallback if parsing fails, could be a custom string
-      formData.frequencyMode = 'adhoc'; // Or handle as custom string if form supports it
+      formData.frequencyMode = 'adhoc'; // Fallback
     }
   }
 
+
   // Time of day parsing
-  if (task.timeOfDay === 'All day' || !task.timeOfDay) {
+  if (task.timeOfDay === 'All day' || task.timeOfDay?.toLowerCase() === 'cả ngày' || !task.timeOfDay) {
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
@@ -119,7 +124,7 @@ export default function PlantDetailPage() {
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogVisible, setIsGridPhotoDialogVisible] = useState(false);
+  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false); // Corrected state variable name
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -152,7 +157,7 @@ export default function PlantDetailPage() {
             ...foundPlant,
             photos: foundPlant.photos.map((photo, index) => ({
                 ...photo,
-                id: photo.id || `p-${foundPlant.id}-${index}-${Date.now()}` // Ensure ID exists
+                id: photo.id || `p-${foundPlant.id}-${index}-${Date.now()}` 
             }))
         };
         setPlant(plantWithPhotoIds);
@@ -175,14 +180,14 @@ export default function PlantDetailPage() {
     }
 
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     setPlant(prevPlant => {
       if (!prevPlant) return null;
       const updatedTasks = prevPlant.careTasks.map(t =>
         t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : (t.resumeDate || addWeeks(new Date(), 1).toISOString()) } : t
       );
-      // Also update in mockPlants for persistence in this prototype
+      
       const plantIndex = mockPlants.findIndex(p => p.id === prevPlant.id);
       if (plantIndex !== -1) {
         mockPlants[plantIndex].careTasks = updatedTasks;
@@ -204,7 +209,7 @@ export default function PlantDetailPage() {
 
   const handleDeletePlant = async () => {
     setIsDeleting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500)); 
     const plantIndex = mockPlants.findIndex(p => p.id === id);
     if (plantIndex > -1) {
       mockPlants.splice(plantIndex, 1);
@@ -220,29 +225,29 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant) return;
 
-    if (file.size > 4 * 1024 * 1024) { // 4MB limit
+    if (file.size > 4 * 1024 * 1024) { 
         toast({ variant: 'destructive', title: t('plantDetail.toasts.imageTooLarge'), description: t('plantDetail.toasts.imageTooLargeDesc') });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
     }
 
     setIsDiagnosingNewPhoto(true);
-    setNewPhotoJournaled(false); // Reset journaled state for new diagnosis
-    setNewPhotoDiagnosisDialogState({open: false}); // Close any previous dialog
+    setNewPhotoJournaled(false); 
+    setNewPhotoDiagnosisDialogState({open: false}); 
 
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onloadend = async () => {
         const base64Image = reader.result as string;
-        if (!base64Image.startsWith('data:image/')) { // Basic validation
+        if (!base64Image.startsWith('data:image/')) { 
             toast({ title: t('plantDetail.toasts.invalidFileType'), description: t('plantDetail.toasts.invalidFileTypeDesc'), variant: "destructive"});
             setIsDiagnosingNewPhoto(false);
             return;
         }
 
         try {
-            // AI Call 1: Diagnose the new photo
+            
             const newPhotoDiagnosisResult = await diagnosePlantHealth({
                 photoDataUri: base64Image,
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`,
@@ -265,7 +270,7 @@ export default function PlantDetailPage() {
                                     newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
 
-            // AI Call 2: Compare current plant health with new diagnosis
+            
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
@@ -273,21 +278,21 @@ export default function PlantDetailPage() {
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
-            // Open dialog and start loading care plan review
+            
             setNewPhotoDiagnosisDialogState({
                 open: true,
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
                 newPhotoPreviewUrl: base64Image,
-                isLoadingCarePlanReview: true, // Start loading care plan review
+                isLoadingCarePlanReview: true, 
             });
 
-            // AI Call 3: Review current care plan against new diagnosis
+            
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
                 newPhotoHealthIsHealthy: newPhotoDiagnosisResult.healthAssessment.isHealthy,
-                currentCareTasks: plant.careTasks.map(ct => ({ // Transform to AI-friendly format
+                currentCareTasks: plant.careTasks.map(ct => ({ 
                   id: ct.id,
                   name: ct.name,
                   description: ct.description,
@@ -302,7 +307,7 @@ export default function PlantDetailPage() {
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
                 carePlanReviewResult,
-                isLoadingCarePlanReview: false, // Done loading care plan review
+                isLoadingCarePlanReview: false, 
             }));
 
         } catch (e: any) {
@@ -311,7 +316,7 @@ export default function PlantDetailPage() {
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
             setIsDiagnosingNewPhoto(false);
-            if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = ""; // Clear file input
+            if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = ""; 
         }
     };
   };
@@ -320,13 +325,13 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     setPlant(updatedPlant);
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex].healthCondition = newHealth;
     }
-    toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc', {healthStatus: newHealth.replace('_', ' ')})});
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }})); // Mark suggestion as handled
+    toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc', {healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }})); 
   };
 
   const addPhotoToJournal = () => {
@@ -337,26 +342,26 @@ export default function PlantDetailPage() {
                                     newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
     const newPhoto: PlantPhoto = {
-        id: `p-${plant.id}-photo-${Date.now()}`, // Ensure unique ID
+        id: `p-${plant.id}-photo-${Date.now()}`, 
         url: newPhotoDiagnosisDialogState.newPhotoPreviewUrl,
         dateTaken: new Date().toISOString(),
-        healthCondition: newHealthStatusFromDiagnosis, // Use the health from the new diagnosis
+        healthCondition: newHealthStatusFromDiagnosis, 
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
-        // notes: "New photo added and diagnosed." // Optional general note
+        
     };
 
-    const updatedPhotos = [newPhoto, ...plant.photos]; // Add to beginning for newest first
+    const updatedPhotos = [newPhoto, ...plant.photos]; 
     const updatedPlant = { ...plant, photos: updatedPhotos };
     setPlant(updatedPlant);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex].photos = updatedPhotos;
     }
 
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
-    setNewPhotoJournaled(true); // Mark as journaled for this session
+    setNewPhotoJournaled(true); 
   };
 
   const calculateNextDueDateForAIMain = (frequency: string): string | undefined => {
@@ -376,7 +381,7 @@ export default function PlantDetailPage() {
       if (unit === 'Months') return addMonths(now, value).toISOString();
     }
     console.warn(`Next due date calculation not fully implemented for frequency: ${frequency}`);
-    return undefined; // Fallback if format is unexpected
+    return undefined; 
   };
 
 
@@ -385,13 +390,13 @@ export default function PlantDetailPage() {
 
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: true}));
 
-    let updatedCareTasks = JSON.parse(JSON.stringify(plant.careTasks)) as CareTask[]; // Deep copy
+    let updatedCareTasks = JSON.parse(JSON.stringify(plant.careTasks)) as CareTask[]; 
     const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
 
-    // Apply modifications to existing tasks
+    
     taskModifications.forEach(mod => {
         const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
-        if (taskIndex === -1) return; // Should not happen if IDs are correct
+        if (taskIndex === -1) return; 
 
         switch (mod.suggestedAction) {
             case 'pause':
@@ -412,17 +417,17 @@ export default function PlantDetailPage() {
                         frequency: mod.updatedDetails.frequency || updatedCareTasks[taskIndex].frequency,
                         timeOfDay: mod.updatedDetails.timeOfDay || updatedCareTasks[taskIndex].timeOfDay,
                         level: mod.updatedDetails.level || updatedCareTasks[taskIndex].level,
-                        // Recalculate nextDueDate if frequency changes
+                        
                         nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDateForAIMain(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
                     };
                 }
                 break;
-            default: // 'keep_as_is'
+            default: 
                 break;
         }
     });
 
-    // Add new tasks
+    
     newTasks.forEach(aiTask => {
         updatedCareTasks.push({
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -440,36 +445,36 @@ export default function PlantDetailPage() {
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     setPlant(updatedPlant);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex].careTasks = updatedCareTasks;
     }
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); // Clear suggestions
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); 
   };
 
   const handleKeepCurrentCarePlan = () => {
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined })); // Clear suggestions
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined })); 
     toast({ title: t('plantDetail.toasts.carePlanUnchanged'), description: t('plantDetail.toasts.carePlanUnchangedDesc') });
   };
 
 
   const openGridPhotoDialog = (photo: PlantPhoto) => {
     setSelectedGridPhoto(photo);
-    setIsGridPhotoDialogVisible(true);
+    setIsGridPhotoDialogValid(true);
   };
   const closeGridPhotoDialog = () => {
-    setIsGridPhotoDialogVisible(false);
-    setTimeout(() => setSelectedGridPhoto(null), 300); // Delay resetting to allow fade out
+    setIsGridPhotoDialogValid(false);
+    setTimeout(() => setSelectedGridPhoto(null), 300); 
   };
 
   const handleSetAsPrimaryPhoto = (photoUrl: string) => {
     if (!plant) return;
-    // Update local state
+    
     setPlant(prev => prev ? { ...prev, primaryPhotoUrl: photoUrl } : null);
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex].primaryPhotoUrl = photoUrl;
@@ -486,7 +491,7 @@ export default function PlantDetailPage() {
     let currentTasks = plant.careTasks ? [...plant.careTasks] : [];
     let updatedTasks: CareTask[];
 
-    if (taskToEdit) { // Editing existing task
+    if (taskToEdit) { 
         const taskIndex = currentTasks.findIndex(t => t.id === taskToEdit.id);
         if (taskIndex !== -1) {
             updatedTasks = currentTasks.map(t =>
@@ -497,15 +502,15 @@ export default function PlantDetailPage() {
                     frequency: taskData.frequency,
                     timeOfDay: taskData.timeOfDay,
                     level: taskData.level,
-                    nextDueDate: taskData.startDate, // Use form's startDate as the new nextDueDate
+                    nextDueDate: taskData.startDate, 
                 } : t
             );
         } else {
-             // Should not happen if taskToEdit is valid
+             
              updatedTasks = [...currentTasks];
         }
         toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
-    } else { // Adding new task
+    } else { 
         const newTask: CareTask = {
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             plantId: plant.id,
@@ -515,17 +520,17 @@ export default function PlantDetailPage() {
             timeOfDay: taskData.timeOfDay,
             level: taskData.level,
             isPaused: false,
-            nextDueDate: taskData.startDate, // Use form's startDate as the initial nextDueDate
+            nextDueDate: taskData.startDate, 
         };
         updatedTasks = [...currentTasks, newTask];
         toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
     }
 
-    // Update plant state
+    
     const newPlantState = { ...plant, careTasks: updatedTasks };
     setPlant(newPlantState);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex] = newPlantState;
@@ -539,7 +544,7 @@ export default function PlantDetailPage() {
 
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); // Ensure it's reset for new task
+    setInitialTaskFormData(undefined); 
     setIsTaskFormDialogOpen(true);
   };
 
@@ -550,7 +555,7 @@ export default function PlantDetailPage() {
   };
 
   const handleOpenDeleteSingleTaskDialog = (taskId: string) => {
-    setSelectedTaskIds(new Set([taskId])); // Set only the single task for deletion
+    setSelectedTaskIds(new Set([taskId])); 
     setShowDeleteSelectedTasksDialog(true);
   };
 
@@ -567,7 +572,7 @@ export default function PlantDetailPage() {
     const newPlantState = { ...plant, careTasks: updatedTasks };
     setPlant(newPlantState);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
         mockPlants[plantIndex] = newPlantState;
@@ -575,7 +580,7 @@ export default function PlantDetailPage() {
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
-    setSelectedTaskIds(new Set()); // Clear selection
+    setSelectedTaskIds(new Set()); 
   };
 
   const handleToggleTaskSelection = useCallback((taskId: string) => {
@@ -592,8 +597,8 @@ export default function PlantDetailPage() {
 
   const toggleManagePhotosMode = useCallback(() => {
     setIsManagingPhotos(prev => {
-      if (prev) { // Exiting manage mode
-        setSelectedPhotoIds(new Set()); // Clear selections
+      if (prev) { 
+        setSelectedPhotoIds(new Set()); 
       }
       return !prev;
     });
@@ -617,21 +622,21 @@ export default function PlantDetailPage() {
     let updatedPhotos = plant.photos.filter(p => !selectedPhotoIds.has(p.id));
     let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
 
-    // If primary photo was selected for deletion, find a new one
+    
     if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.photos.find(p => p.url === plant.primaryPhotoUrl)?.id || '')) {
       if (updatedPhotos.length > 0) {
-        // Set the most recent remaining photo as primary
+        
         const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
         newPrimaryPhotoUrl = sortedRemainingPhotos[0].url;
       } else {
-        newPrimaryPhotoUrl = undefined; // Or a placeholder if needed
+        newPrimaryPhotoUrl = undefined; 
       }
     }
 
     const newPlantState = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
     setPlant(newPlantState);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
       mockPlants[plantIndex] = newPlantState;
@@ -639,7 +644,7 @@ export default function PlantDetailPage() {
 
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
-    setIsManagingPhotos(false); // Exit manage mode
+    setIsManagingPhotos(false); 
     setShowDeletePhotosDialog(false);
   };
 
@@ -657,7 +662,7 @@ export default function PlantDetailPage() {
     if (!dateString) return t('common.notApplicable');
     try {
       const date = parseISO(dateString);
-      return format(date, 'PPP', { locale: dateFnsLocale }); // Example: Jan 1, 2023
+      return format(date, 'PPP', { locale: dateFnsLocale }); 
     } catch (error) {
       console.error("Error parsing date:", dateString, error);
       return t('common.error');
@@ -676,7 +681,7 @@ export default function PlantDetailPage() {
   const handleSaveEditedPhotoDetails = async () => {
     if (!plant || !photoToEdit) return;
     setIsSavingPhotoDetails(true);
-    await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 700)); 
 
     const updatedPhotos = plant.photos.map(p =>
       p.id === photoToEdit.id
@@ -693,7 +698,7 @@ export default function PlantDetailPage() {
     const updatedPlant = { ...plant, photos: updatedPhotos };
     setPlant(updatedPlant);
 
-    // Update mock data
+    
     const plantIndex = mockPlants.findIndex(p => p.id === plant.id);
     if (plantIndex !== -1) {
       mockPlants[plantIndex].photos = updatedPhotos;
@@ -752,7 +757,7 @@ export default function PlantDetailPage() {
           selectedTaskIds={selectedTaskIds}
           onToggleTaskSelection={handleToggleTaskSelection}
           onDeleteSelectedTasks={() => {
-            // Logic before showing dialog, if any (e.g., counting tasks)
+            
             setShowDeleteSelectedTasksDialog(true);
           }}
         />
@@ -782,11 +787,11 @@ export default function PlantDetailPage() {
           onChange={handleGrowthPhotoFileChange}
         />
 
-        {/* Dialog for New Photo Analysis Results */}
+        
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
-                setNewPhotoDiagnosisDialogState({open: false}); // Reset all states when closing
-                setNewPhotoJournaled(false); // Reset journaled state too
+                setNewPhotoDiagnosisDialogState({open: false}); 
+                setNewPhotoJournaled(false); 
             }
         }}>
             <DialogContent className="sm:max-w-2xl">
@@ -797,24 +802,34 @@ export default function PlantDetailPage() {
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                <div className="space-y-4 py-4">
                     {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
                          <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.title')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
                     )}
 
-                    {/* Latest Diagnosis from New Photo */}
+                    
                     {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">{t('plantDetail.newPhotoDialog.latestDiagnosisTitle')}</CardTitle></CardHeader>
                             <CardContent className="text-sm space-y-1">
                                 <p><strong>{t('plantDetail.newPhotoDialog.plantLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.identification.commonName || plant.commonName}</p>
-                                <p><strong>{t('plantDetail.newPhotoDialog.statusLabel')}</strong> <Badge variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"} className={cn("capitalize", newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500 hover:bg-green-600" : "")}>{newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? t('common.healthy') : t('common.needs_attention')}</Badge></p>
+                                <p><strong>{t('plantDetail.newPhotoDialog.statusLabel')}</strong> 
+                                  <Badge 
+                                    variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"} 
+                                    className={cn(
+                                      "capitalize", 
+                                      newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500 hover:bg-green-600" : ""
+                                    )}
+                                  >
+                                    {t(newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'plantDetail.healthConditions.healthy' : 'plantDetail.healthConditions.needs_attention')}
+                                  </Badge>
+                                </p>
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>{t('plantDetail.newPhotoDialog.diagnosisLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
                             </CardContent>
                         </Card>
                     )}
 
-                    {/* Health Comparison & Update Suggestion */}
+                    
                     {newPhotoDiagnosisDialogState.healthComparisonResult && (
                         <Card>
                             <CardHeader><CardTitle className="text-lg">{t('plantDetail.newPhotoDialog.healthComparisonTitle')}</CardTitle></CardHeader>
@@ -824,7 +839,7 @@ export default function PlantDetailPage() {
                                     <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
                                         <MessageSquareWarning className="h-4 w-4 text-blue-500" />
                                         <AlertTitle>{t('plantDetail.newPhotoDialog.updateHealthAlertTitle')}</AlertTitle>
-                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: (newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth as string).replace('_', ' ')})}</AlertDescription>
+                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(`plantDetail.healthConditions.${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}`) })}</AlertDescription>
                                         <div className="mt-3 flex gap-2">
                                             <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
                                                 <CheckCircle className="mr-1.5 h-4 w-4"/>{t('plantDetail.newPhotoDialog.updateHealthButton')}
@@ -839,7 +854,7 @@ export default function PlantDetailPage() {
                         </Card>
                     )}
 
-                    {/* Care Plan Review Section */}
+                    
                     {newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
                         <div className="flex items-center justify-center p-4">
                             <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -889,7 +904,7 @@ export default function PlantDetailPage() {
                                                 <li key={`new-${index}`}>
                                                     <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{task.taskLevel}</Badge>)
                                                     <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
-                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequency', {frequency: task.suggestedFrequency})}, {t('plantDetail.careManagement.taskTimeOfDay', {time: task.suggestedTimeOfDay})}</p>
+                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {task.suggestedFrequency}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {task.suggestedTimeOfDay}</p>
                                                 </li>
                                             ))}
                                         </ul>
@@ -919,7 +934,7 @@ export default function PlantDetailPage() {
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
                        </Button>
-                     ) : <div className="flex-1" /> /* Placeholder to keep close button on right */ }
+                     ) : <div className="flex-1" />  }
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             {t('common.close')}
@@ -929,8 +944,8 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for Viewing Single Grid Photo Details */}
-        <Dialog open={isGridPhotoDialogVisible} onOpenChange={closeGridPhotoDialog}>
+        
+        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitlePrimitive>{t('plantDetail.photoDetailsDialog.title', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}</DialogTitlePrimitive>
@@ -939,7 +954,7 @@ export default function PlantDetailPage() {
                     <div className="space-y-3 py-3">
                         <Image src={selectedGridPhoto.url} alt={t('plantDetail.photoDetailsDialog.title', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
-                        <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition.replace('_', '')}` as any, selectedGridPhoto.healthCondition.replace('_',' '))}</Badge></p>
+                        <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
                         {selectedGridPhoto.notes && <p><strong>{t('plantDetail.photoDetailsDialog.generalNotesLabel')}</strong> {selectedGridPhoto.notes}</p>}
                     </div>
@@ -957,7 +972,7 @@ export default function PlantDetailPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Dialog for Add/Edit Care Task */}
+        
         <Dialog open={isTaskFormDialogOpen} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsTaskFormDialogOpen(false);
@@ -981,14 +996,14 @@ export default function PlantDetailPage() {
                         setInitialTaskFormData(undefined);
                     }}
                     isLoading={isSavingTask}
-                    formTitle={taskToEdit ? t('plantDetail.taskFormDialog.editTitle') : t('plantDetail.taskFormDialog.addTitle')} // Passed for consistency, though form might not use it internally
+                    formTitle={taskToEdit ? t('plantDetail.taskFormDialog.editTitle') : t('plantDetail.taskFormDialog.addTitle')} 
                     formDescription={taskToEdit ? t('plantDetail.taskFormDialog.editDescription', {plantName: plant.commonName}) : t('plantDetail.taskFormDialog.addDescription', {plantName: plant.commonName})}
                     submitButtonText={taskToEdit ? t('common.update') : t('common.add')}
                 />
             </DialogContent>
         </Dialog>
 
-        {/* Alert Dialog for Deleting Selected Tasks */}
+        
         <AlertDialog open={showDeleteSelectedTasksDialog} onOpenChange={setShowDeleteSelectedTasksDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -1006,7 +1021,7 @@ export default function PlantDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* Alert Dialog for Deleting Selected Photos */}
+        
         <AlertDialog open={showDeletePhotosDialog} onOpenChange={setShowDeletePhotosDialog}>
             <AlertDialogContent>
                 <AlertDialogHeader>
@@ -1029,7 +1044,7 @@ export default function PlantDetailPage() {
             </AlertDialogContent>
         </AlertDialog>
 
-        {/* Dialog for Editing Photo Details */}
+        
         <Dialog open={isEditPhotoDialogVisible} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setIsEditPhotoDialogVisible(false);
