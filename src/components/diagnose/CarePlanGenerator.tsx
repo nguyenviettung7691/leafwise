@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon, Sparkles } from 'lucide-react'; // Added Sparkles
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -162,7 +162,7 @@ export function CarePlanGenerator({
             {isLoadingCarePlan ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.carePlanGenerator.getPlanButtonLoading')}</>
             ) : (
-              t('diagnosePage.carePlanGenerator.getPlanButton')
+              <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.carePlanGenerator.getPlanButton')}</>
             )}
           </Button>
         </form>
@@ -215,17 +215,17 @@ export function CarePlanGenerator({
               <div className="space-y-3 text-xs text-muted-foreground">
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{t('diagnosePage.carePlanGenerator.notificationsPlaceholder')}</p>
+                  <p>{carePlanResult.pushNotificationsPlaceholder}</p>
                 </div>
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{t('diagnosePage.carePlanGenerator.activityTrackingPlaceholder')}</p>
+                  <p>{carePlanResult.activityTrackingPlaceholder}</p>
                 </div>
               </div>
 
               <div className="mt-6 text-center">
                 {carePlanEffectivelySaved && lastSavedPlantId ? (
-                  <ProgressBarLink
+                   <ProgressBarLink
                     href={`/plants/${lastSavedPlantId}`}
                     className="text-sm text-primary hover:underline"
                   >

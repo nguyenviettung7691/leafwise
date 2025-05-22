@@ -188,7 +188,7 @@
       "locationLabel": "Vị trí/Khí hậu của bạn (Tùy chọn)",
       "locationPlaceholder": "Ví dụ: Ban công nắng, Văn phòng trong nhà, Vùng ôn đới",
       "modeLabel": "Chế độ kế hoạch chăm sóc",
-      "getPlanButton": "Lấy kế hoạch",
+      "getPlanButton": "Lấy Kế Hoạch Chăm Sóc",
       "getPlanButtonLoading": "Đang tạo kế hoạch...",
       "errorAlertTitle": "Lỗi kế hoạch chăm sóc",
       "generatedPlanTitle": "Kế hoạch chăm sóc đã tạo cho {{plantName}}",

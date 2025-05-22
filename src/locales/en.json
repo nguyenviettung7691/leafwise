@@ -188,7 +188,7 @@
       "locationLabel": "Your Location/Climate (Optional)",
       "locationPlaceholder": "e.g., Sunny balcony, Indoor office, Temperate zone",
       "modeLabel": "Care Plan Mode",
-      "getPlanButton": "Get Plan",
+      "getPlanButton": "Get Care Plan",
       "getPlanButtonLoading": "Generating Plan...",
       "errorAlertTitle": "Care Plan Error",
       "generatedPlanTitle": "Generated Care Plan for {{plantName}}",
