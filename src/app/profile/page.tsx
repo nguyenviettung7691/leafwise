@@ -76,8 +76,8 @@ export default function ProfilePage() {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit for avatar
         toast({
           variant: 'destructive',
-          title: 'Image Too Large',
-          description: 'Please select an image file smaller than 2MB for your avatar.',
+          title: t('profilePage.toasts.avatarImageTooLargeTitle'),
+          description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
         setEditedAvatarFile(null);
         setEditedAvatarPreviewUrl(null);
@@ -113,8 +113,9 @@ export default function ProfilePage() {
       setIsEditing(false);
       setEditedAvatarFile(null);
       setEditedAvatarPreviewUrl(null);
+      // Toast for success is in AuthContext
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
   };
 
@@ -129,8 +130,9 @@ export default function ProfilePage() {
 
     try {
       await updateUser({ preferences: updatedPreferences });
+       // Toast for success is in AuthContext
     } catch (error) {
-       toast({ title: "Error", description: `Failed to update ${preferenceKey}.`, variant: "destructive" });
+       toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', {preferenceKey}), variant: "destructive" });
     }
   };
 
@@ -143,7 +145,7 @@ export default function ProfilePage() {
 
   const handleExportData = () => {
     if (!authUser) {
-      toast({ title: "Error", description: "No user data to export.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profilePage.toasts.exportErrorNoData'), variant: "destructive" });
       return;
     }
     const dataToExport = {
@@ -160,7 +162,7 @@ export default function ProfilePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-    toast({ title: "Data Exported", description: "Your data has been downloaded." });
+    toast({ title: t('profilePage.toasts.exportSuccess'), description: t('profilePage.toasts.exportSuccess') });
   };
 
   const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -172,12 +174,12 @@ export default function ProfilePage() {
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
-          throw new Error("Failed to read file content.");
+          throw new Error(t('profilePage.toasts.importFailedReadFile'));
         }
         const importedData = JSON.parse(text);
 
         if (!importedData.userProfile || !Array.isArray(importedData.plants)) {
-          throw new Error("Invalid file format. Missing 'userProfile' or 'plants' data.");
+          throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
         const { id, email, ...profileToUpdate } = importedData.userProfile;
@@ -186,11 +188,11 @@ export default function ProfilePage() {
         mockPlants.length = 0; 
         mockPlants.push(...(importedData.plants as Plant[])); 
 
-        toast({ title: "Import Successful", description: "Your data has been imported. Refresh or navigate to see changes." });
+        toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
         router.push('/'); 
 
       } catch (error: any) {
-        toast({ title: "Import Failed", description: error.message || "Could not parse or apply the imported data.", variant: "destructive" });
+        toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
       } finally {
         if (importFileInputRef.current) {
           importFileInputRef.current.value = "";
@@ -198,7 +200,7 @@ export default function ProfilePage() {
       }
     };
     reader.onerror = () => {
-      toast({ title: "Import Failed", description: "Failed to read the selected file.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profilePage.toasts.importFailedReadFile'), variant: "destructive" });
       if (importFileInputRef.current) {
         importFileInputRef.current.value = "";
       }
@@ -208,7 +210,7 @@ export default function ProfilePage() {
 
   const handleDestroyDataConfirmed = async () => {
     if (!user || destroyEmailInput !== user.email) {
-      toast({ title: "Error", description: "Email confirmation failed.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('profilePage.toasts.destroyEmailMismatch'), variant: "destructive" });
       return;
     }
     setIsDestroyingData(true);
@@ -218,7 +220,7 @@ export default function ProfilePage() {
     // Log out the user (this will also clear their profile from localStorage via AuthContext)
     await logout();
     
-    toast({ title: "Data Destroyed", description: "All your personal data has been removed.", variant: "destructive" });
+    toast({ title: t('profilePage.toasts.destroySuccess'), description: t('profilePage.toasts.destroySuccess'), variant: "destructive" });
     setIsDestroyConfirmOpen(false);
     setDestroyEmailInput('');
     setIsDestroyingData(false);
@@ -269,16 +271,16 @@ export default function ProfilePage() {
           <h1 className="text-3xl font-bold tracking-tight">{t('nav.profile')}</h1>
           {!isEditing ? (
             <Button variant="outline" onClick={handleEditToggle}>
-              <Edit3 className="mr-2 h-4 w-4" /> Edit Profile
+              <Edit3 className="mr-2 h-4 w-4" /> {t('profilePage.editProfileButton')}
             </Button>
           ) : (
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleEditToggle} disabled={authLoading || isLoggingOut}>
-                <X className="mr-2 h-4 w-4" /> Cancel
+                <X className="mr-2 h-4 w-4" /> {t('common.cancel')}
               </Button>
               <Button onClick={handleSaveChanges} disabled={authLoading || isLoggingOut}>
                 {authLoading ? <AuthLoader className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                {authLoading ? 'Saving...' : 'Save Changes'}
+                {authLoading ? t('profilePage.savingButton') : t('profilePage.saveChangesButton')}
               </Button>
             </div>
           )}
@@ -292,7 +294,7 @@ export default function ProfilePage() {
                   className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
                   onClick={() => isEditing && avatarInputRef.current?.click()}
                 >
-                  <AvatarImage src={avatarSrc} alt={user.name} data-ai-hint="person avatar"/>
+                  <AvatarImage src={avatarSrc} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
                   <AvatarFallback className="text-2xl bg-muted">
                     {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
@@ -316,7 +318,7 @@ export default function ProfilePage() {
               <div>
                 {isEditing ? (
                   <div className="space-y-2">
-                    <Label htmlFor="profileName" className="sr-only">Name</Label>
+                    <Label htmlFor="profileName" className="sr-only">{t('profilePage.nameLabel')}</Label>
                     <Input
                       id="profileName"
                       value={editedName}
@@ -324,7 +326,7 @@ export default function ProfilePage() {
                       className="text-2xl font-semibold p-1"
                       disabled={authLoading || isLoggingOut}
                     />
-                     <p className="text-md text-muted-foreground">{user.email} (Email cannot be changed)</p>
+                     <p className="text-md text-muted-foreground">{user.email} ({t('profilePage.emailCannotBeChanged')})</p>
                   </div>
                 ) : (
                   <>
@@ -341,54 +343,54 @@ export default function ProfilePage() {
 
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="text-xl">Preferences</CardTitle>
-            <CardDescription>Manage your application settings.</CardDescription>
+            <CardTitle className="text-xl">{t('profilePage.preferencesCardTitle')}</CardTitle>
+            <CardDescription>{t('profilePage.preferencesCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
               <div className='flex items-center gap-3'>
                 <Bell className="h-5 w-5 text-primary" />
-                <Label htmlFor="emailNotifications" className="text-base">Email Notifications</Label>
+                <Label htmlFor="emailNotifications" className="text-base">{t('profilePage.emailNotificationsLabel')}</Label>
               </div>
               <Switch
                 id="emailNotifications"
                 checked={user.preferences?.emailNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('emailNotifications', checked)}
-                aria-label="Toggle email notifications"
+                aria-label={t('profilePage.emailNotificationsLabel')}
                 disabled={authLoading || isLoggingOut}
               />
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
               <div className='flex items-center gap-3'>
                 <Smartphone className="h-5 w-5 text-primary" />
-                <Label htmlFor="pushNotifications" className="text-base">Push Notifications</Label>
+                <Label htmlFor="pushNotifications" className="text-base">{t('profilePage.pushNotificationsLabel')}</Label>
               </div>
               <Switch
                 id="pushNotifications"
                 checked={user.preferences?.pushNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('pushNotifications', checked)}
-                aria-label="Toggle push notifications"
+                aria-label={t('profilePage.pushNotificationsLabel')}
                 disabled={authLoading || isLoggingOut}
               />
             </div>
           </CardContent>
            <CardFooter className="pt-6 border-t">
-            <p className="text-xs text-muted-foreground">Profile changes and preferences are mock-saved to local storage.</p>
+            <p className="text-xs text-muted-foreground">{t('profilePage.preferencesDisclaimer')}</p>
           </CardFooter>
         </Card>
         
         <Card className="shadow-xl">
           <CardHeader>
-            <CardTitle className="text-xl">Data Management</CardTitle>
-            <CardDescription>Export your plant data or import data from a backup file.</CardDescription>
+            <CardTitle className="text-xl">{t('profilePage.dataManagementCardTitle')}</CardTitle>
+            <CardDescription>{t('profilePage.dataManagementCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto">
-                <Download className="mr-2 h-5 w-5" /> Export My Data
+                <Download className="mr-2 h-5 w-5" /> {t('profilePage.exportDataButton')}
               </Button>
               <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto">
-                <Upload className="mr-2 h-5 w-5" /> Import Data
+                <Upload className="mr-2 h-5 w-5" /> {t('profilePage.importDataButton')}
               </Button>
               <input
                 type="file"
@@ -399,7 +401,7 @@ export default function ProfilePage() {
               />
             </div>
              <p className="text-xs text-muted-foreground">
-                Importing data will overwrite your current plants and profile settings with the content from the file. This action is for prototype purposes.
+                {t('profilePage.importDisclaimer')}
              </p>
           </CardContent>
         </Card>
@@ -410,13 +412,13 @@ export default function ProfilePage() {
             <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2 text-destructive">
                   <AlertTriangle className="h-5 w-5" />
-                  Danger Zone
+                  {t('profilePage.dangerZoneCardTitle')}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <p className="text-sm font-medium">Log Out</p>
-                    <p className="text-xs text-muted-foreground">End your current session.</p>
+                    <p className="text-sm font-medium">{t('profilePage.logOutSectionTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{t('profilePage.logOutSectionDescription')}</p>
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button
@@ -425,21 +427,21 @@ export default function ProfilePage() {
                             disabled={isLoggingOut || authLoading}
                         >
                             {isLoggingOut ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <LogOut className="mr-2 h-5 w-5" />}
-                            {isLoggingOut ? 'Logging out...' : 'Log Out'}
+                            {isLoggingOut ? t('profilePage.loggingOutButton') : t('profilePage.logOutButton')}
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('profilePage.logOutConfirmTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            You will be returned to the login page.
+                            {t('profilePage.logOutConfirmDescription')}
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                        <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel disabled={isLoggingOut}>{t('common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
                             {isLoggingOut ? <AuthLoader className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Log Out
+                            {t('profilePage.logOutButton')}
                         </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
@@ -447,8 +449,8 @@ export default function ProfilePage() {
                 </div>
                 <Separator />
                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-destructive">DESTROY All My Data</p>
-                    <p className="text-xs text-muted-foreground">Permanently remove all your plants, care plans, and profile settings. This action cannot be undone.</p>
+                    <p className="text-sm font-medium text-destructive">{t('profilePage.destroyDataSectionTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{t('profilePage.destroyDataSectionDescription')}</p>
                     <Button
                         variant="destructive"
                         className="w-full sm:w-auto"
@@ -456,7 +458,7 @@ export default function ProfilePage() {
                         disabled={isDestroyingData || authLoading}
                     >
                         {isDestroyingData ? <AuthLoader className="h-5 w-5 mr-2 animate-spin" /> : <AlertTriangle className="mr-2 h-5 w-5" />}
-                        DESTROY All My Data
+                        {isDestroyingData ? t('profilePage.destroyingDataButton') : t('profilePage.destroyDataButton')}
                     </Button>
                 </div>
             </CardContent>
@@ -473,35 +475,33 @@ export default function ProfilePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-6 w-6" /> Are you absolutely sure?
+              <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.
-            </AlertDialogDescription>
-            <AlertDialogDescription className="mt-2">
-              To confirm, please type your email address (<strong className="text-foreground">{user?.email}</strong>) in the box below.
+             <AlertDialogDescription className="space-y-3">
+              <div>{t('profilePage.destroyConfirmDescription1')}</div>
+              <div>{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
-            <Label htmlFor="destroy-confirm-email" className="sr-only">Confirm Email</Label>
+            <Label htmlFor="destroy-confirm-email" className="sr-only">{t('profilePage.destroyConfirmEmailPlaceholder')}</Label>
             <Input
               id="destroy-confirm-email"
               type="email"
-              placeholder="Enter your email to confirm"
+              placeholder={t('profilePage.destroyConfirmEmailPlaceholder')}
               value={destroyEmailInput}
               onChange={(e) => setDestroyEmailInput(e.target.value)}
               className="border-destructive focus-visible:ring-destructive"
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDestroyConfirmOpen(false)} disabled={isDestroyingData}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setIsDestroyConfirmOpen(false)} disabled={isDestroyingData}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDestroyDataConfirmed}
               disabled={destroyEmailInput !== user?.email || isDestroyingData}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground focus-visible:ring-destructive"
             >
               {isDestroyingData ? <AuthLoader className="h-4 w-4 animate-spin" /> : null}
-              DESTROY
+              {t('profilePage.destroyConfirmAction')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -510,5 +510,7 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
+    
 
     
