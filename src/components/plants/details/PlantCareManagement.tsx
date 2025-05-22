@@ -11,38 +11,40 @@ import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as Edi
 import { format, parseISO, isToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useLanguage } from '@/contexts/LanguageContext';
+
+const formatDate = (dateString?: string, t?: Function) => {
+  if (!dateString) return t ? t('common.notApplicable') : 'N/A';
+  try {
+    const date = parseISO(dateString);
+    return format(date, 'MMM d, yyyy');
+  } catch (error) {
+    console.error("Error parsing date:", dateString, error);
+    return t ? t('common.error') : 'Invalid Date';
+  }
+};
+
+const formatDateTime = (dateString?: string, timeString?: string, t?: Function) => {
+  if (!dateString) return t ? t('common.notApplicable') : 'N/A';
+  let formattedString = formatDate(dateString, t);
+  if (timeString && timeString !== 'All day' && /^\d{2}:\d{2}$/.test(timeString)) {
+    formattedString += ` ${t ? t('plantDetail.careManagement.atTimePrefix', {time:timeString}) : `at ${timeString}`}`;
+  }
+  return formattedString;
+};
 
 interface PlantCareManagementProps {
   plant: Plant;
   loadingTaskId: string | null;
   onToggleTaskPause: (taskId: string) => Promise<void>;
   onOpenEditTaskDialog: (task: CareTask) => void;
-  onOpenDeleteTaskDialog: (taskId: string) => void; // For single delete icon
+  onOpenDeleteTaskDialog: (taskId: string) => void; 
   onOpenAddTaskDialog: () => void;
   selectedTaskIds: Set<string>;
   onToggleTaskSelection: (taskId: string) => void;
-  onDeleteSelectedTasks: () => void; // For multi-delete button
+  onDeleteSelectedTasks: () => void; 
 }
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = parseISO(dateString);
-    return format(date, 'MMM d, yyyy');
-  } catch (error) {
-    console.error("Error parsing date:", dateString, error);
-    return 'Invalid Date';
-  }
-};
-
-const formatDateTime = (dateString?: string, timeString?: string) => {
-  if (!dateString) return 'N/A';
-  let formattedString = formatDate(dateString);
-  if (timeString && timeString !== 'All day' && /^\d{2}:\d{2}$/.test(timeString)) {
-    formattedString += ` at ${timeString}`;
-  }
-  return formattedString;
-};
 
 export function PlantCareManagement({
   plant,
@@ -56,6 +58,7 @@ export function PlantCareManagement({
   onDeleteSelectedTasks
 }: PlantCareManagementProps) {
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
+  const { t } = useLanguage();
 
   const sortedTasks = useMemo(() => {
     if (!plant.careTasks) return [];
@@ -76,12 +79,7 @@ export function PlantCareManagement({
 
   const toggleManageMode = () => {
     setIsManagingCarePlan(prev => {
-      if (prev) { // Exiting manage mode
-        // Clear selection by calling onToggleTaskSelection with a non-existent ID
-        // or by having a dedicated clear function passed down.
-        // For now, assuming parent handles clearing selection if needed.
-        // Alternatively, if onToggleTaskSelection clears all if taskId is empty/specific value:
-        // onToggleTaskSelection(""); // Example: Signal to clear all
+      if (prev) { 
       }
       return !prev;
     });
@@ -91,25 +89,25 @@ export function PlantCareManagement({
   return (
     <div>
       <div className="flex justify-between items-center mb-3 pt-6 border-t">
-        <h3 className="font-semibold text-lg">Care Plan</h3>
+        <h3 className="font-semibold text-lg">{t('plantDetail.careManagement.sectionTitle')}</h3>
         <div className="flex items-center gap-2">
           {isManagingCarePlan && selectedTaskIds.size > 0 && (
             <Button
               variant="destructive"
               size="sm"
-              onClick={onDeleteSelectedTasks} // This should trigger the AlertDialog in parent
+              onClick={onDeleteSelectedTasks}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete ({selectedTaskIds.size})
+              {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
             </Button>
           )}
           <Button variant="outline" size="sm" onClick={toggleManageMode}>
             {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-            {isManagingCarePlan ? 'Done' : 'Manage'}
+            {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
           </Button>
           {isManagingCarePlan && (
             <Button variant="default" size="sm" onClick={onOpenAddTaskDialog}>
-              <PlusCircle className="h-4 w-4 mr-2" /> Add Task
+              <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
             </Button>
           )}
         </div>
@@ -137,7 +135,7 @@ export function PlantCareManagement({
                     <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => onToggleTaskSelection(task.id)}
-                        onClick={(e) => e.stopPropagation()} // Prevent card click from toggling if clicking checkbox directly
+                        onClick={(e) => e.stopPropagation()} 
                         aria-label={`Select task ${task.name}`}
                     />
                   </div>
@@ -156,7 +154,7 @@ export function PlantCareManagement({
                     </Badge>
                     {task.isPaused && (
                       <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
-                        Paused
+                        {t('plantDetail.careManagement.taskPausedBadge')}
                       </Badge>
                     )}
                   </div>
@@ -164,22 +162,22 @@ export function PlantCareManagement({
                     <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    Frequency: {task.frequency}
-                    {task.timeOfDay && ` | Time: ${task.timeOfDay}`}
+                    {t('plantDetail.careManagement.taskFrequency', {frequency: task.frequency})}
+                    {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDay', {time: task.timeOfDay})}`}
                     {task.isPaused ? (
-                      task.resumeDate ? ` | Resumes: ${formatDate(task.resumeDate)}` : ' | Paused'
+                      task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                     ) : (
-                      task.nextDueDate ? ` | Next: ${formatDateTime(task.nextDueDate, task.timeOfDay)}` : ''
+                      task.nextDueDate ? ` | ${formatDateTime(task.nextDueDate, task.timeOfDay, t)}` : ''
                     )}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   {isManagingCarePlan && !isSelected && ( 
                     <>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label="Edit Task">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label={t('common.edit')}>
                         <EditTaskIcon className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenDeleteTaskDialog(task.id);}} aria-label="Delete Task" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenDeleteTaskDialog(task.id);}} aria-label={t('common.delete')} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
@@ -190,17 +188,17 @@ export function PlantCareManagement({
                       size="sm"
                       onClick={() => onToggleTaskPause(task.id)}
                       disabled={loadingTaskId === task.id}
-                      className="w-28 text-xs" // Kept width for consistency, adjust if needed
+                      className="w-28 text-xs" 
                     >
                       {loadingTaskId === task.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : task.isPaused ? (
                         <>
-                          <Play className="mr-1.5 h-3.5 w-3.5" /> Resume
+                          <Play className="mr-1.5 h-3.5 w-3.5" /> {t('common.resume')}
                         </>
                       ) : (
                         <>
-                          <Pause className="mr-1.5 h-3.5 w-3.5" /> Pause
+                          <Pause className="mr-1.5 h-3.5 w-3.5" /> {t('common.pause')}
                         </>
                       )}
                     </Button>
@@ -212,16 +210,18 @@ export function PlantCareManagement({
         </div>
       ) : (
         <p className="text-muted-foreground text-sm text-center py-4">
-          {isManagingCarePlan ? "No care tasks defined yet. Click 'Add Task' to get started." : "No care tasks defined yet. Click 'Manage' to add tasks."}
+          {isManagingCarePlan ? t('plantDetail.careManagement.noTasksManage') : t('plantDetail.careManagement.noTasksNormal')}
         </p>
       )}
       {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
         <WeeklyCareCalendarView
           tasks={plant.careTasks}
           onEditTask={onOpenEditTaskDialog}
-          onDeleteTask={onOpenDeleteTaskDialog} // Changed to onOpenDeleteTaskDialog to match parent
+          onDeleteTask={onOpenDeleteTaskDialog}
         />
       )}
     </div>
   );
 }
+
+    

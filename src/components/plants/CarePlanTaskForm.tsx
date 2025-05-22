@@ -13,12 +13,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { PlusCircle, Check, ChevronsUpDown, Edit2, CalendarIcon } from 'lucide-react';
+import { PlusCircle, Check, ChevronsUpDown, Edit2, CalendarIcon, Loader2 } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
+
 
 const taskFormSchema = z.object({
   name: z.string().min(1, { message: "Task name is required." }),
@@ -57,7 +59,7 @@ const taskFormSchema = z.object({
 export type OnSaveTaskData = {
     name: string;
     description?: string;
-    startDate: string; // This will be used as the nextDueDate
+    startDate: string; 
     frequency: string;
     timeOfDay: string;
     level: 'basic' | 'advanced';
@@ -74,15 +76,15 @@ interface CarePlanTaskFormProps {
 }
 
 const predefinedTasks = [
-    { value: "watering", label: "Watering" },
-    { value: "lighting_adjustment", label: "Lighting Adjustment" },
-    { value: "fertilizing", label: "Fertilizing" },
-    { value: "pruning", label: "Pruning" },
-    { value: "repotting", label: "Repotting" },
-    { value: "pest_check", label: "Pest Check" },
-    { value: "soil_aeration", label: "Soil Aeration" },
-    { value: "dusting_leaves", label: "Dusting Leaves" },
-    { value: "rotate_pot", label: "Rotate Pot" },
+    { value: "watering", labelKey: "carePlanTaskForm.taskTypes.watering" },
+    { value: "lighting_adjustment", labelKey: "carePlanTaskForm.taskTypes.lighting_adjustment" },
+    { value: "fertilizing", labelKey: "carePlanTaskForm.taskTypes.fertilizing" },
+    { value: "pruning", labelKey: "carePlanTaskForm.taskTypes.pruning" },
+    { value: "repotting", labelKey: "carePlanTaskForm.taskTypes.repotting" },
+    { value: "pest_check", labelKey: "carePlanTaskForm.taskTypes.pest_check" },
+    { value: "soil_aeration", labelKey: "carePlanTaskForm.taskTypes.soil_aeration" },
+    { value: "dusting_leaves", labelKey: "carePlanTaskForm.taskTypes.dusting_leaves" },
+    { value: "rotate_pot", labelKey: "carePlanTaskForm.taskTypes.rotate_pot" },
 ];
 
 export function CarePlanTaskForm({ 
@@ -90,10 +92,11 @@ export function CarePlanTaskForm({
   onSave, 
   onCancel, 
   isLoading,
-  formTitle = "Add New Care Plan Task",
+  formTitle,
   formDescription, 
   submitButtonText 
 }: CarePlanTaskFormProps) {
+  const { t } = useLanguage();
   const form = useForm<CarePlanTaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: initialData || {
@@ -132,29 +135,29 @@ export function CarePlanTaskForm({
   const watchedFrequencyMode = form.watch('frequencyMode');
   const watchedTimeOfDayOption = form.watch('timeOfDayOption');
 
-  const actualSubmitButtonText = submitButtonText || (initialData ? "Update Task" : "Add Task");
+  const actualSubmitButtonText = submitButtonText || (initialData ? t('carePlanTaskForm.updateButton') : t('carePlanTaskForm.addButton'));
   const SubmitIcon = initialData ? Edit2 : PlusCircle;
 
 
   const onSubmit = (data: CarePlanTaskFormData) => {
     let frequencyString = '';
     switch (data.frequencyMode) {
-        case 'adhoc': frequencyString = 'Ad-hoc'; break;
-        case 'daily': frequencyString = 'Daily'; break;
-        case 'weekly': frequencyString = 'Weekly'; break;
-        case 'monthly': frequencyString = 'Monthly'; break;
-        case 'yearly': frequencyString = 'Yearly'; break;
-        case 'every_x_days': frequencyString = `Every ${data.frequencyValue} Days`; break;
-        case 'every_x_weeks': frequencyString = `Every ${data.frequencyValue} Weeks`; break;
-        case 'every_x_months': frequencyString = `Every ${data.frequencyValue} Months`; break;
+        case 'adhoc': frequencyString = t('carePlanTaskForm.frequencyOptions.adhoc'); break;
+        case 'daily': frequencyString = t('carePlanTaskForm.frequencyOptions.daily'); break;
+        case 'weekly': frequencyString = t('carePlanTaskForm.frequencyOptions.weekly'); break;
+        case 'monthly': frequencyString = t('carePlanTaskForm.frequencyOptions.monthly'); break;
+        case 'yearly': frequencyString = t('carePlanTaskForm.frequencyOptions.yearly'); break;
+        case 'every_x_days': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', {count: data.frequencyValue}); break;
+        case 'every_x_weeks': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', {count: data.frequencyValue}); break;
+        case 'every_x_months': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', {count: data.frequencyValue}); break;
     }
 
-    const timeOfDayString = data.timeOfDayOption === 'all_day' ? 'All day' : data.specificTime!;
+    const timeOfDayString = data.timeOfDayOption === 'all_day' ? t('carePlanTaskForm.timeOfDayOptionAllDay') : data.specificTime!;
 
     onSave({
         name: data.name,
         description: data.description, 
-        startDate: data.startDate, // Pass the selected start date
+        startDate: data.startDate, 
         frequency: frequencyString,
         timeOfDay: timeOfDayString,
         level: data.level,
@@ -162,14 +165,14 @@ export function CarePlanTaskForm({
   };
 
   const frequencyOptions = [
-    { value: 'adhoc', label: 'Ad-hoc (As needed)' },
-    { value: 'daily', label: 'Daily' },
-    { value: 'every_x_days', label: 'Every X Days' },
-    { value: 'weekly', label: 'Weekly' },
-    { value: 'every_x_weeks', label: 'Every X Weeks' },
-    { value: 'monthly', label: 'Monthly' },
-    { value: 'every_x_months', label: 'Every X Months' },
-    { value: 'yearly', label: 'Yearly' },
+    { value: 'adhoc', labelKey: 'carePlanTaskForm.frequencyOptions.adhoc' },
+    { value: 'daily', labelKey: 'carePlanTaskForm.frequencyOptions.daily' },
+    { value: 'every_x_days', labelKey: 'carePlanTaskForm.frequencyOptions.every_x_days' },
+    { value: 'weekly', labelKey: 'carePlanTaskForm.frequencyOptions.weekly' },
+    { value: 'every_x_weeks', labelKey: 'carePlanTaskForm.frequencyOptions.every_x_weeks' },
+    { value: 'monthly', labelKey: 'carePlanTaskForm.frequencyOptions.monthly' },
+    { value: 'every_x_months', labelKey: 'carePlanTaskForm.frequencyOptions.every_x_months' },
+    { value: 'yearly', labelKey: 'carePlanTaskForm.frequencyOptions.yearly' },
   ];
 
   return (
@@ -180,7 +183,7 @@ export function CarePlanTaskForm({
           name="name"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Task Name <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t('carePlanTaskForm.taskNameLabel')} <span className="text-destructive">*</span></FormLabel>
               <Popover open={comboboxOpen} onOpenChange={(isOpen) => {
                   setComboboxOpen(isOpen);
                   if (isOpen) {
@@ -195,7 +198,7 @@ export function CarePlanTaskForm({
                       aria-expanded={comboboxOpen}
                       className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
-                      {field.value ? predefinedTasks.find(task => task.label.toLowerCase() === field.value.toLowerCase())?.label || field.value : "Select or type task..."}
+                      {field.value ? predefinedTasks.find(task => t(task.labelKey).toLowerCase() === field.value.toLowerCase())?.[t(field.value)] || field.value : t('carePlanTaskForm.taskNamePlaceholder')}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>
@@ -203,7 +206,7 @@ export function CarePlanTaskForm({
                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                   <Command>
                     <CommandInput
-                      placeholder="Search or type custom..."
+                      placeholder={t('carePlanTaskForm.taskNamePlaceholder')}
                       value={commandInputValue}
                       onValueChange={setCommandInputValue}
                       onKeyDown={(e) => {
@@ -217,25 +220,25 @@ export function CarePlanTaskForm({
                       }}
                     />
                     <CommandList>
-                        <CommandEmpty>No task found. Type custom name and press Enter.</CommandEmpty>
+                        <CommandEmpty>{t('carePlanTaskForm.taskNameCommandEmpty')}</CommandEmpty>
                         <CommandGroup>
                         {predefinedTasks.map((task) => (
                             <CommandItem
                             key={task.value}
-                            value={task.label}
+                            value={t(task.labelKey)}
                             onSelect={() => {
-                                form.setValue('name', task.label, { shouldValidate: true });
-                                setCommandInputValue(task.label); 
+                                form.setValue('name', t(task.labelKey), { shouldValidate: true });
+                                setCommandInputValue(t(task.labelKey)); 
                                 setComboboxOpen(false);
                             }}
                             >
                             <Check
                                 className={cn(
                                 "mr-2 h-4 w-4",
-                                (form.getValues('name') || '').toLowerCase() === task.label.toLowerCase() ? "opacity-100" : "opacity-0"
+                                (form.getValues('name') || '').toLowerCase() === t(task.labelKey).toLowerCase() ? "opacity-100" : "opacity-0"
                                 )}
                             />
-                            {task.label}
+                            {t(task.labelKey)}
                             </CommandItem>
                         ))}
                         </CommandGroup>
@@ -243,7 +246,7 @@ export function CarePlanTaskForm({
                   </Command>
                 </PopoverContent>
               </Popover>
-              <FormDescription>What care task is this? Type custom or select from list.</FormDescription>
+              <FormDescription>{t('carePlanTaskForm.taskNameDescription')}</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -254,9 +257,9 @@ export function CarePlanTaskForm({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Description (Optional)</FormLabel>
+              <FormLabel>{t('carePlanTaskForm.descriptionLabel')}</FormLabel>
               <FormControl>
-                <Textarea placeholder="e.g., Use distilled water, ensure good drainage." {...field} value={field.value ?? ''} />
+                <Textarea placeholder={t('carePlanTaskForm.descriptionPlaceholder')} {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -268,7 +271,7 @@ export function CarePlanTaskForm({
           name="startDate"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel>Start Date <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t('carePlanTaskForm.startDateLabel')} <span className="text-destructive">*</span></FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
@@ -282,7 +285,7 @@ export function CarePlanTaskForm({
                       {field.value ? (
                         format(parseISO(field.value), "PPP")
                       ) : (
-                        <span>Pick a date</span>
+                        <span>{t('carePlanTaskForm.startDatePlaceholder')}</span>
                       )}
                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                     </Button>
@@ -298,7 +301,7 @@ export function CarePlanTaskForm({
                 </PopoverContent>
               </Popover>
               <FormDescription>
-                The date this task will first be due.
+                {t('carePlanTaskForm.startDateDescription')}
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -310,16 +313,16 @@ export function CarePlanTaskForm({
           name="frequencyMode"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Frequency <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t('carePlanTaskForm.frequencyLabel')} <span className="text-destructive">*</span></FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select frequency" />
+                    <SelectValue placeholder={t('carePlanTaskForm.frequencyPlaceholder')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   {frequencyOptions.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>{t(opt.labelKey)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -334,11 +337,11 @@ export function CarePlanTaskForm({
             name="frequencyValue"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Every (Number) <span className="text-destructive">*</span></FormLabel>
+                <FormLabel>{t('carePlanTaskForm.frequencyValueLabel')} <span className="text-destructive">*</span></FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
-                    placeholder="e.g., 3" 
+                    placeholder={t('carePlanTaskForm.frequencyValuePlaceholder')}
                     {...field} 
                     value={field.value ?? ''} 
                     onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} 
@@ -355,7 +358,7 @@ export function CarePlanTaskForm({
           name="timeOfDayOption"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Time of Day <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t('carePlanTaskForm.timeOfDayLabel')} <span className="text-destructive">*</span></FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -366,13 +369,13 @@ export function CarePlanTaskForm({
                     <FormControl>
                       <RadioGroupItem value="all_day" />
                     </FormControl>
-                    <FormLabel className="font-normal">All Day</FormLabel>
+                    <FormLabel className="font-normal">{t('carePlanTaskForm.timeOfDayOptionAllDay')}</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
                       <RadioGroupItem value="specific_time" />
                     </FormControl>
-                    <FormLabel className="font-normal">Specific Time</FormLabel>
+                    <FormLabel className="font-normal">{t('carePlanTaskForm.timeOfDayOptionSpecificTime')}</FormLabel>
                   </FormItem>
                 </RadioGroup>
               </FormControl>
@@ -387,9 +390,9 @@ export function CarePlanTaskForm({
                 name="specificTime"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Set Time (HH:MM) <span className="text-destructive">*</span></FormLabel>
+                    <FormLabel>{t('carePlanTaskForm.specificTimeLabel')} <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                        <Input type="time" placeholder="HH:MM" {...field} value={field.value ?? ''} />
+                        <Input type="time" placeholder={t('carePlanTaskForm.specificTimePlaceholder')} {...field} value={field.value ?? ''} />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -402,16 +405,16 @@ export function CarePlanTaskForm({
           name="level"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Task Level <span className="text-destructive">*</span></FormLabel>
+              <FormLabel>{t('carePlanTaskForm.levelLabel')} <span className="text-destructive">*</span></FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select task level" />
+                    <SelectValue placeholder={t('carePlanTaskForm.levelPlaceholder')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="basic">Basic</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
+                  <SelectItem value="basic">{t('common.basic')}</SelectItem>
+                  <SelectItem value="advanced">{t('common.advanced')}</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -421,13 +424,16 @@ export function CarePlanTaskForm({
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" disabled={isLoading}>
-            {isLoading ? 'Saving...' : <><SubmitIcon className="mr-2 h-4 w-4" /> {actualSubmitButtonText}</>}
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SubmitIcon className="mr-2 h-4 w-4" />}
+            {isLoading ? t('carePlanTaskForm.savingButton') : actualSubmitButtonText}
           </Button>
         </div>
       </form>
     </Form>
   );
 }
+
+    

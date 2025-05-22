@@ -26,6 +26,7 @@ import {
   isToday,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
@@ -40,20 +41,20 @@ const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
     const [hours, minutes] = timeOfDay.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
   } else {
-    newDate.setHours(0, 0, 0, 0); // Default to start of the day for 'All day' or invalid time
+    newDate.setHours(0, 0, 0, 0); 
   }
   return newDate;
 };
 
 const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 1): Date => {
   const newDate = new Date(date);
-  if (frequency.toLowerCase() === 'ad-hoc') { // Ad-hoc tasks don't recur based on adding frequency.
-    return newDate; // Return the same date, recurrence is handled by nextDueDate only.
+  if (frequency.toLowerCase() === 'ad-hoc') { 
+    return newDate; 
   }
-  if (frequency === 'Daily') return addDays(newDate, 1 * multiplier);
-  if (frequency === 'Weekly') return addWeeks(newDate, 1 * multiplier);
-  if (frequency === 'Monthly') return addMonths(newDate, 1 * multiplier);
-  if (frequency === 'Yearly') return addYears(newDate, 1 * multiplier);
+  if (frequency === 'Daily' || frequency.toLowerCase() === 'daily') return addDays(newDate, 1 * multiplier);
+  if (frequency === 'Weekly' || frequency.toLowerCase() === 'weekly') return addWeeks(newDate, 1 * multiplier);
+  if (frequency === 'Monthly' || frequency.toLowerCase() === 'monthly') return addMonths(newDate, 1 * multiplier);
+  if (frequency === 'Yearly' || frequency.toLowerCase() === 'yearly') return addYears(newDate, 1 * multiplier);
 
   const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
   if (everyXMatch) {
@@ -63,7 +64,7 @@ const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 
     if (unit.toLowerCase() === 'weeks') return addWeeks(newDate, value * multiplier);
     if (unit.toLowerCase() === 'months') return addMonths(newDate, value * multiplier);
   }
-  // Fallback for unknown frequencies if trying to iterate
+  
   if (multiplier !== 1) return new Date(multiplier > 0 ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER);
   return newDate;
 };
@@ -75,11 +76,12 @@ interface WeeklyCareCalendarViewProps {
 }
 
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
+  const { t } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
 
-  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
+  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; 
 
   const currentWeekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
   const currentWeekEnd = useMemo(() => endOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
@@ -93,7 +95,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         return date >= parseISO(task.resumeDate);
       } catch { return false; }
     }
-    return false; // Paused indefinitely
+    return false; 
   };
 
   useEffect(() => {
@@ -115,17 +117,17 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       seedDate = setTimeToTaskTime(seedDate, task.timeOfDay);
 
 
-      if (task.frequency.toLowerCase() === 'ad-hoc') {
+      if ((task.frequency || '').toLowerCase() === 'ad-hoc') {
         if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
           occurrences.push({ originalTask: task, occurrenceDate: seedDate });
         }
         return occurrences;
       }
 
-      // Check forward from seedDate
+      
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      while (currentOccurrenceForward <= rangeEndDate && safetyForward < 100) { // Limit iterations
+      while (currentOccurrenceForward <= rangeEndDate && safetyForward < 100) { 
         if (currentOccurrenceForward >= rangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceForward) });
         }
@@ -134,10 +136,10 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         safetyForward++;
       }
 
-      // Check backward from seedDate (but not before seedDate itself if seedDate is after rangeStart)
+      
       let currentOccurrenceBackward = addFrequencyHelper(new Date(seedDate), task.frequency, -1);
       let safetyBackward = 0;
-      while (currentOccurrenceBackward >= rangeStartDate && safetyBackward < 100) { // Limit iterations
+      while (currentOccurrenceBackward >= rangeStartDate && safetyBackward < 100) { 
          if (currentOccurrenceBackward <= rangeEndDate && isActive(task, currentOccurrenceBackward)) {
            occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceBackward) });
          }
@@ -146,7 +148,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         safetyBackward++;
       }
       
-      // Ensure seed date is added if it's in range and active, and not already picked up by forward check
+      
       if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
         if (!occurrences.find(o => o.occurrenceDate.getTime() === seedDate.getTime())) {
            occurrences.push({ originalTask: task, occurrenceDate: new Date(seedDate) });
@@ -193,10 +195,11 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
       }
     });
 
-    if (uniqueHoursWithTasks.size === 0 && tasksThisWeek.length > 0) { // Show default if filter on but no timed tasks
-        // This might be too noisy. If no timed tasks, and filter is on, maybe show nothing for hours.
-        // return DEFAULT_HOURS; // Or return empty to hide hour rows
+    if (uniqueHoursWithTasks.size === 0 && tasksThisWeek.length > 0 && !tasksThisWeek.some(o => o.originalTask.timeOfDay && o.originalTask.timeOfDay.toLowerCase() !== 'all day')) {
         return [];
+    }
+    if (uniqueHoursWithTasks.size === 0 && tasksThisWeek.some(o => o.originalTask.timeOfDay && o.originalTask.timeOfDay.toLowerCase() !== 'all day')) {
+      return []; 
     }
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
@@ -208,16 +211,16 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
   return (
     <Card className="mt-6 shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
-        <CardTitle className="text-lg font-medium">Weekly Care Schedule</CardTitle>
+        <CardTitle className="text-lg font-medium">{t('weeklyCareCalendar.title')}</CardTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label="Previous week">
+          <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label={t('weeklyCareCalendar.previousWeekAria')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium w-auto text-center tabular-nums px-2">
             {format(currentWeekStart, 'MMM d')} - {format(currentWeekEnd, 'MMM d, yyyy')}
-            {isCurrentActualWeek && <span className="text-primary font-semibold"> (Current)</span>}
+            {isCurrentActualWeek && <span className="text-primary font-semibold"> {t('weeklyCareCalendar.currentWeekIndicator')}</span>}
           </span>
-          <Button variant="outline" size="icon" onClick={goToNextWeek} aria-label="Next week">
+          <Button variant="outline" size="icon" onClick={goToNextWeek} aria-label={t('weeklyCareCalendar.nextWeekAria')}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -230,20 +233,20 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             onCheckedChange={(checked) => setShowOnlyHoursWithTasks(Boolean(checked))}
           />
           <Label htmlFor="show-only-hours-with-tasks" className="text-xs font-normal">
-            Show only time of day with tasks
+            {t('weeklyCareCalendar.checkboxLabel')}
           </Label>
         </div>
 
         <div className="grid grid-cols-[auto_repeat(7,minmax(100px,1fr))] border-t">
-          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
+          <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('weeklyCareCalendar.timeColumnHeader')}</div>
           {daysInWeek.map(day => {
             const dayOfWeek = getDay(day);
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             const today = isToday(day);
             const dayNameClassName = cn(
               "font-semibold",
-              isWeekend ? "dark:text-primary/70 text-primary/90" : "text-foreground",
-              today ? "text-primary dark:text-primary" : ""
+              isWeekend ? "text-primary" : "text-foreground",
+              today ? "text-primary" : ""
             );
             return (
               <div
@@ -294,7 +297,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                             occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border shadow-sm"
                           )}
                           onClick={() => onEditTask(occurrence.originalTask)}
-                          title={`${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm')}) - Edit`}
+                          title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm')})`}
                         >
                            <span className="font-semibold">{occurrence.originalTask.name}</span>
                             <Button
@@ -302,9 +305,9 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               size="icon"
                               className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
-                              aria-label="Delete task"
+                              aria-label={t('weeklyCareCalendar.taskDeleteAria')}
                             >
-                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive' : 'text-destructive')} />
+                              <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
                             </Button>
                         </div>
                       ))}
@@ -315,7 +318,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             );
           })}
 
-          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-14">All Day</div>
+          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-14">{t('weeklyCareCalendar.allDayLabel')}</div>
           {daysInWeek.map(day => {
              const allDayTasksForDay = getTasksForDay(day).filter(occurrence => {
                 const taskTimeOfDay = occurrence.originalTask.timeOfDay;
@@ -337,7 +340,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border shadow-sm"
                             )}
                             onClick={() => onEditTask(occurrence.originalTask)}
-                            title={`${occurrence.originalTask.name} (All day) - Edit`}
+                            title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${t('weeklyCareCalendar.allDayLabel')})`}
                         >
                            <span className="font-semibold">{occurrence.originalTask.name}</span>
                            <Button
@@ -345,9 +348,9 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               size="icon"
                               className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                               onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
-                              aria-label="Delete task"
+                              aria-label={t('weeklyCareCalendar.taskDeleteAria')}
                             >
-                              <Trash2 className={cn("h-2.5 w-2.5", occurrence.originalTask.level === 'advanced' ? 'text-destructive' : 'text-destructive')} />
+                              <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
                             </Button>
                         </div>
                     ))}
@@ -359,3 +362,5 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
+
+    

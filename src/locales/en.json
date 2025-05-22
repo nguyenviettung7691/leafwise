@@ -195,6 +195,7 @@
     "resetPageButton": "Reset Diagnosis Page"
   },
   "plantDetail": {
+    "backToMyPlants": "Back to My Plants",
     "headerCard": {
       "close": "Close",
       "deleteConfirmTitle": "Are you sure?",
@@ -205,14 +206,201 @@
       "lastCared": "Last Cared",
       "editPlantAriaLabel": "Edit Plant",
       "deletePlantAriaLabel": "Delete Plant",
-      "fullSizePhotoTitle": "{{plantName}} - Full Size"
+      "fullSizePhotoTitle": "{{plantName}} - Full Size Photo"
     },
     "infoGrid": {
       "ageEstimate": "Age Estimate",
       "createdDate": "Created Date",
       "location": "Location",
       "family": "Family",
-      "notes": "Notes"
+      "notes": "Notes",
+      "unknown": "Unknown",
+      "notApplicable": "N/A"
+    },
+    "healthConditions": {
+      "healthy": "Healthy",
+      "needs_attention": "Needs Attention",
+      "sick": "Sick",
+      "unknown": "Unknown"
+    },
+    "careManagement": {
+      "sectionTitle": "Care Plan",
+      "manageButton": "Manage",
+      "doneButton": "Done",
+      "addTaskButton": "Add Task",
+      "deleteSelectedButton": "Delete ({{count}})",
+      "taskPausedBadge": "Paused",
+      "taskResumesDate": "Resumes: {{date}}",
+      "taskNextDueDate": "Next: {{date}}",
+      "taskNextDueDateTime": "Next: {{date}} at {{time}}",
+      "taskFrequency": "Frequency: {{frequency}}",
+      "taskTimeOfDay": "Time: {{time}}",
+      "noTasksManage": "No care tasks defined yet. Click 'Manage' to add tasks.",
+      "noTasksNormal": "No care tasks defined yet."
+    },
+    "growthTracker": {
+      "sectionTitle": "Growth Monitoring",
+      "addPhotoDiagnoseButton": "Add Photo & Diagnose",
+      "diagnosingButton": "Diagnosing...",
+      "manageButton": "Manage",
+      "doneButton": "Done",
+      "deleteSelectedButton": "Delete ({{count}})",
+      "photoGalleryTitle": "Photo Gallery",
+      "primaryPhotoTooltip": "Primary Photo",
+      "healthTrendTitle": "Health Trend",
+      "viewDetails": "View Details",
+      "noPhotos": "No photos recorded for growth monitoring yet.",
+      "editPhotoDetailsAriaLabel": "Edit photo details",
+      "selectPhotoAriaLabel": "Select photo from {{date}}"
+    },
+    "newPhotoDialog": {
+      "title": "New Photo Analysis & Care Plan Review",
+      "description": "Review the latest diagnosis, health comparison, and care plan suggestions for your {{plantName}}.",
+      "latestDiagnosisTitle": "Latest Diagnosis",
+      "plantLabel": "Plant:",
+      "statusLabel": "Status:",
+      "diagnosisLabel": "Diagnosis:",
+      "healthComparisonTitle": "Health Comparison",
+      "updateHealthAlertTitle": "Suggestion: Update Overall Health",
+      "updateHealthAlertDescription": "The AI suggests updating the plant's overall health status to {{suggestedHealth}}.",
+      "updateHealthButton": "Update Health",
+      "keepCurrentButton": "Keep Current",
+      "carePlanReviewTitle": "Care Plan Update Suggestions",
+      "loadingCarePlanReview": "Reviewing care plan...",
+      "taskModificationSuggestion": "For task '{{taskName}}': AI suggests to {{action}}.",
+      "taskModificationReason": "Reason: {{reasoning}}",
+      "taskModificationNewName": "New Name: {{name}}",
+      "taskModificationNewDesc": "New Desc: {{description}}",
+      "taskModificationNewFreq": "New Freq: {{frequency}}",
+      "taskModificationNewTime": "New Time: {{time}}",
+      "taskModificationNewLevel": "New Level: {{level}}",
+      "suggestedNewTasksTitle": "Suggested New Tasks:",
+      "noCarePlanChanges": "No specific changes suggested for the care plan tasks based on this diagnosis.",
+      "applyChangesButton": "Apply Suggested Changes",
+      "keepCurrentPlanButton": "Keep Current Plan",
+      "addPhotoToJournalButton": "Add Diagnosed Photo to Journal"
+    },
+    "photoDetailsDialog": {
+      "title": "Photo Details - {{date}}",
+      "dateLabel": "Date:",
+      "healthAtDiagnosisLabel": "Health at Diagnosis:",
+      "diagnosisNotesLabel": "Diagnosis Notes:",
+      "generalNotesLabel": "General Notes:",
+      "setAsPrimaryButton": "Set as Primary Photo"
+    },
+    "taskFormDialog": {
+      "addTitle": "Add New Care Plan Task",
+      "addDescription": "Manually add a new care plan task for {{plantName}}.",
+      "editTitle": "Edit Care Plan Task",
+      "editDescription": "Update the details for this care task for {{plantName}}."
+    },
+    "deleteTaskDialog": {
+      "title": "Are you sure?",
+      "description": "This action cannot be undone. This will permanently delete the selected {{count}} task(s).",
+      "deleteButton": "Delete Task(s)"
+    },
+    "deletePhotosDialog": {
+      "title": "Are you sure?",
+      "description": "This action cannot be undone. This will permanently delete the selected {{count}} photo(s). Associated diagnosis data will also be removed.",
+      "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest remaining photo will be used as the new primary photo.",
+      "deleteButton": "Delete Photo(s)"
+    },
+    "editPhotoDialog": {
+      "title": "Edit Photo Details",
+      "description": "Update the information associated with this photo.",
+      "dateTakenLabel": "Date Taken",
+      "healthConditionLabel": "Health Condition",
+      "diagnosisNotesLabel": "Diagnosis Notes",
+      "diagnosisNotesPlaceholder": "AI diagnosis notes...",
+      "generalNotesLabel": "General Notes (Optional)",
+      "generalNotesPlaceholder": "Your personal observations...",
+      "saveChangesButton": "Save Changes",
+      "pickDate": "Pick a date"
+    },
+    "toasts": {
+      "plantHealthUpdated": "Plant Health Updated",
+      "plantHealthUpdatedDesc": "Overall health status changed to {{healthStatus}}.",
+      "photoAdded": "Photo Added",
+      "photoAddedDesc": "New photo and diagnosis snapshot added to Growth Monitoring.",
+      "carePlanUpdated": "Care Plan Updated",
+      "carePlanUpdatedDesc": "Suggested changes have been applied to the care plan.",
+      "carePlanUnchanged": "Care Plan Unchanged",
+      "carePlanUnchangedDesc": "No changes were applied to the care plan based on AI suggestions.",
+      "primaryPhotoUpdated": "Primary Photo Updated",
+      "primaryPhotoUpdatedDesc": "The plant's primary photo has been changed.",
+      "taskUpdated": "Task Updated",
+      "taskUpdatedDesc": "Task \"{{taskName}}\" has been updated.",
+      "taskAdded": "Task Added",
+      "taskAddedDesc": "New task \"{{taskName}}\" added to {{plantName}}.",
+      "tasksDeleted": "Task(s) Deleted",
+      "tasksDeletedDesc": "Task(s) \"{{taskNames}}\" deleted.",
+      "photosDeleted": "Photos Deleted",
+      "photosDeletedDesc": "{{count}} photo(s) deleted.",
+      "photoDetailsSaved": "Photo Details Updated",
+      "photoDetailsSavedDesc": "The photo's information has been saved.",
+      "imageTooLarge": "Image Too Large",
+      "imageTooLargeDesc": "Please select an image file smaller than 4MB.",
+      "invalidFileType": "Invalid File Type",
+      "invalidFileTypeDesc": "Please upload an image.",
+      "notAPlant": "Not a Plant?",
+      "notAPlantDesc": "AI could not identify a plant in the new photo.",
+      "errorDiagnosisOrPlan": "An error occurred during diagnosis or care plan review.",
+      "taskPaused": "Task \"{{taskName}}\" has been paused.",
+      "taskResumed": "Task \"{{taskName}}\" has been resumed."
+    },
+    "footer": {
+      "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"
     }
+  },
+  "carePlanTaskForm": {
+    "taskNameLabel": "Task Name",
+    "taskNameDescription": "What care task is this? Type custom or select from list.",
+    "taskNamePlaceholder": "Select or type task...",
+    "taskNameCommandEmpty": "No task found. Type custom name and press Enter.",
+    "descriptionLabel": "Description (Optional)",
+    "descriptionPlaceholder": "e.g., Use distilled water, ensure good drainage.",
+    "startDateLabel": "Start Date",
+    "startDateDescription": "The date this task will first be due.",
+    "startDatePlaceholder": "Pick a date",
+    "frequencyLabel": "Frequency",
+    "frequencyPlaceholder": "Select frequency",
+    "frequencyValueLabel": "Every (Number)",
+    "frequencyValuePlaceholder": "e.g., 3",
+    "timeOfDayLabel": "Time of Day",
+    "timeOfDayOptionAllDay": "All Day",
+    "timeOfDayOptionSpecificTime": "Specific Time",
+    "specificTimeLabel": "Set Time (HH:MM)",
+    "specificTimePlaceholder": "HH:MM",
+    "levelLabel": "Task Level",
+    "levelPlaceholder": "Select task level",
+    "updateButton": "Update Task",
+    "addButton": "Add Task",
+    "savingButton": "Saving...",
+    "frequencyOptions": {
+      "adhoc": "Ad-hoc (As needed)",
+      "daily": "Daily",
+      "every_x_days": "Every X Days",
+      "weekly": "Weekly",
+      "every_x_weeks": "Every X Weeks",
+      "monthly": "Monthly",
+      "every_x_months": "Every X Months",
+      "yearly": "Yearly"
+    }
+  },
+  "weeklyCareCalendar": {
+    "title": "Weekly Care Schedule",
+    "checkboxLabel": "Show only time of day with tasks",
+    "previousWeekAria": "Previous week",
+    "nextWeekAria": "Next week",
+    "timeColumnHeader": "Time",
+    "allDayLabel": "All day",
+    "currentWeekIndicator": "(Current)",
+    "taskTooltipTitle": "{{plantName}}: {{taskName}}",
+    "taskTooltipTime": "Time: {{time}}",
+    "taskTooltipDesc": "Desc: {{description}}",
+    "taskEditTitle": "Edit",
+    "taskDeleteAria": "Delete task"
   }
 }
+
+    

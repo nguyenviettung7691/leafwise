@@ -195,6 +195,7 @@
     "resetPageButton": "[VI] Reset Diagnosis Page"
   },
   "plantDetail": {
+    "backToMyPlants": "[VI] Back to My Plants",
     "headerCard": {
       "close": "[VI] Close",
       "deleteConfirmTitle": "[VI] Are you sure?",
@@ -205,14 +206,201 @@
       "lastCared": "[VI] Last Cared",
       "editPlantAriaLabel": "[VI] Edit Plant",
       "deletePlantAriaLabel": "[VI] Delete Plant",
-      "fullSizePhotoTitle": "[VI] {{plantName}} - Full Size"
+      "fullSizePhotoTitle": "[VI] {{plantName}} - Full Size Photo"
     },
     "infoGrid": {
       "ageEstimate": "[VI] Age Estimate",
       "createdDate": "[VI] Created Date",
       "location": "[VI] Location",
       "family": "[VI] Family",
-      "notes": "[VI] Notes"
+      "notes": "[VI] Notes",
+      "unknown": "[VI] Unknown",
+      "notApplicable": "[VI] N/A"
+    },
+    "healthConditions": {
+      "healthy": "[VI] Healthy",
+      "needs_attention": "[VI] Needs Attention",
+      "sick": "[VI] Sick",
+      "unknown": "[VI] Unknown"
+    },
+    "careManagement": {
+      "sectionTitle": "[VI] Care Plan",
+      "manageButton": "[VI] Manage",
+      "doneButton": "[VI] Done",
+      "addTaskButton": "[VI] Add Task",
+      "deleteSelectedButton": "[VI] Delete ({{count}})",
+      "taskPausedBadge": "[VI] Paused",
+      "taskResumesDate": "[VI] Resumes: {{date}}",
+      "taskNextDueDate": "[VI] Next: {{date}}",
+      "taskNextDueDateTime": "[VI] Next: {{date}} at {{time}}",
+      "taskFrequency": "[VI] Frequency: {{frequency}}",
+      "taskTimeOfDay": "[VI] Time: {{time}}",
+      "noTasksManage": "[VI] No care tasks defined yet. Click 'Manage' to add tasks.",
+      "noTasksNormal": "[VI] No care tasks defined yet."
+    },
+    "growthTracker": {
+      "sectionTitle": "[VI] Growth Monitoring",
+      "addPhotoDiagnoseButton": "[VI] Add Photo & Diagnose",
+      "diagnosingButton": "[VI] Diagnosing...",
+      "manageButton": "[VI] Manage",
+      "doneButton": "[VI] Done",
+      "deleteSelectedButton": "[VI] Delete ({{count}})",
+      "photoGalleryTitle": "[VI] Photo Gallery",
+      "primaryPhotoTooltip": "[VI] Primary Photo",
+      "healthTrendTitle": "[VI] Health Trend",
+      "viewDetails": "[VI] View Details",
+      "noPhotos": "[VI] No photos recorded for growth monitoring yet.",
+      "editPhotoDetailsAriaLabel": "[VI] Edit photo details",
+      "selectPhotoAriaLabel": "[VI] Select photo from {{date}}"
+    },
+    "newPhotoDialog": {
+      "title": "[VI] New Photo Analysis & Care Plan Review",
+      "description": "[VI] Review the latest diagnosis, health comparison, and care plan suggestions for your {{plantName}}.",
+      "latestDiagnosisTitle": "[VI] Latest Diagnosis",
+      "plantLabel": "[VI] Plant:",
+      "statusLabel": "[VI] Status:",
+      "diagnosisLabel": "[VI] Diagnosis:",
+      "healthComparisonTitle": "[VI] Health Comparison",
+      "updateHealthAlertTitle": "[VI] Suggestion: Update Overall Health",
+      "updateHealthAlertDescription": "[VI] The AI suggests updating the plant's overall health status to {{suggestedHealth}}.",
+      "updateHealthButton": "[VI] Update Health",
+      "keepCurrentButton": "[VI] Keep Current",
+      "carePlanReviewTitle": "[VI] Care Plan Update Suggestions",
+      "loadingCarePlanReview": "[VI] Reviewing care plan...",
+      "taskModificationSuggestion": "[VI] For task '{{taskName}}': AI suggests to {{action}}.",
+      "taskModificationReason": "[VI] Reason: {{reasoning}}",
+      "taskModificationNewName": "[VI] New Name: {{name}}",
+      "taskModificationNewDesc": "[VI] New Desc: {{description}}",
+      "taskModificationNewFreq": "[VI] New Freq: {{frequency}}",
+      "taskModificationNewTime": "[VI] New Time: {{time}}",
+      "taskModificationNewLevel": "[VI] New Level: {{level}}",
+      "suggestedNewTasksTitle": "[VI] Suggested New Tasks:",
+      "noCarePlanChanges": "[VI] No specific changes suggested for the care plan tasks based on this diagnosis.",
+      "applyChangesButton": "[VI] Apply Suggested Changes",
+      "keepCurrentPlanButton": "[VI] Keep Current Plan",
+      "addPhotoToJournalButton": "[VI] Add Diagnosed Photo to Journal"
+    },
+    "photoDetailsDialog": {
+      "title": "[VI] Photo Details - {{date}}",
+      "dateLabel": "[VI] Date:",
+      "healthAtDiagnosisLabel": "[VI] Health at Diagnosis:",
+      "diagnosisNotesLabel": "[VI] Diagnosis Notes:",
+      "generalNotesLabel": "[VI] General Notes:",
+      "setAsPrimaryButton": "[VI] Set as Primary Photo"
+    },
+    "taskFormDialog": {
+      "addTitle": "[VI] Add New Care Plan Task",
+      "addDescription": "[VI] Manually add a new care plan task for {{plantName}}.",
+      "editTitle": "[VI] Edit Care Plan Task",
+      "editDescription": "[VI] Update the details for this care task for {{plantName}}."
+    },
+    "deleteTaskDialog": {
+      "title": "[VI] Are you sure?",
+      "description": "[VI] This action cannot be undone. This will permanently delete the selected {{count}} task(s).",
+      "deleteButton": "[VI] Delete Task(s)"
+    },
+    "deletePhotosDialog": {
+      "title": "[VI] Are you sure?",
+      "description": "[VI] This action cannot be undone. This will permanently delete the selected {{count}} photo(s). Associated diagnosis data will also be removed.",
+      "warningPrimaryDeleted": "[VI] Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest remaining photo will be used as the new primary photo.",
+      "deleteButton": "[VI] Delete Photo(s)"
+    },
+    "editPhotoDialog": {
+      "title": "[VI] Edit Photo Details",
+      "description": "[VI] Update the information associated with this photo.",
+      "dateTakenLabel": "[VI] Date Taken",
+      "healthConditionLabel": "[VI] Health Condition",
+      "diagnosisNotesLabel": "[VI] Diagnosis Notes",
+      "diagnosisNotesPlaceholder": "[VI] AI diagnosis notes...",
+      "generalNotesLabel": "[VI] General Notes (Optional)",
+      "generalNotesPlaceholder": "[VI] Your personal observations...",
+      "saveChangesButton": "[VI] Save Changes",
+      "pickDate": "[VI] Pick a date"
+    },
+    "toasts": {
+      "plantHealthUpdated": "[VI] Plant Health Updated",
+      "plantHealthUpdatedDesc": "[VI] Overall health status changed to {{healthStatus}}.",
+      "photoAdded": "[VI] Photo Added",
+      "photoAddedDesc": "[VI] New photo and diagnosis snapshot added to Growth Monitoring.",
+      "carePlanUpdated": "[VI] Care Plan Updated",
+      "carePlanUpdatedDesc": "[VI] Suggested changes have been applied to the care plan.",
+      "carePlanUnchanged": "[VI] Care Plan Unchanged",
+      "carePlanUnchangedDesc": "[VI] No changes were applied to the care plan based on AI suggestions.",
+      "primaryPhotoUpdated": "[VI] Primary Photo Updated",
+      "primaryPhotoUpdatedDesc": "[VI] The plant's primary photo has been changed.",
+      "taskUpdated": "[VI] Task Updated",
+      "taskUpdatedDesc": "[VI] Task \"{{taskName}}\" has been updated.",
+      "taskAdded": "[VI] Task Added",
+      "taskAddedDesc": "[VI] New task \"{{taskName}}\" added to {{plantName}}.",
+      "tasksDeleted": "[VI] Task(s) Deleted",
+      "tasksDeletedDesc": "[VI] Task(s) \"{{taskNames}}\" deleted.",
+      "photosDeleted": "[VI] Photos Deleted",
+      "photosDeletedDesc": "[VI] {{count}} photo(s) deleted.",
+      "photoDetailsSaved": "[VI] Photo Details Updated",
+      "photoDetailsSavedDesc": "[VI] The photo's information has been saved.",
+      "imageTooLarge": "[VI] Image Too Large",
+      "imageTooLargeDesc": "[VI] Please select an image file smaller than 4MB.",
+      "invalidFileType": "[VI] Invalid File Type",
+      "invalidFileTypeDesc": "[VI] Please upload an image.",
+      "notAPlant": "[VI] Not a Plant?",
+      "notAPlantDesc": "[VI] AI could not identify a plant in the new photo.",
+      "errorDiagnosisOrPlan": "[VI] An error occurred during diagnosis or care plan review.",
+      "taskPaused": "[VI] Task \"{{taskName}}\" has been paused.",
+      "taskResumed": "[VI] Task \"{{taskName}}\" has been resumed."
+    },
+    "footer": {
+      "lastUpdated": "[VI] Last updated: {{date}} (Simulated - reflects last interaction)"
     }
+  },
+  "carePlanTaskForm": {
+    "taskNameLabel": "[VI] Task Name",
+    "taskNameDescription": "[VI] What care task is this? Type custom or select from list.",
+    "taskNamePlaceholder": "[VI] Select or type task...",
+    "taskNameCommandEmpty": "[VI] No task found. Type custom name and press Enter.",
+    "descriptionLabel": "[VI] Description (Optional)",
+    "descriptionPlaceholder": "[VI] e.g., Use distilled water, ensure good drainage.",
+    "startDateLabel": "[VI] Start Date",
+    "startDateDescription": "[VI] The date this task will first be due.",
+    "startDatePlaceholder": "[VI] Pick a date",
+    "frequencyLabel": "[VI] Frequency",
+    "frequencyPlaceholder": "[VI] Select frequency",
+    "frequencyValueLabel": "[VI] Every (Number)",
+    "frequencyValuePlaceholder": "[VI] e.g., 3",
+    "timeOfDayLabel": "[VI] Time of Day",
+    "timeOfDayOptionAllDay": "[VI] All Day",
+    "timeOfDayOptionSpecificTime": "[VI] Specific Time",
+    "specificTimeLabel": "[VI] Set Time (HH:MM)",
+    "specificTimePlaceholder": "[VI] HH:MM",
+    "levelLabel": "[VI] Task Level",
+    "levelPlaceholder": "[VI] Select task level",
+    "updateButton": "[VI] Update Task",
+    "addButton": "[VI] Add Task",
+    "savingButton": "[VI] Saving...",
+    "frequencyOptions": {
+      "adhoc": "[VI] Ad-hoc (As needed)",
+      "daily": "[VI] Daily",
+      "every_x_days": "[VI] Every X Days",
+      "weekly": "[VI] Weekly",
+      "every_x_weeks": "[VI] Every X Weeks",
+      "monthly": "[VI] Monthly",
+      "every_x_months": "[VI] Every X Months",
+      "yearly": "[VI] Yearly"
+    }
+  },
+  "weeklyCareCalendar": {
+    "title": "[VI] Weekly Care Schedule",
+    "checkboxLabel": "[VI] Show only time of day with tasks",
+    "previousWeekAria": "[VI] Previous week",
+    "nextWeekAria": "[VI] Next week",
+    "timeColumnHeader": "[VI] Time",
+    "allDayLabel": "[VI] All day",
+    "currentWeekIndicator": "[VI] (Current)",
+    "taskTooltipTitle": "[VI] {{plantName}}: {{taskName}}",
+    "taskTooltipTime": "[VI] Time: {{time}}",
+    "taskTooltipDesc": "[VI] Desc: {{description}}",
+    "taskEditTitle": "[VI] Edit",
+    "taskDeleteAria": "[VI] Delete task"
   }
 }
+
+    

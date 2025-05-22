@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -22,10 +23,10 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))', // Lime
-  needs_attention: 'hsl(var(--chart-4))', // Yellow
-  sick: 'hsl(var(--destructive))', // Red
-  unknown: 'hsl(var(--muted-foreground))', // Grey
+  healthy: 'hsl(var(--primary))', 
+  needs_attention: 'hsl(var(--chart-4))', 
+  sick: 'hsl(var(--destructive))', 
+  unknown: 'hsl(var(--muted-foreground))', 
 };
 
 
@@ -35,24 +36,7 @@ const healthScoreMapping: Record<PlantHealthCondition, number> = {
   needs_attention: 2,
   healthy: 3,
 };
-const healthScoreLabels: Record<number, string> = {
-  0: 'Unknown',
-  1: 'Sick',
-  2: 'Needs Attention',
-  3: 'Healthy',
-};
 
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = parseISO(dateString);
-    return format(date, 'MMM d, yyyy');
-  } catch (error) {
-    console.error("Error parsing date:", dateString, error);
-    return 'Invalid Date';
-  }
-};
 
 const CustomChartDot = (props: any) => {
   const { cx, cy, payload, onDotClick } = props;
@@ -105,6 +89,14 @@ export function PlantGrowthTracker({
   onDeleteSelectedPhotos,
   onOpenEditPhotoDialog,
 }: PlantGrowthTrackerProps) {
+  const { t } = useLanguage();
+
+  const healthScoreLabels: Record<number, string> = {
+    0: t('common.unknown'),
+    1: t('common.sick'),
+    2: t('common.needs_attention'),
+    3: t('common.healthy'),
+  };
 
   const chartData = useMemo(() => {
     if (!plant || !plant.photos || plant.photos.length < 1) return [];
@@ -115,11 +107,11 @@ export function PlantGrowthTracker({
         date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
-        healthLabel: photo.healthCondition.replace(/_/g, ' '),
+        healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition.replace('_', '')}` as any, photo.healthCondition.replace(/_/g, ' ')),
         healthCondition: photo.healthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plant]);
+  }, [plant, t]);
 
   const sortedPhotosForGallery = useMemo(() => {
     if (!plant || !plant.photos) return [];
@@ -128,7 +120,7 @@ export function PlantGrowthTracker({
 
   const chartConfig = {
     health: {
-      label: 'Health Status',
+      label: t('plantDetail.growthTracker.healthTrendTitle'),
       color: 'hsl(var(--primary))', 
     },
   } satisfies ChartConfig;
@@ -151,11 +143,22 @@ export function PlantGrowthTracker({
     e.stopPropagation(); 
   };
 
+  const formatDateForGallery = (dateString?: string) => {
+    if (!dateString) return t('common.notApplicable');
+    try {
+      const date = parseISO(dateString);
+      return format(date, 'MMM d, yyyy');
+    } catch (error) {
+      console.error("Error parsing date:", dateString, error);
+      return t('common.error');
+    }
+  };
+
 
   return (
     <div>
       <div className="flex justify-between items-center mb-3 pt-6 border-t">
-        <h3 className="font-semibold text-lg">Growth Monitoring</h3>
+        <h3 className="font-semibold text-lg">{t('plantDetail.growthTracker.sectionTitle')}</h3>
         <div className="flex items-center gap-2">
           {isManagingPhotos && selectedPhotoIds.size > 0 && (
             <Button
@@ -164,12 +167,12 @@ export function PlantGrowthTracker({
               onClick={onDeleteSelectedPhotos}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Delete ({selectedPhotoIds.size})
+              {t('plantDetail.growthTracker.deleteSelectedButton', {count: selectedPhotoIds.size})}
             </Button>
           )}
            <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
             {isManagingPhotos ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-            {isManagingPhotos ? 'Done' : 'Manage'}
+            {isManagingPhotos ? t('common.done') : t('common.manage')}
           </Button>
           {!isManagingPhotos && (
             <Button
@@ -181,11 +184,11 @@ export function PlantGrowthTracker({
               {isDiagnosingNewPhoto ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Diagnosing...
+                  {t('plantDetail.growthTracker.diagnosingButton')}
                 </>
               ) : (
                 <>
-                  <ImageUp className="h-4 w-4 mr-2" /> Add Photo & Diagnose
+                  <ImageUp className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
                 </>
               )}
             </Button>
@@ -197,7 +200,7 @@ export function PlantGrowthTracker({
         <div className="mt-4 pt-4 border-t">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
-            Photo Gallery
+            {t('plantDetail.growthTracker.photoGalleryTitle')}
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {sortedPhotosForGallery.map((photo) => {
@@ -222,7 +225,7 @@ export function PlantGrowthTracker({
                             size="icon"
                             className="h-6 w-6 p-1 bg-card/70 hover:bg-card/90 rounded-full"
                             onClick={(e) => { e.stopPropagation(); onOpenEditPhotoDialog(photo); }}
-                            aria-label="Edit photo details"
+                            aria-label={t('plantDetail.growthTracker.editPhotoDetailsAriaLabel')}
                         >
                             <Edit3 className="h-3.5 w-3.5 text-foreground/80" />
                         </Button>
@@ -232,7 +235,7 @@ export function PlantGrowthTracker({
                         checked={isSelected}
                         onCheckedChange={() => onTogglePhotoSelection(photo.id)}
                         onClick={handleCheckboxClick}
-                        aria-label={`Select photo from ${formatDate(photo.dateTaken)}`}
+                        aria-label={t('plantDetail.growthTracker.selectPhotoAriaLabel', {date: formatDateForGallery(photo.dateTaken)})}
                         className="h-5 w-5 bg-card/70 rounded-sm"
                       />
                     )}
@@ -246,14 +249,14 @@ export function PlantGrowthTracker({
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Primary Photo</p>
+                          <p>{t('plantDetail.growthTracker.primaryPhotoTooltip')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
                   <Image
                     src={photo.url}
-                    alt={`Plant photo from ${formatDate(photo.dateTaken)}`}
+                    alt={`Plant photo from ${formatDateForGallery(photo.dateTaken)}`}
                     width={200} height={200}
                     className={cn(
                       "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
@@ -265,16 +268,16 @@ export function PlantGrowthTracker({
                       <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                            onClick={() => onOpenGridPhotoDialog(photo)}
                       >
-                          <span className="text-white text-xs font-semibold">View Details</span>
+                          <span className="text-white text-xs font-semibold">{t('plantDetail.growthTracker.viewDetails')}</span>
                       </div>
                   )}
                    <div className={cn(
                       "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
                        isManagingPhotos && isSelected ? 'opacity-75' : ''
                   )}>
-                    <p className="text-white text-xs truncate w-full">{formatDate(photo.dateTaken)}</p> 
+                    <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p> 
                     <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                      {photo.healthCondition.replace('_', ' ')}
+                      {t(`plantDetail.healthConditions.${photo.healthCondition.replace('_','')}` as any, photo.healthCondition.replace('_', ' '))}
                     </Badge>
                   </div>
                 </div>
@@ -288,7 +291,7 @@ export function PlantGrowthTracker({
         <div className="mt-4 mb-6 pt-4 border-t"> 
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            Health Trend
+            {t('plantDetail.growthTracker.healthTrendTitle')}
           </h4>
           <ChartContainer config={chartConfig} className="h-[250px] w-full">
             <LineChart
@@ -339,7 +342,7 @@ export function PlantGrowthTracker({
                                         />
                                     )}
                                     <p className="font-medium text-foreground">{props.payload?.date}</p>
-                                    <p className="text-muted-foreground">Health: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
+                                    <p className="text-muted-foreground">{t('common.health')}: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
                                 </div>
                             )
                         }}
@@ -360,8 +363,10 @@ export function PlantGrowthTracker({
       )}
 
       {(!sortedPhotosForGallery || sortedPhotosForGallery.length === 0) && chartData.length === 0 && (
-         <p className="text-muted-foreground text-center py-4">No photos recorded for growth monitoring yet.</p>
+         <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
       )}
     </div>
   );
 }
+
+    
