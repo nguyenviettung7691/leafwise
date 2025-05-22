@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Settings",
@@ -116,6 +115,14 @@
       "noPlantsHint": "Try adjusting your filters or add new plants!"
     }
   },
+  "addNewPlantPage": {
+    "formTitle": "Add New Plant",
+    "formDescription": "Manually input the details for new plant.",
+    "submitButtonText": "Add Plant",
+    "savingText": "Saving plant...",
+    "toastPlantAddedTitle": "Plant Added!",
+    "toastPlantAddedDescription": "{{plantName}} has been added to My Plants."
+  },
   "savePlantForm": {
     "primaryPhotoLabel": "Primary Photo (Optional)",
     "uploadAreaText": "Click to upload or drag and drop",
@@ -155,7 +162,7 @@
     },
     "resultDisplay": {
       "title": "Diagnosis Result",
-      "notAPlantTitle": "Not a Plant",
+      "notAPlantTitle": "Not a Plant?",
       "notAPlantDescription": "The AI could not identify a plant in the image. Diagnosis, saving, and care plan generation are not available for non-plant images.",
       "imageAlt": "Diagnosed plant preview",
       "identificationTitle": "Identification",

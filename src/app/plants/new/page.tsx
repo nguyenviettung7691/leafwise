@@ -2,24 +2,24 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-// APP_NAV_CONFIG is no longer passed as a prop
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import type { PlantFormData, Plant } from '@/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { mockPlants } from '@/lib/mock-data'; // Import mockPlants
+import { mockPlants } from '@/lib/mock-data';
+import { useLanguage } from '@/contexts/LanguageContext'; // Import useLanguage
 
 export default function NewPlantPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage(); // Initialize useLanguage
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: PlantFormData) => {
     setIsSaving(true);
     
-    // Simulate a short delay for saving
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
@@ -27,27 +27,26 @@ export default function NewPlantPage() {
 
     if (data.primaryPhoto && data.primaryPhoto[0]) {
       const file = data.primaryPhoto[0];
-      // Convert file to data URL for mock storage
       newPhotoUrl = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = (error) => {
           console.error("Error reading file for data URL:", error);
-          resolve(undefined); // Resolve with undefined if error
+          resolve(undefined);
         }
         reader.readAsDataURL(file);
       });
-    } else if (data.diagnosedPhotoDataUrl) { // Though less likely for "new plant" flow
+    } else if (data.diagnosedPhotoDataUrl) {
       newPhotoUrl = data.diagnosedPhotoDataUrl;
     }
     
     const newPlant: Plant = {
       id: newPlantId,
       commonName: data.commonName,
-      scientificName: data.scientificName || undefined, // Ensure it's undefined if empty, not just ''
+      scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
       ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
-      // ageEstimateYears: data.ageEstimateYears, // Keep this if your Plant type still has it directly
+      ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
@@ -63,14 +62,14 @@ export default function NewPlantPage() {
       plantingDate: new Date().toISOString(),
     };
 
-    mockPlants.unshift(newPlant); // Add to the beginning of the mock data array
+    mockPlants.unshift(newPlant);
 
     toast({
-      title: 'Plant Added!',
-      description: `${newPlant.commonName} has been added to My Plants.`,
+      title: t('addNewPlantPage.toastPlantAddedTitle'),
+      description: t('addNewPlantPage.toastPlantAddedDescription', { plantName: newPlant.commonName }),
     });
     setIsSaving(false);
-    router.push(`/plants/${newPlantId}`); // Navigate to the new plant's detail page
+    router.push(`/plants/${newPlantId}`);
   };
 
   const handleCancelNewPlant = () => {
@@ -78,21 +77,21 @@ export default function NewPlantPage() {
   };
 
   return (
-    <AppLayout> {/* navItemsConfig prop removed */}
+    <AppLayout>
       <div className="max-w-2xl mx-auto">
         {isSaving ? (
           <div className="flex justify-center items-center h-full min-h-[300px]">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg">Saving plant...</p>
+            <p className="ml-4 text-lg">{t('addNewPlantPage.savingText')}</p>
           </div>
         ) : (
           <SavePlantForm
             onSave={handleSaveNewPlant}
             onCancel={handleCancelNewPlant}
             isLoading={isSaving}
-            formTitle="Add New Plant"
-            formDescription="Manually input the details for new plant."
-            submitButtonText="Add Plant"
+            formTitle={t('addNewPlantPage.formTitle')}
+            formDescription={t('addNewPlantPage.formDescription')}
+            submitButtonText={t('addNewPlantPage.submitButtonText')}
           />
         )}
       </div>

@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Cài đặt",
@@ -116,6 +115,14 @@
       "noPlantsHint": "Hãy thử điều chỉnh bộ lọc hoặc thêm cây mới!"
     }
   },
+  "addNewPlantPage": {
+    "formTitle": "Thêm cây mới",
+    "formDescription": "Nhập thủ công chi tiết cho cây mới.",
+    "submitButtonText": "Thêm cây",
+    "savingText": "Đang lưu cây...",
+    "toastPlantAddedTitle": "Đã thêm cây!",
+    "toastPlantAddedDescription": "{{plantName}} đã được thêm vào Cây của tôi."
+  },
   "savePlantForm": {
     "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
     "uploadAreaText": "Nhấp để tải lên hoặc kéo thả",
@@ -155,7 +162,7 @@
     },
     "resultDisplay": {
       "title": "Kết quả chẩn đoán",
-      "notAPlantTitle": "Không phải cây",
+      "notAPlantTitle": "Không phải cây?",
       "notAPlantDescription": "AI không thể xác định cây trong ảnh. Chẩn đoán, lưu và tạo kế hoạch chăm sóc không khả dụng cho ảnh không phải cây.",
       "imageAlt": "Xem trước cây đã chẩn đoán",
       "identificationTitle": "Nhận dạng",
