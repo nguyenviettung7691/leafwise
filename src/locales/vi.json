@@ -114,6 +114,33 @@
       "noPlantsHint": "Hãy thử điều chỉnh bộ lọc hoặc thêm cây mới!"
     }
   },
+  "savePlantForm": {
+    "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
+    "uploadAreaText": "Nhấp để tải lên hoặc kéo thả",
+    "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 4MB)",
+    "gallerySelectLabel": "Hoặc chọn từ Thư viện (Tùy chọn)",
+    "commonNameLabel": "Tên thường gọi",
+    "commonNamePlaceholder": "VD: Trầu Bà Lỗ",
+    "scientificNameLabel": "Tên khoa học (Tùy chọn)",
+    "scientificNamePlaceholder": "VD: Monstera deliciosa",
+    "familyCategoryLabel": "Họ thực vật",
+    "familyCategoryPlaceholder": "VD: Araceae",
+    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính) (Tùy chọn)",
+    "ageEstimateYearsPlaceholder": "VD: 2",
+    "healthConditionLabel": "Tình trạng sức khỏe",
+    "healthConditionPlaceholder": "Chọn tình trạng sức khỏe",
+    "healthOptions": {
+      "healthy": "Khỏe mạnh",
+      "needs_attention": "Cần chú ý",
+      "sick": "Bị bệnh",
+      "unknown": "Không rõ"
+    },
+    "locationLabel": "Vị trí (Tùy chọn)",
+    "locationPlaceholder": "VD: Cửa sổ phòng khách",
+    "customNotesLabel": "Ghi chú tùy chỉnh (Tùy chọn)",
+    "customNotesPlaceholder": "VD: Tưới khi lớp đất mặt khô.",
+    "savingButton": "Đang lưu..."
+  },
   "diagnosePage": {
     "uploadForm": {
       "title": "Chẩn đoán cây",
@@ -145,7 +172,7 @@
       "recommendationsTitle": "Hành động đề xuất ban đầu:",
       "saveToMyPlantsButton": "Lưu vào Cây của tôi",
       "plantSavedAlertTitle": "Đã lưu cây!",
-      "plantSavedAlertDescription": "{{plantName}} đã được lưu (mô phỏng) vào Cây của tôi. Bây giờ bạn có thể tạo kế hoạch chăm sóc chi tiết.",
+      "plantSavedAlertDescription": "{{plantName}} đã được lưu (mô phỏng) vào Cây của tôi.",
       "viewPlantLink": "Xem {{plantName}} trong Cây của tôi",
       "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
       "saveFormTitle": "Lưu vào Cây của tôi",
@@ -303,7 +330,7 @@
     "deletePhotosDialog": {
       "title": "Bạn có chắc không?",
       "description": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn {{count}} ảnh đã chọn. Dữ liệu chẩn đoán liên quan cũng sẽ bị xóa.",
-      "warningPrimaryDeleted": "Cảnh báo: Một trong những ảnh được chọn là ảnh chính hiện tại. Xóa nó sẽ loại bỏ nó khỏi vị trí ảnh chính. Ảnh còn lại mới nhất sẽ được sử dụng làm ảnh chính mới.",
+      "warningPrimaryDeleted": "Cảnh báo: Một trong những ảnh được chọn là ảnh chính hiện tại. Xóa nó sẽ loại bỏ nó khỏi vị trí ảnh chính. Ảnh mới nhất còn lại sẽ được sử dụng làm ảnh chính mới.",
       "deleteButton": "Xóa ảnh"
     },
     "editPhotoDialog": {
@@ -535,5 +562,3 @@
     "signInLink": "Đăng nhập"
   }
 }
-
-    

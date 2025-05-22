@@ -3,10 +3,11 @@
 
 import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
+import { diagnosePlantHealth, type DiagnosePlantHealthOutput, type DiagnosePlantHealthInput as DiagnoseInput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
 import type { GenerateDetailedCarePlanOutput, AIGeneratedTask } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,7 +18,6 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { mockPlants } from '@/lib/mock-data';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
-import { Button } from '@/components/ui/button';
 
 export default function DiagnosePlantPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -41,7 +41,7 @@ export default function DiagnosePlantPage() {
 
 
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const calculateNextDueDate = (frequency: string): string | undefined => {
@@ -148,9 +148,14 @@ export default function DiagnosePlantPage() {
     try {
       const base64Image = await readFileAsDataURL(file);
       if (!base64Image.startsWith('data:image/')) {
-        throw new Error('Invalid file type. Please upload an image (JPEG, PNG, GIF, WebP).');
+        throw new Error(t('diagnosePage.toasts.invalidFileType'));
       }
-      const result = await diagnosePlantHealth({ photoDataUri: base64Image, description });
+      const diagnosisInput: DiagnoseInput = { 
+        photoDataUri: base64Image, 
+        description,
+        languageCode: language
+      };
+      const result = await diagnosePlantHealth(diagnosisInput);
       setDiagnosisResult(result);
       toast({
         title: t('diagnosePage.toasts.diagnosisCompleteTitle'),
@@ -238,7 +243,7 @@ export default function DiagnosePlantPage() {
 
     try {
       const input: GenerateDetailedCarePlanInput = {
-        plantCommonName: diagnosisResult.identification.commonName || "Unidentified Plant",
+        plantCommonName: diagnosisResult.identification.commonName || t('common.unknown'),
         plantScientificName: diagnosisResult.identification.scientificName,
         diagnosisNotes: diagnosisResult.healthAssessment.diagnosis,
         carePlanMode: carePlanMode,
@@ -375,5 +380,3 @@ export default function DiagnosePlantPage() {
     </AppLayout>
   );
 }
-
-    

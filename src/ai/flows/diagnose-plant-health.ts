@@ -18,6 +18,7 @@ const DiagnosePlantHealthInputSchema = z.object({
       "A photo of a plant, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
   description: z.string().optional().describe('An optional user description of the plant or its symptoms.'),
+  languageCode: z.string().optional().describe("The desired language for the response (e.g., 'en', 'vi'). Default to English if not provided."),
 });
 export type DiagnosePlantHealthInput = z.infer<typeof DiagnosePlantHealthInputSchema>;
 
@@ -52,7 +53,9 @@ const prompt = ai.definePrompt({
   input: {schema: DiagnosePlantHealthInputSchema},
   output: {schema: DiagnosePlantHealthOutputSchema},
   prompt: `You are an expert botanist and plant pathologist.
-Analyze the provided plant image and optional user description to perform the following tasks:
+Analyze the provided plant image and optional user description to perform the following tasks.
+Please provide your response (identification, diagnosis, recommendations) in the language specified by '{{languageCode}}'. If no languageCode is provided, respond in English.
+
 1.  **Identification**: Determine if the image contains a plant. If it does, identify its common and scientific names. If possible, also determine its family category (e.g., Araceae, Asparagaceae, Cactaceae, Fabaceae) useful for general categorization, and estimate the plant's age in years (as a number, e.g., 0.5 for 6 months, 1, 2) if discernible. If unsure about any of these, indicate that.
 2.  **Health Assessment**: Assess the plant's health. Determine if it's healthy or if it shows signs of disease, pest infestation, nutrient deficiency, or other issues. Provide a diagnosis. State your confidence level (low, medium, high) for this assessment.
 3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps. Frame these recommendations in terms of common care task categories such as Watering, Lighting, Fertilizing, Pest Control, Pruning, or Soil/Potting. For example:
@@ -91,4 +94,3 @@ const diagnosePlantHealthFlow = ai.defineFlow(
     return output;
   }
 );
-

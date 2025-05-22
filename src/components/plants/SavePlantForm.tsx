@@ -17,6 +17,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Leaf, UploadCloud, Save, Edit } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const primaryPhotoSchema = typeof window !== 'undefined'
   ? z.instanceof(FileList).optional().nullable()
@@ -47,7 +48,7 @@ interface SavePlantFormProps {
   formTitle?: string;
   formDescription?: string;
   submitButtonText?: string;
-  hideInternalHeader?: boolean; // New prop
+  hideInternalHeader?: boolean;
 }
 
 export function SavePlantForm({
@@ -59,8 +60,9 @@ export function SavePlantForm({
   formTitle,
   formDescription,
   submitButtonText,
-  hideInternalHeader = false, // Default to false
+  hideInternalHeader = false,
 }: SavePlantFormProps) {
+  const { t } = useLanguage();
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
     defaultValues: {
@@ -98,9 +100,11 @@ export function SavePlantForm({
     await onSave(formDataToSave);
   };
 
-  const currentFormTitle = formTitle || "Save Plant Details";
-  const currentSubmitButtonText = submitButtonText || "Save Plant";
-  const FormIcon = currentFormTitle.toLowerCase().includes("edit") ? Edit : Leaf;
+  const currentFormTitle = formTitle || t('diagnosePage.resultDisplay.saveFormTitle');
+  const currentFormDescription = formDescription || t('diagnosePage.resultDisplay.saveFormDescription', { plantName: initialData?.commonName || t('common.unknown')});
+  const currentSubmitButtonText = submitButtonText || t('diagnosePage.resultDisplay.saveFormSubmitButton');
+  const FormIcon = currentFormTitle.toLowerCase().includes(t('common.edit').toLowerCase()) ? Edit : Leaf;
+
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
     setImagePreview(photo.url);
@@ -120,17 +124,17 @@ export function SavePlantForm({
             <FormIcon className="h-6 w-6 text-primary" />
             {currentFormTitle}
           </CardTitle>
-          {formDescription && <CardDescription>{formDescription}</CardDescription>}
+          {formDescription && <CardDescription>{currentFormDescription}</CardDescription>}
         </CardHeader>
       )}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6 pt-6"> {/* Ensure pt-6 if header is hidden */}
+          <CardContent className={cn("space-y-6", hideInternalHeader ? "pt-6" : "")}>
             {imagePreview && (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
                 <Image
                   src={imagePreview}
-                  alt="Plant preview"
+                  alt={t('diagnosePage.resultDisplay.imageAlt')}
                   width={150}
                   height={150}
                   className="rounded-md object-contain max-h-[150px] shadow-md"
@@ -143,7 +147,7 @@ export function SavePlantForm({
               name="primaryPhoto"
               render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => (
                 <FormItem>
-                  <FormLabel>Primary Photo (Optional)</FormLabel>
+                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')}</FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -153,9 +157,9 @@ export function SavePlantForm({
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" />
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                    <span className="font-semibold">Click to upload</span> or drag and drop
+                                    <span className="font-semibold">{t('savePlantForm.uploadAreaText')}</span>
                                 </p>
-                                <p className="text-xs text-muted-foreground">PNG, JPG, GIF, WEBP (MAX. 4MB)</p>
+                                <p className="text-xs text-muted-foreground">{t('savePlantForm.uploadAreaHint')}</p>
                                 {form.getValues('primaryPhoto')?.[0] && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
                             </div>
                             <Input
@@ -174,7 +178,7 @@ export function SavePlantForm({
                                     onChange(files); 
                                     if (files && files[0]) {
                                         if (files[0].size > 4 * 1024 * 1024) { 
-                                            form.setError("primaryPhoto", { type: "manual", message: "Image too large, max 4MB."});
+                                            form.setError("primaryPhoto", { type: "manual", message: t('diagnosePage.toasts.imageTooLargeDesc')});
                                             setImagePreview(initialData?.diagnosedPhotoDataUrl || null); 
                                             e.target.value = ''; 
                                         } else {
@@ -203,7 +207,7 @@ export function SavePlantForm({
 
             {galleryPhotos && galleryPhotos.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Or Select from Gallery (Optional)</Label>
+                <Label className="text-sm font-medium">{t('savePlantForm.gallerySelectLabel')}</Label>
                 <ScrollArea className="w-full whitespace-nowrap rounded-md border">
                   <div className="flex space-x-3 p-3">
                     {galleryPhotos.map((photo) => (
@@ -237,9 +241,9 @@ export function SavePlantForm({
               name="commonName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Common Name <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.commonNameLabel')} <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Swiss Cheese Plant" {...field} />
+                    <Input placeholder={t('savePlantForm.commonNamePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -250,9 +254,9 @@ export function SavePlantForm({
               name="scientificName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Scientific Name (Optional)</FormLabel>
+                  <FormLabel>{t('savePlantForm.scientificNameLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Monstera deliciosa" {...field} value={field.value ?? ''} />
+                    <Input placeholder={t('savePlantForm.scientificNamePlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -263,9 +267,9 @@ export function SavePlantForm({
               name="familyCategory"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Family Category <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.familyCategoryLabel')} <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Araceae" {...field} value={field.value ?? ''} />
+                    <Input placeholder={t('savePlantForm.familyCategoryPlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -276,9 +280,9 @@ export function SavePlantForm({
               name="ageEstimateYears"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Age (Years, Est.) (Optional)</FormLabel>
+                  <FormLabel>{t('savePlantForm.ageEstimateYearsLabel')}</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.1" placeholder="e.g., 2" {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
+                    <Input type="number" step="0.1" placeholder={t('savePlantForm.ageEstimateYearsPlaceholder')} {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -289,18 +293,18 @@ export function SavePlantForm({
               name="healthCondition"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Health Condition <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.healthConditionLabel')} <span className="text-destructive">*</span></FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select health status" />
+                        <SelectValue placeholder={t('savePlantForm.healthConditionPlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="healthy">Healthy</SelectItem>
-                      <SelectItem value="needs_attention">Needs Attention</SelectItem>
-                      <SelectItem value="sick">Sick</SelectItem>
-                      <SelectItem value="unknown">Unknown</SelectItem>
+                      <SelectItem value="healthy">{t('savePlantForm.healthOptions.healthy')}</SelectItem>
+                      <SelectItem value="needs_attention">{t('savePlantForm.healthOptions.needs_attention')}</SelectItem>
+                      <SelectItem value="sick">{t('savePlantForm.healthOptions.sick')}</SelectItem>
+                      <SelectItem value="unknown">{t('savePlantForm.healthOptions.unknown')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -312,9 +316,9 @@ export function SavePlantForm({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location (Optional)</FormLabel>
+                  <FormLabel>{t('savePlantForm.locationLabel')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Living Room Window" {...field} value={field.value ?? ''} />
+                    <Input placeholder={t('savePlantForm.locationPlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -325,9 +329,9 @@ export function SavePlantForm({
               name="customNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Custom Notes (Optional)</FormLabel>
+                  <FormLabel>{t('savePlantForm.customNotesLabel')}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="e.g., Water when top inch is dry." {...field} rows={3} value={field.value ?? ''}/>
+                    <Textarea placeholder={t('savePlantForm.customNotesPlaceholder')} {...field} rows={3} value={field.value ?? ''}/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -336,10 +340,10 @@ export function SavePlantForm({
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={isLoading || (!form.formState.isValid && form.formState.isSubmitted)}>
-              {isLoading ? 'Saving...' : <><Save className="mr-2 h-4 w-4" /> {currentSubmitButtonText}</>}
+              {isLoading ? t('savePlantForm.savingButton') : <><Save className="mr-2 h-4 w-4" /> {currentSubmitButtonText}</>}
             </Button>
           </CardFooter>
         </form>

@@ -23,7 +23,7 @@ interface DiagnosisResultDisplayProps {
 }
 
 const confidenceStyles = {
-  low: 'bg-destructive/10 text-destructive border-destructive/50 dark:bg-destructive/20 dark:text-destructive dark:border-destructive/40',
+  low: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-500',
   medium: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500',
   high: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500',
 };
@@ -170,5 +170,3 @@ export function DiagnosisResultDisplay({
     </Card>
   );
 }
-
-    

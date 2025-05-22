@@ -114,6 +114,33 @@
       "noPlantsHint": "Try adjusting your filters or add new plants!"
     }
   },
+  "savePlantForm": {
+    "primaryPhotoLabel": "Primary Photo (Optional)",
+    "uploadAreaText": "Click to upload or drag and drop",
+    "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 4MB)",
+    "gallerySelectLabel": "Or Select from Gallery (Optional)",
+    "commonNameLabel": "Common Name",
+    "commonNamePlaceholder": "e.g., Swiss Cheese Plant",
+    "scientificNameLabel": "Scientific Name (Optional)",
+    "scientificNamePlaceholder": "e.g., Monstera deliciosa",
+    "familyCategoryLabel": "Family Category",
+    "familyCategoryPlaceholder": "e.g., Araceae",
+    "ageEstimateYearsLabel": "Age (Years, Est.) (Optional)",
+    "ageEstimateYearsPlaceholder": "e.g., 2",
+    "healthConditionLabel": "Health Condition",
+    "healthConditionPlaceholder": "Select health status",
+    "healthOptions": {
+      "healthy": "Healthy",
+      "needs_attention": "Needs Attention",
+      "sick": "Sick",
+      "unknown": "Unknown"
+    },
+    "locationLabel": "Location (Optional)",
+    "locationPlaceholder": "e.g., Living Room Window",
+    "customNotesLabel": "Custom Notes (Optional)",
+    "customNotesPlaceholder": "e.g., Water when top inch is dry.",
+    "savingButton": "Saving..."
+  },
   "diagnosePage": {
     "uploadForm": {
       "title": "Diagnose Plant",
@@ -145,7 +172,7 @@
       "recommendationsTitle": "Initial Recommended Actions:",
       "saveToMyPlantsButton": "Save to My Plants",
       "plantSavedAlertTitle": "Plant Saved!",
-      "plantSavedAlertDescription": "{{plantName}} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.",
+      "plantSavedAlertDescription": "{{plantName}} has been (simulated) saved to My Plants.",
       "viewPlantLink": "View {{plantName}} in My Plants",
       "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
       "saveFormTitle": "Save to My Plants",
@@ -303,7 +330,7 @@
     "deletePhotosDialog": {
       "title": "Are you sure?",
       "description": "This action cannot be undone. This will permanently delete the selected {{count}} photo(s). Associated diagnosis data will also be removed.",
-      "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest remaining photo will be used as the new primary photo.",
+      "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest photo will be used as the new primary photo.",
       "deleteButton": "Delete Photo(s)"
     },
     "editPhotoDialog": {
@@ -535,5 +562,3 @@
     "signInLink": "Sign in"
   }
 }
-
-    
