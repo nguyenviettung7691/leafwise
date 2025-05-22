@@ -283,7 +283,7 @@
     },
     "growthTracker": {
       "sectionTitle": "Theo dõi tăng trưởng",
-      "addPhotoDiagnoseButton": "Thêm ảnh & Chẩn đoán",
+      "addPhotoDiagnoseButton": "Thêm ảnh &amp; Chẩn đoán",
       "diagnosingButton": "Đang chẩn đoán...",
       "manageButton": "Quản lý",
       "doneButton": "Xong",
@@ -297,7 +297,7 @@
       "selectPhotoAriaLabel": "Chọn ảnh từ {{date}}"
     },
     "newPhotoDialog": {
-      "title": "Phân tích ảnh mới & Xem xét kế hoạch chăm sóc",
+      "title": "Phân tích ảnh mới &amp; Xem xét kế hoạch chăm sóc",
       "description": "Xem lại chẩn đoán mới nhất, so sánh sức khỏe và đề xuất kế hoạch chăm sóc cho {{plantName}} của bạn.",
       "latestDiagnosisTitle": "Chẩn đoán mới nhất",
       "plantLabel": "Cây:",
@@ -321,7 +321,14 @@
       "noCarePlanChanges": "Không có thay đổi cụ thể nào được đề xuất cho các công việc trong kế hoạch chăm sóc dựa trên chẩn đoán này.",
       "applyChangesButton": "Áp dụng thay đổi đề xuất",
       "keepCurrentPlanButton": "Giữ kế hoạch hiện tại",
-      "addPhotoToJournalButton": "Thêm ảnh đã chẩn đoán vào Nhật ký"
+      "addPhotoToJournalButton": "Thêm ảnh đã chẩn đoán vào Nhật ký",
+      "suggestedAction": {
+        "keep_as_is": "giữ nguyên",
+        "pause": "tạm dừng",
+        "resume": "tiếp tục",
+        "remove": "loại bỏ",
+        "update_details": "cập nhật chi tiết"
+      }
     },
     "photoDetailsDialog": {
       "title": "Chi tiết ảnh - {{date}}",
@@ -607,5 +614,3 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng."
   }
 }
-
-    

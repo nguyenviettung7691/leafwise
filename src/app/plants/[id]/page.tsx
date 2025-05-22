@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -514,7 +513,7 @@ export default function PlantDetailPage() {
             timeOfDay: taskData.timeOfDay,
             level: taskData.level,
             isPaused: false,
-            nextDueDate: taskData.startDate,
+            nextDueDate: taskData.startDate, // Use startDate from form as nextDueDate
         };
         updatedTasks = [...currentTasks, newTask];
         toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
@@ -835,7 +834,7 @@ export default function PlantDetailPage() {
                                     <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
                                         <MessageSquareWarning className="h-4 w-4 text-blue-500" />
                                         <AlertTitle>{t('plantDetail.newPhotoDialog.updateHealthAlertTitle')}</AlertTitle>
-                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(`plantDetail.healthConditions.${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}`) })}</AlertDescription>
+                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(`plantDetail.healthConditions.${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}`)} )}</AlertDescription>
                                         <div className="mt-3 flex gap-2">
                                             <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
                                                 <CheckCircle className="mr-1.5 h-4 w-4"/>{t('plantDetail.newPhotoDialog.updateHealthButton')}
@@ -875,7 +874,7 @@ export default function PlantDetailPage() {
                                         <ul className="list-disc list-inside space-y-2 pl-2">
                                             {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.map(mod => (
                                                 <li key={mod.taskId}>
-                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: mod.suggestedAction.replace(/_/g, ' ')})}
+                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: t(`plantDetail.newPhotoDialog.suggestedAction.${mod.suggestedAction}`)} )}
                                                     {mod.reasoning && <p className="text-xs text-muted-foreground pl-4"><em>{t('plantDetail.newPhotoDialog.taskModificationReason', {reasoning: mod.reasoning})}</em></p>}
                                                     {mod.suggestedAction === 'update_details' && mod.updatedDetails && (
                                                         <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
@@ -883,7 +882,7 @@ export default function PlantDetailPage() {
                                                             {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
                                                             {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: mod.updatedDetails.frequency})}</p>}
                                                             {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: mod.updatedDetails.timeOfDay})}</p>}
-                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: mod.updatedDetails.level})}</p>}
+                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)} )}</p>}
                                                         </div>
                                                     )}
                                                 </li>
@@ -898,7 +897,7 @@ export default function PlantDetailPage() {
                                         <ul className="list-disc list-inside space-y-2 pl-2">
                                             {newPhotoDiagnosisDialogState.carePlanReviewResult.newTasks.map((task, index) => (
                                                 <li key={`new-${index}`}>
-                                                    <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{task.taskLevel}</Badge>)
+                                                    <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{t(`common.${task.taskLevel}`)}</Badge>)
                                                     <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
                                                     <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {task.suggestedFrequency}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {task.suggestedTimeOfDay}</p>
                                                 </li>
@@ -930,7 +929,7 @@ export default function PlantDetailPage() {
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
                        </Button>
-                     ) : <div className="flex-1" />  }
+                     ) : <div className="flex-1" />}
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             {t('common.close')}
@@ -1137,6 +1136,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
-
-    

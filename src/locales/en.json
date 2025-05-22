@@ -283,7 +283,7 @@
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
-      "addPhotoDiagnoseButton": "Add Photo & Diagnose",
+      "addPhotoDiagnoseButton": "Add Photo &amp; Diagnose",
       "diagnosingButton": "Diagnosing...",
       "manageButton": "Manage",
       "doneButton": "Done",
@@ -297,7 +297,7 @@
       "selectPhotoAriaLabel": "Select photo from {{date}}"
     },
     "newPhotoDialog": {
-      "title": "New Photo Analysis & Care Plan Review",
+      "title": "New Photo Analysis &amp; Care Plan Review",
       "description": "Review the latest diagnosis, health comparison, and care plan suggestions for your {{plantName}}.",
       "latestDiagnosisTitle": "Latest Diagnosis",
       "plantLabel": "Plant:",
@@ -321,7 +321,14 @@
       "noCarePlanChanges": "No specific changes suggested for the care plan tasks based on this diagnosis.",
       "applyChangesButton": "Apply Suggested Changes",
       "keepCurrentPlanButton": "Keep Current Plan",
-      "addPhotoToJournalButton": "Add Diagnosed Photo to Journal"
+      "addPhotoToJournalButton": "Add Diagnosed Photo to Journal",
+      "suggestedAction": {
+        "keep_as_is": "keep as is",
+        "pause": "pause",
+        "resume": "resume",
+        "remove": "remove",
+        "update_details": "update details"
+      }
     },
     "photoDetailsDialog": {
       "title": "Photo Details - {{date}}",
@@ -607,5 +614,3 @@
     "errorNoUserSession": "No user session found."
   }
 }
-
-    

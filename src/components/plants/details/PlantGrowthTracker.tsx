@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
@@ -8,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ImageUp, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, Edit3 } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, Edit3 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
@@ -107,7 +106,7 @@ export function PlantGrowthTracker({
         date: format(parseISO(photo.dateTaken), 'MMM d, yy', { locale: dateFnsLocale }),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
-        healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition.replace('_', '')}` as any, photo.healthCondition.replace(/_/g, ' ')),
+        healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition}`),
         healthCondition: photo.healthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
@@ -188,7 +187,7 @@ export function PlantGrowthTracker({
                 </>
               ) : (
                 <>
-                  <ImageUp className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
+                  <Sparkles className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
                 </>
               )}
             </Button>
@@ -203,7 +202,7 @@ export function PlantGrowthTracker({
             {t('plantDetail.growthTracker.photoGalleryTitle')}
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {sortedPhotosForGallery.map((photo) => {
+            {sortedPhotosForGallery.map(photo => {
               const isPrimary = plant.primaryPhotoUrl === photo.url;
               const isSelected = selectedPhotoIds.has(photo.id);
               return (
@@ -256,7 +255,7 @@ export function PlantGrowthTracker({
                   )}
                   <Image
                     src={photo.url}
-                    alt={`Plant photo from ${formatDateForGallery(photo.dateTaken)}`}
+                    alt={`${t('plantDetail.growthTracker.photoGalleryTitle')} - ${formatDateForGallery(photo.dateTaken)}`}
                     width={200} height={200}
                     className={cn(
                       "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
@@ -277,7 +276,7 @@ export function PlantGrowthTracker({
                   )}>
                     <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p>
                     <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
-                      {t(`plantDetail.healthConditions.${photo.healthCondition.replace('_','')}` as any, photo.healthCondition.replace('_', ' '))}
+                      {t(`plantDetail.healthConditions.${photo.healthCondition}`)}
                     </Badge>
                   </div>
                 </div>
@@ -334,7 +333,7 @@ export function PlantGrowthTracker({
                                     {props.payload?.photoUrl && (
                                         <Image
                                             src={props.payload.photoUrl}
-                                            alt="Plant diagnosis"
+                                            alt={t('plantDetail.growthTracker.photoGalleryTitle')}
                                             width={64}
                                             height={64}
                                             className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
