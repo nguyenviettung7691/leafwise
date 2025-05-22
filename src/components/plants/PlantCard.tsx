@@ -1,15 +1,17 @@
 
 import Image from 'next/image';
-import Link from 'next/link';
 import type { Plant, CareTask } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3 } from 'lucide-react';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, parseISO, differenceInDays, Locale } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
+
 
 interface PlantCardProps {
   plant: Plant;
@@ -45,27 +47,34 @@ const getNextUpcomingTask = (tasks: CareTask[]): CareTask | null => {
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
 
-const formatDueDate = (dueDate: string): string => {
+const formatDueDate = (dueDate: string, locale: Locale, t: Function): string => {
   const date = parseISO(dueDate);
   const now = new Date();
   const today = new Date(now.setHours(0,0,0,0));
   const tomorrow = new Date(new Date(today).setDate(today.getDate() + 1));
 
-  if (date.getTime() === today.getTime()) return 'Today';
-  if (date.getTime() === tomorrow.getTime()) return 'Tomorrow';
+  if (date.getTime() === today.getTime()) return t('plantCard.dueToday');
+  if (date.getTime() === tomorrow.getTime()) return t('plantCard.dueTomorrow');
 
   const diff = differenceInDays(date, today);
-  if (diff > 0 && diff <= 7) return `In ${diff} day${diff > 1 ? 's' : ''}`;
-
-  return format(date, 'MMM d');
+  if (diff > 0 && diff <= 7) {
+    return t(diff === 1 ? 'plantCard.dueInDay' : 'plantCard.dueInDays', { count: diff });
+  }
+  return format(date, 'MMM d', { locale });
 };
 
-const formatDateSimple = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    return format(parseISO(dateString), 'MMM d, yyyy');
+const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) => {
+    if (!dateString) return t ? t('common.notApplicable') : 'N/A';
+    try {
+      return format(parseISO(dateString), 'MMM d, yyyy', { locale });
+    } catch (error) {
+      console.error("Error parsing date for formatDateSimple:", dateString, error);
+      return t ? t('common.error') : 'Invalid Date';
+    }
 };
 
 export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
+  const { t, dateFnsLocale } = useLanguage();
   const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -86,6 +95,8 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
     }
   };
 
+  const healthConditionText = t(`common.${plant.healthCondition.replace('_', '')}`, plant.healthCondition.replace('_', ' '));
+
 
   return (
     <div className="relative">
@@ -96,7 +107,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
             size="icon"
             className="h-6 w-6 p-1 hover:bg-accent/50"
             onClick={handleEditClick}
-            aria-label={`Edit ${plant.commonName}`}
+            aria-label={t('common.edit') + ` ${plant.commonName}`}
           >
             <Edit3 className="h-4 w-4" />
           </Button>
@@ -111,7 +122,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
           )}
         </div>
       )}
-      <Link href={isManaging ? '#' : `/plants/${plant.id}`} className={cn("block group", isManaging ? "cursor-pointer" : "")}>
+      <ProgressBarLink href={isManaging ? '#' : `/plants/${plant.id}`} className={cn("block group", isManaging ? "cursor-pointer" : "")}>
         <Card
           className={cn(
             "overflow-hidden h-full flex flex-col transition-all duration-300 ease-in-out group-hover:shadow-xl hover:border-primary dark:hover:border-primary",
@@ -147,7 +158,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
                   healthConditionStyles[plant.healthCondition]
                 )}
               >
-                {plant.healthCondition.replace('_', ' ')}
+                {healthConditionText}
               </Badge>
             </div>
           </CardContent>
@@ -155,23 +166,23 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
             {nextUpcomingTask ? (
               <div className="flex items-center gap-1">
                 <CalendarClock className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                <span>Next: {nextUpcomingTask.name} - {formatDueDate(nextUpcomingTask.nextDueDate!)}</span>
+                <span>{t('plantCard.nextPrefix')} {nextUpcomingTask.name} - {formatDueDate(nextUpcomingTask.nextDueDate!, dateFnsLocale, t)}</span>
               </div>
             ) : (
               <div className="flex items-center gap-1">
                 <CalendarClock className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>No upcoming tasks</span>
+                <span>{t('plantCard.noUpcomingTasks')}</span>
               </div>
             )}
             {plant.lastCaredDate && (
               <div className="flex items-center gap-1">
                 <History className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>Last Cared: {formatDateSimple(plant.lastCaredDate)}</span>
+                <span>{t('plantCard.lastCaredPrefix')} {formatDateSimple(plant.lastCaredDate, dateFnsLocale, t)}</span>
               </div>
             )}
           </CardFooter>
         </Card>
-      </Link>
+      </ProgressBarLink>
     </div>
   );
 }

@@ -392,6 +392,15 @@
       "lastUpdated": "Cập nhật lần cuối: {{date}} (Mô phỏng - phản ánh tương tác cuối cùng)"
     }
   },
+  "plantCard": {
+    "nextPrefix": "Tiếp theo:",
+    "lastCaredPrefix": "Chăm sóc cuối:",
+    "noUpcomingTasks": "Không có công việc sắp tới",
+    "dueToday": "Hôm nay",
+    "dueTomorrow": "Ngày mai",
+    "dueInDays": "Trong {{count}} ngày",
+    "dueInDay": "Trong {{count}} ngày"
+  },
   "carePlanTaskForm": {
     "taskNameLabel": "Tên công việc",
     "taskNameDescription": "Đây là công việc chăm sóc gì? Nhập tùy chỉnh hoặc chọn từ danh sách.",

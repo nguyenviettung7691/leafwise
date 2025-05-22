@@ -392,6 +392,15 @@
       "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"
     }
   },
+  "plantCard": {
+    "nextPrefix": "Next:",
+    "lastCaredPrefix": "Last Cared:",
+    "noUpcomingTasks": "No upcoming tasks",
+    "dueToday": "Today",
+    "dueTomorrow": "Tomorrow",
+    "dueInDays": "In {{count}} days",
+    "dueInDay": "In {{count}} day"
+  },
   "carePlanTaskForm": {
     "taskNameLabel": "Task Name",
     "taskNameDescription": "What care task is this? Type custom or select from list.",
