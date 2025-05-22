@@ -18,6 +18,7 @@ const GenerateDetailedCarePlanInputSchema = z.object({
   diagnosisNotes: z.string().optional().describe('Any notes from the plant health diagnosis, to help tailor the plan.'),
   carePlanMode: z.enum(['basic', 'advanced']).describe("The desired mode for the care plan: 'basic' or 'advanced'."),
   locationClimate: z.string().optional().describe('The user\'s general location or climate (e.g., "temperate, indoor", "tropical, outdoor").'),
+  languageCode: z.string().optional().describe("The desired language for the response (e.g., 'en', 'vi'). Default to English if not provided."),
 });
 export type GenerateDetailedCarePlanInput = z.infer<typeof GenerateDetailedCarePlanInputSchema>;
 
@@ -48,6 +49,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateDetailedCarePlanInputSchema},
   output: {schema: GenerateDetailedCarePlanOutputSchema},
   prompt: `You are an expert horticulturist creating a structured and actionable list of care tasks for a plant.
+Please generate all task names and descriptions in the language specified by '{{languageCode}}'. If no languageCode is provided, use English.
 
 Plant Information:
 - Common Name: {{{plantCommonName}}}
@@ -115,4 +117,3 @@ const generateDetailedCarePlanFlow = ai.defineFlow(
     };
   }
 );
-

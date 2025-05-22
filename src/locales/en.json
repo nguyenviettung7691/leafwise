@@ -330,7 +330,7 @@
     "deletePhotosDialog": {
       "title": "Are you sure?",
       "description": "This action cannot be undone. This will permanently delete the selected {{count}} photo(s). Associated diagnosis data will also be removed.",
-      "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest photo will be used as the new primary photo.",
+      "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest remaining photo will be used as the new primary photo.",
       "deleteButton": "Delete Photo(s)"
     },
     "editPhotoDialog": {

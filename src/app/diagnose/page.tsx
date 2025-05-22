@@ -248,6 +248,7 @@ export default function DiagnosePlantPage() {
         diagnosisNotes: diagnosisResult.healthAssessment.diagnosis,
         carePlanMode: carePlanMode,
         locationClimate: locationClimate,
+        languageCode: language,
       };
       const result = await generateDetailedCarePlan(input);
       if (process.env.NODE_ENV === 'development') {

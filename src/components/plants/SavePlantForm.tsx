@@ -124,7 +124,7 @@ export function SavePlantForm({
             <FormIcon className="h-6 w-6 text-primary" />
             {currentFormTitle}
           </CardTitle>
-          {formDescription && <CardDescription>{currentFormDescription}</CardDescription>}
+          {formDescription && <CardDescription>{formDescription}</CardDescription>}
         </CardHeader>
       )}
       <Form {...form}>
