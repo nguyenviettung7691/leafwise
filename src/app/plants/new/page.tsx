@@ -8,18 +8,20 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { mockPlants } from '@/lib/mock-data';
-import { useLanguage } from '@/contexts/LanguageContext'; // Import useLanguage
+import { useLanguage } from '@/contexts/LanguageContext';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
 
 export default function NewPlantPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { t } = useLanguage(); // Initialize useLanguage
+  const { t } = useLanguage();
+  const { addPlant } = usePlantData(); // Use PlantDataContext
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: PlantFormData) => {
     setIsSaving(true);
     
+    // Simulate network delay (optional, but good for UX)
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
@@ -36,7 +38,7 @@ export default function NewPlantPage() {
         }
         reader.readAsDataURL(file);
       });
-    } else if (data.diagnosedPhotoDataUrl) {
+    } else if (data.diagnosedPhotoDataUrl) { // This case might not be relevant for manual add, but good to keep if form supports it
       newPhotoUrl = data.diagnosedPhotoDataUrl;
     }
     
@@ -45,7 +47,7 @@ export default function NewPlantPage() {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
+      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
@@ -55,14 +57,15 @@ export default function NewPlantPage() {
         id: `p-${newPlantId}-initial-${Date.now()}`,
         url: newPhotoUrl,
         dateTaken: new Date().toISOString(),
-        healthCondition: data.healthCondition,
-        diagnosisNotes: 'Manually added plant.',
+        healthCondition: data.healthCondition, // Use form's health condition
+        diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),
       }] : [],
       careTasks: [],
       plantingDate: new Date().toISOString(),
+      lastCaredDate: undefined, // New plants don't have a last cared date
     };
 
-    mockPlants.unshift(newPlant);
+    addPlant(newPlant); // Use context function to add plant
 
     toast({
       title: t('addNewPlantPage.toastPlantAddedTitle'),
@@ -92,6 +95,7 @@ export default function NewPlantPage() {
             formTitle={t('addNewPlantPage.formTitle')}
             formDescription={t('addNewPlantPage.formDescription')}
             submitButtonText={t('addNewPlantPage.submitButtonText')}
+            hideInternalHeader={false} // Show the form's own header here
           />
         )}
       </div>

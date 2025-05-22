@@ -6,22 +6,26 @@ import { Loader2, Filter } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useMemo } from 'react';
 import type { Plant, CareTask } from '@/types';
-import { mockPlants } from '@/lib/mock-data';
 import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
 import { CareCalendarView } from '@/components/calendar/CareCalendarView';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
 
 export default function CalendarPage() {
   const { t } = useLanguage();
-  const [isLoading, setIsLoading] = useState(true);
+  const { plants: contextPlants, isLoading: isLoadingContextPlants } = usePlantData(); // Use PlantDataContext
+
   const [allPlants, setAllPlants] = useState<Plant[]>([]);
   const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [pageIsLoading, setPageIsLoading] = useState(true);
 
   useEffect(() => {
-    setAllPlants(mockPlants);
-    setSelectedPlantIds(new Set(mockPlants.map(p => p.id)));
-    setIsLoading(false);
-  }, []);
+    if (!isLoadingContextPlants) {
+      setAllPlants(contextPlants);
+      setSelectedPlantIds(new Set(contextPlants.map(p => p.id)));
+      setPageIsLoading(false);
+    }
+  }, [contextPlants, isLoadingContextPlants]);
 
   const filteredPlants = useMemo(() => {
     if (selectedPlantIds.size === allPlants.length) {
@@ -43,7 +47,7 @@ export default function CalendarPage() {
     // Future: Implement actual task completion logic
   };
 
-  if (isLoading) {
+  if (pageIsLoading) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-full">
@@ -80,5 +84,3 @@ export default function CalendarPage() {
     </AppLayout>
   );
 }
-
-    

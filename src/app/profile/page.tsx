@@ -27,11 +27,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { mockPlants } from '@/lib/mock-data';
 import { useRouter } from 'next/navigation';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
+  const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData(); // Use PlantDataContext
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
@@ -56,16 +57,24 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
+      // For avatar preview, if there's an existing URL and no edit is in progress
+      if (!editedAvatarPreviewUrl && authUser.avatarUrl) {
+        setEditedAvatarPreviewUrl(authUser.avatarUrl);
+      }
     }
-  }, [authUser]);
+  }, [authUser, editedAvatarPreviewUrl]); // Add editedAvatarPreviewUrl to dependencies
 
   const handleEditToggle = () => {
-    if (isEditing) {
+    if (isEditing) { // When cancelling edit
       if (authUser) {
         setEditedName(authUser.name);
+        setEditedAvatarPreviewUrl(authUser.avatarUrl || null); // Reset preview to original avatar
       }
-      setEditedAvatarFile(null);
-      setEditedAvatarPreviewUrl(null);
+      setEditedAvatarFile(null); // Clear any staged file
+    } else { // When starting edit
+        if (authUser) {
+            setEditedAvatarPreviewUrl(authUser.avatarUrl || null); // Set preview to current avatar
+        }
     }
     setIsEditing(!isEditing);
   };
@@ -73,14 +82,14 @@ export default function ProfilePage() {
   const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit for avatar
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           variant: 'destructive',
           title: t('profilePage.toasts.avatarImageTooLargeTitle'),
           description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
         setEditedAvatarFile(null);
-        setEditedAvatarPreviewUrl(null);
+        // Do not reset preview URL here, keep the current one if upload fails
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         return;
       }
@@ -91,8 +100,7 @@ export default function ProfilePage() {
       };
       reader.readAsDataURL(file);
     } else {
-      setEditedAvatarFile(null);
-      setEditedAvatarPreviewUrl(null);
+      // If no file selected, don't clear file or preview, let it be the existing state or previous selection
     }
   };
 
@@ -104,16 +112,19 @@ export default function ProfilePage() {
       name: editedName,
     };
 
-    if (editedAvatarPreviewUrl) {
+    // Only update avatarUrl if a new preview URL is set (meaning a new file was selected or an existing one confirmed)
+    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== user.avatarUrl) {
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
+    } else if (!editedAvatarPreviewUrl && user.avatarUrl) { // If preview was cleared, it implies removing avatar
+      updatedUserData.avatarUrl = undefined; 
     }
+    // If editedAvatarPreviewUrl is same as user.avatarUrl, no change to avatarUrl needed.
 
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
-      setEditedAvatarFile(null);
-      setEditedAvatarPreviewUrl(null);
-      // Toast for success is in AuthContext
+      // setEditedAvatarFile(null); // Keep this reset if needed, or rely on useEffect to update preview from authUser
+      // The preview will update via useEffect reacting to authUser change
     } catch (error) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
@@ -130,7 +141,6 @@ export default function ProfilePage() {
 
     try {
       await updateUser({ preferences: updatedPreferences });
-       // Toast for success is in AuthContext
     } catch (error) {
        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', {preferenceKey}), variant: "destructive" });
     }
@@ -139,7 +149,6 @@ export default function ProfilePage() {
   const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
-    // Navigation is handled within the logout function
     setIsLoggingOut(false);
   };
 
@@ -150,7 +159,7 @@ export default function ProfilePage() {
     }
     const dataToExport = {
       userProfile: authUser,
-      plants: mockPlants, 
+      plants: contextPlants, // Use plants from context
     };
     const jsonString = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -162,7 +171,7 @@ export default function ProfilePage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-    toast({ title: t('profilePage.toasts.exportSuccess'), description: t('profilePage.toasts.exportSuccess') });
+    toast({ title: t('profilePage.toasts.exportSuccessTitle'), description: t('profilePage.toasts.exportSuccessDesc') });
   };
 
   const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -182,11 +191,11 @@ export default function ProfilePage() {
           throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
+        // Destructure to avoid passing id and email directly if updateUser restricts it
         const { id, email, ...profileToUpdate } = importedData.userProfile;
         await updateUser(profileToUpdate);
 
-        mockPlants.length = 0; 
-        mockPlants.push(...(importedData.plants as Plant[])); 
+        setContextPlants(importedData.plants as Plant[]); // Use context function to update plants
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
         router.push('/'); 
@@ -214,20 +223,18 @@ export default function ProfilePage() {
       return;
     }
     setIsDestroyingData(true);
-    // Simulate data destruction
-    mockPlants.length = 0; // Clear plants array
-
-    // Log out the user (this will also clear their profile from localStorage via AuthContext)
-    await logout();
     
-    toast({ title: t('profilePage.toasts.destroySuccess'), description: t('profilePage.toasts.destroySuccess'), variant: "destructive" });
+    clearAllPlantData(); // Use context function to clear plant data
+    await logout(); // This also clears user profile from localStorage
+    
+    toast({ title: t('profilePage.toasts.destroySuccessTitle'), description: t('profilePage.toasts.destroySuccessDesc'), variant: "destructive" });
     setIsDestroyConfirmOpen(false);
     setDestroyEmailInput('');
     setIsDestroyingData(false);
-    // Navigation to login page is handled by logout()
   };
 
-  const avatarSrc = editedAvatarPreviewUrl || user?.avatarUrl || 'https://placehold.co/100x100.png';
+  const avatarSrcToDisplay = isEditing ? (editedAvatarPreviewUrl || 'https://placehold.co/100x100.png') : (user?.avatarUrl || 'https://placehold.co/100x100.png');
+
 
   if (authLoading || !user) {
     return (
@@ -294,7 +301,7 @@ export default function ProfilePage() {
                   className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
                   onClick={() => isEditing && avatarInputRef.current?.click()}
                 >
-                  <AvatarImage src={avatarSrc} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
+                  <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
                   <AvatarFallback className="text-2xl bg-muted">
                     {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
@@ -406,8 +413,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Separator />
-
         <Card className="shadow-xl border-destructive">
             <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2 text-destructive">
@@ -469,7 +474,7 @@ export default function ProfilePage() {
       <AlertDialog open={isDestroyConfirmOpen} onOpenChange={(isOpen) => {
           if (!isOpen) {
               setIsDestroyConfirmOpen(false);
-              setDestroyEmailInput(''); // Reset input when dialog closes
+              setDestroyEmailInput(''); 
           }
       }}>
         <AlertDialogContent>
@@ -510,7 +515,3 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
-
-    
-
-    

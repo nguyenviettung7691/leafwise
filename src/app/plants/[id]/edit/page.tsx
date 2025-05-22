@@ -2,15 +2,14 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Leaf, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
-import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantFormData, PlantPhoto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
 
 export default function EditPlantPage() {
   const router = useRouter();
@@ -18,6 +17,7 @@ export default function EditPlantPage() {
   const id = params.id as string;
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { getPlantById, updatePlant } = usePlantData(); // Use PlantDataContext
 
   const [plant, setPlant] = useState<Plant | null>(null);
   const [initialFormData, setInitialFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
@@ -27,92 +27,84 @@ export default function EditPlantPage() {
 
   useEffect(() => {
     if (id) {
-      const foundPlant = mockPlants.find(p => p.id === id);
+      const foundPlant = getPlantById(id); // Get plant from context
       if (foundPlant) {
         setPlant(foundPlant);
         setGalleryPhotos(foundPlant.photos || []);
         
-        let ageYears: number | undefined = undefined;
-        if (foundPlant.ageEstimate) {
-          const match = foundPlant.ageEstimate.match(/(\d+(\.\d+)?)/);
-          if (match && match[1]) {
-            ageYears = parseFloat(match[1]);
-          }
-        }
-
         setInitialFormData({
           commonName: foundPlant.commonName,
           scientificName: foundPlant.scientificName || '',
           familyCategory: foundPlant.familyCategory || '',
-          ageEstimateYears: ageYears,
+          ageEstimateYears: foundPlant.ageEstimateYears,
           healthCondition: foundPlant.healthCondition,
           location: foundPlant.location || '',
           customNotes: foundPlant.customNotes || '',
           diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, 
         });
       } else {
-        notFound();
+        notFound(); // Or redirect if preferred
       }
     }
     setIsLoadingPage(false);
-  }, [id]);
+  }, [id, getPlantById]);
 
   const handleUpdatePlant = async (data: PlantFormData) => {
-    setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const plantIndex = mockPlants.findIndex(p => p.id === id);
-    if (plantIndex !== -1 && plant) {
-        let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl; 
-
-        if (data.primaryPhoto && data.primaryPhoto[0]) {
-            
-            newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () => resolve(null);
-                reader.readAsDataURL(data.primaryPhoto![0]);
-            });
-        }
-        
-        mockPlants[plantIndex] = {
-          ...mockPlants[plantIndex],
-          commonName: data.commonName,
-          scientificName: data.scientificName || undefined,
-          familyCategory: data.familyCategory || '',
-          ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
-          ageEstimateYears: data.ageEstimateYears,
-          healthCondition: data.healthCondition,
-          location: data.location || undefined,
-          customNotes: data.customNotes || undefined,
-          primaryPhotoUrl: newPrimaryPhotoUrl || plant.primaryPhotoUrl, 
-        };
-      
-        if (newPrimaryPhotoUrl && newPrimaryPhotoUrl !== plant.primaryPhotoUrl) {
-            const existingPhotoIndex = mockPlants[plantIndex].photos.findIndex(p => p.url === newPrimaryPhotoUrl);
-            if (existingPhotoIndex === -1) { 
-                mockPlants[plantIndex].photos.unshift({
-                    id: `p-${id}-new-${Date.now()}`,
-                    url: newPrimaryPhotoUrl,
-                    dateTaken: new Date().toISOString(),
-                    healthCondition: data.healthCondition,
-                    diagnosisNotes: "Primary photo updated via edit form (new upload)."
-                });
-            }
-        }
-
-
-        toast({
-          title: t('editPlantPage.toastPlantUpdatedTitle'),
-          description: t('editPlantPage.toastPlantUpdatedDescription', { plantName: data.commonName }),
-        });
-    } else {
-      toast({
-        title: t('common.error'),
-        description: t('editPlantPage.toastErrorFindingPlant'),
-        variant: 'destructive'
-      });
+    if (!plant) {
+        toast({ title: t('common.error'), description: t('editPlantPage.toastErrorFindingPlant'), variant: 'destructive'});
+        return;
     }
+    setIsSaving(true);
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+
+    let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+    let updatedPhotos = [...plant.photos];
+
+    if (data.primaryPhoto && data.primaryPhoto[0]) {
+        newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(data.primaryPhoto![0]);
+        });
+
+        // If a new photo was uploaded and URL successfully created, add/update it in the gallery
+        if (newPrimaryPhotoUrl) {
+          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
+          if (existingPhotoIndex === -1) { // New photo to add to gallery
+            updatedPhotos.unshift({
+                id: `p-${plant.id}-new-${Date.now()}`,
+                url: newPrimaryPhotoUrl,
+                dateTaken: new Date().toISOString(),
+                healthCondition: data.healthCondition, // Use form's health for new photo
+                diagnosisNotes: "Primary photo updated via edit form (new upload)."
+            });
+          }
+          // If it exists, it's just being re-selected as primary, no change to gallery item needed here.
+        }
+    }
+
+    const updatedPlantData: Plant = {
+      ...plant,
+      commonName: data.commonName,
+      scientificName: data.scientificName || undefined,
+      familyCategory: data.familyCategory || '',
+      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
+      ageEstimateYears: data.ageEstimateYears,
+      healthCondition: data.healthCondition,
+      location: data.location || undefined,
+      customNotes: data.customNotes || undefined,
+      primaryPhotoUrl: newPrimaryPhotoUrl || plant.primaryPhotoUrl, 
+      photos: updatedPhotos,
+      // plantingDate, lastCaredDate, careTasks are preserved from the original plant object
+    };
+  
+    updatePlant(plant.id, updatedPlantData); // Use context function to update plant
+
+    toast({
+      title: t('editPlantPage.toastPlantUpdatedTitle'),
+      description: t('editPlantPage.toastPlantUpdatedDescription', { plantName: data.commonName }),
+    });
     
     setIsSaving(false);
     router.push(`/plants/${id}`); 
@@ -128,7 +120,7 @@ export default function EditPlantPage() {
     );
   }
 
-  if (!plant) { 
+  if (!plant) { // Should be caught by initial loading and notFound(), but as a safeguard
     return notFound();
   }
 
@@ -144,6 +136,7 @@ export default function EditPlantPage() {
           formTitle={t('editPlantPage.formTitle')}
           formDescription={t('editPlantPage.formDescription', { plantName: plant.commonName })}
           submitButtonText={t('editPlantPage.submitButtonText')}
+          hideInternalHeader={false} // Show the form's own header here
         />
       </div>
     </AppLayout>
