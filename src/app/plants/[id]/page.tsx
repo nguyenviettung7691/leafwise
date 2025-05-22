@@ -57,43 +57,45 @@ const transformCareTaskToFormData = (task: CareTask, t: Function): CarePlanTaskF
     startDate: task.nextDueDate || new Date().toISOString(),
   };
 
-  const freqLower = task.frequency.toLowerCase();
+  const freqLower = task.frequency.toLowerCase(); // Use original English frequency string
   
-  if (freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) formData.frequencyMode = 'adhoc';
-  else if (freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) formData.frequencyMode = 'daily';
-  else if (freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) formData.frequencyMode = 'weekly';
-  else if (freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
-  else if (freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
+  // Match English structured frequency strings
+  if (freqLower === 'ad-hoc' || freqLower === 'as needed') formData.frequencyMode = 'adhoc';
+  else if (freqLower === 'daily') formData.frequencyMode = 'daily';
+  else if (freqLower === 'weekly') formData.frequencyMode = 'weekly';
+  else if (freqLower === 'monthly') formData.frequencyMode = 'monthly';
+  else if (freqLower === 'yearly') formData.frequencyMode = 'yearly';
   else {
-    const everyXDaysMatch = task.frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/);
     if (everyXDaysMatch) {
       formData.frequencyValue = parseInt(everyXDaysMatch[1], 10);
       formData.frequencyMode = 'every_x_days';
     } else {
-      const everyXWeeksMatch = task.frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+      const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/);
       if (everyXWeeksMatch) {
         formData.frequencyValue = parseInt(everyXWeeksMatch[1], 10);
         formData.frequencyMode = 'every_x_weeks';
       } else {
-        const everyXMonthsMatch = task.frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+        const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/);
         if (everyXMonthsMatch) {
           formData.frequencyValue = parseInt(everyXMonthsMatch[1], 10);
           formData.frequencyMode = 'every_x_months';
         } else {
           formData.frequencyMode = 'adhoc'; // Fallback
+          console.warn(`Could not parse frequency for edit form: "${task.frequency}"`);
         }
       }
     }
   }
 
-  if (task.timeOfDay && task.timeOfDay.toLowerCase() === t('carePlanTaskForm.timeOfDayOptionAllDay').toLowerCase()) {
+  if (task.timeOfDay && task.timeOfDay.toLowerCase() === 'all day') {
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day';
+    formData.timeOfDayOption = 'all_day'; // Default if unparseable
     formData.specificTime = '';
   }
 
@@ -128,7 +130,7 @@ export default function PlantDetailPage() {
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false);
+  const [isGridPhotoDialogVisible, setIsGridPhotoDialogVisible] = useState(false);
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -157,13 +159,10 @@ export default function PlantDetailPage() {
     if (id) {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
-        // Create a deep copy to avoid direct mutation issues if parts of plant object are shared
         const plantCopy = JSON.parse(JSON.stringify(foundPlant));
         setPlant(plantCopy);
-      } else {
-        if (!isLoadingPage) { // Only call notFound if we are done loading and plant is still not found
-          notFound();
-        }
+      } else if (!isLoadingPage) { 
+        notFound();
       }
     }
     setIsLoadingPage(false);
@@ -180,7 +179,7 @@ export default function PlantDetailPage() {
     const wasPausedBeforeUpdate = taskBeingToggled.isPaused;
 
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 700)); // Shorter delay
+    await new Promise(resolve => setTimeout(resolve, 700));
 
     const updatedTasks = plant.careTasks.map(t =>
       t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : (t.resumeDate || addWeeks(new Date(), 1).toISOString()) } : t
@@ -188,7 +187,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
-    // Local state update via context should trigger re-render
+    // setPlant(updatedPlant); // Local state update will be triggered by context change
 
     setLoadingTaskId(null);
 
@@ -262,7 +261,7 @@ export default function PlantDetailPage() {
                                    (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
                                     newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
-            const healthComparisonInput: ComparePlantHealthInputFlowType = {
+            const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
                 newPhotoHealthStatus: newHealthStatusFromDiagnosis,
@@ -286,8 +285,8 @@ export default function PlantDetailPage() {
                   id: ct.id,
                   name: ct.name,
                   description: ct.description,
-                  frequency: ct.frequency,
-                  timeOfDay: ct.timeOfDay,
+                  frequency: ct.frequency, // This is the English structured string
+                  timeOfDay: ct.timeOfDay, // This is the English structured string
                   isPaused: ct.isPaused,
                   level: ct.level,
                 })),
@@ -316,7 +315,8 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     updatePlant(plant.id, updatedPlant);
-    toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc', {healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
+    // setPlant(updatedPlant); // Context update will trigger re-render
+    toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
     setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}));
   };
 
@@ -340,31 +340,35 @@ export default function PlantDetailPage() {
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); // Context update
 
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
     setNewPhotoJournaled(true);
   };
 
-  const calculateNextDueDateForAIMain = (frequency: string): string | undefined => {
-    const now = new Date();
-    // Ensure this matches the logic in diagnose/page.tsx or centralize it
-    if (frequency.toLowerCase().includes(t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase())) return undefined;
-    if (frequency.toLowerCase().includes(t('carePlanTaskForm.frequencyOptions.daily').toLowerCase())) return addDays(now, 1).toISOString();
-    if (frequency.toLowerCase().includes(t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase())) return addWeeks(now, 1).toISOString();
-    if (frequency.toLowerCase().includes(t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase())) return addMonths(now, 1).toISOString();
-    if (frequency.toLowerCase().includes(t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase())) return addYears(now, 1).toISOString();
+  const calculateNextDueDateFromFrequency = (frequency: string, startDate?: string): string | undefined => {
+    const baseDate = startDate ? parseISO(startDate) : new Date();
+    const now = new Date(baseDate);
   
-    // Match formats like "Every X Days" where X is a number
-    const everyXDaysMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    if (!frequency) return undefined;
+    const freqLower = frequency.toLowerCase();
+  
+    if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
+    if (freqLower === 'daily') return addDays(now, 1).toISOString();
+    if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
+    if (freqLower === 'monthly') return addMonths(now, 1).toISOString();
+    if (freqLower === 'yearly') return addYears(now, 1).toISOString();
+  
+    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/);
     if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1], 10)).toISOString();
   
-    const everyXWeeksMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/);
     if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1], 10)).toISOString();
   
-    const everyXMonthsMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/);
     if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1], 10)).toISOString();
     
-    console.warn(`AI Due date calc unhandled freq: ${frequency}`);
+    console.warn(`calculateNextDueDateFromFrequency unhandled freq: ${frequency}`);
     return undefined;
   };
 
@@ -381,32 +385,39 @@ export default function PlantDetailPage() {
         const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
         if (taskIndex === -1) return;
 
+        let taskToUpdate = {...updatedCareTasks[taskIndex]};
+
         switch (mod.suggestedAction) {
             case 'pause':
-                updatedCareTasks[taskIndex] = { ...updatedCareTasks[taskIndex], isPaused: true, resumeDate: null };
+                taskToUpdate.isPaused = true;
+                taskToUpdate.resumeDate = null;
                 break;
             case 'resume':
-                updatedCareTasks[taskIndex] = { ...updatedCareTasks[taskIndex], isPaused: false };
+                taskToUpdate.isPaused = false;
                 break;
             case 'remove':
                 updatedCareTasks = updatedCareTasks.filter(t => t.id !== mod.taskId);
-                break;
+                return; // Skip to next modification
             case 'update_details':
                 if (mod.updatedDetails) {
-                    updatedCareTasks[taskIndex] = {
-                        ...updatedCareTasks[taskIndex],
-                        name: mod.updatedDetails.name || updatedCareTasks[taskIndex].name,
-                        description: mod.updatedDetails.description || updatedCareTasks[taskIndex].description,
-                        frequency: mod.updatedDetails.frequency || updatedCareTasks[taskIndex].frequency,
-                        timeOfDay: mod.updatedDetails.timeOfDay || updatedCareTasks[taskIndex].timeOfDay,
-                        level: mod.updatedDetails.level || updatedCareTasks[taskIndex].level,
-                        nextDueDate: mod.updatedDetails.frequency ? calculateNextDueDateForAIMain(mod.updatedDetails.frequency) : updatedCareTasks[taskIndex].nextDueDate,
+                    taskToUpdate = {
+                        ...taskToUpdate,
+                        name: mod.updatedDetails.name || taskToUpdate.name,
+                        description: mod.updatedDetails.description || taskToUpdate.description,
+                        frequency: mod.updatedDetails.frequency || taskToUpdate.frequency,
+                        timeOfDay: mod.updatedDetails.timeOfDay || taskToUpdate.timeOfDay,
+                        level: mod.updatedDetails.level || taskToUpdate.level,
                     };
+                    // Recalculate nextDueDate if frequency changed, using the task's current nextDueDate as a base if it exists, or today
+                    if (mod.updatedDetails.frequency) {
+                         taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, taskToUpdate.nextDueDate || new Date().toISOString());
+                    }
                 }
                 break;
             default:
                 break;
         }
+        updatedCareTasks[taskIndex] = taskToUpdate;
     });
 
     newTasks.forEach(aiTask => {
@@ -415,16 +426,17 @@ export default function PlantDetailPage() {
             plantId: plant.id,
             name: aiTask.taskName,
             description: aiTask.taskDescription,
-            frequency: aiTask.suggestedFrequency,
-            timeOfDay: aiTask.suggestedTimeOfDay,
+            frequency: aiTask.suggestedFrequency, // English structured string
+            timeOfDay: aiTask.suggestedTimeOfDay, // English structured string
             level: aiTask.taskLevel,
             isPaused: false,
-            nextDueDate: calculateNextDueDateForAIMain(aiTask.suggestedFrequency),
+            nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
         });
     });
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); // Context update
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
@@ -438,17 +450,18 @@ export default function PlantDetailPage() {
 
   const openGridPhotoDialog = (photo: PlantPhoto) => {
     setSelectedGridPhoto(photo);
-    setIsGridPhotoDialogValid(true);
+    setIsGridPhotoDialogVisible(true);
   };
   const closeGridPhotoDialog = () => {
-    setIsGridPhotoDialogValid(false);
-    setTimeout(() => setSelectedGridPhoto(null), 300);
+    setIsGridPhotoDialogVisible(false);
+    setTimeout(() => setSelectedGridPhoto(null), 300); // Delay to allow fade out
   };
 
   const handleSetAsPrimaryPhoto = (photoUrl: string) => {
     if (!plant) return;
     const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); // Context update
     toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
     closeGridPhotoDialog();
   };
@@ -458,7 +471,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     setIsSavingTask(true);
 
-    const currentTasks = plant.careTasks ? [...plant.careTasks] : [];
+    let currentTasks = plant.careTasks ? [...plant.careTasks] : [];
     let updatedTasks: CareTask[];
 
     if (taskToEdit) { 
@@ -466,11 +479,11 @@ export default function PlantDetailPage() {
             t.id === taskToEdit.id ? {
                 ...t,
                 name: taskData.name,
-                description: taskData.description,
-                frequency: taskData.frequency,
-                timeOfDay: taskData.timeOfDay,
+                description: taskData.description, // Save description
+                frequency: taskData.frequency, // English structured string
+                timeOfDay: taskData.timeOfDay, // English structured string
                 level: taskData.level,
-                nextDueDate: taskData.startDate, 
+                nextDueDate: taskData.startDate, // This is the new base due date
             } : t
         );
         toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
@@ -479,12 +492,12 @@ export default function PlantDetailPage() {
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             plantId: plant.id,
             name: taskData.name,
-            description: taskData.description,
-            frequency: taskData.frequency,
-            timeOfDay: taskData.timeOfDay,
+            description: taskData.description, // Save description
+            frequency: taskData.frequency, // English structured string
+            timeOfDay: taskData.timeOfDay, // English structured string
             level: taskData.level,
             isPaused: false,
-            nextDueDate: taskData.startDate,
+            nextDueDate: taskData.startDate, // This is the first due date
         };
         updatedTasks = [...currentTasks, newTask];
         toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
@@ -492,6 +505,7 @@ export default function PlantDetailPage() {
 
     const newPlantState = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, newPlantState);
+    // setPlant(newPlantState); // Context update
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -527,6 +541,7 @@ export default function PlantDetailPage() {
     const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
     const newPlantState = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, newPlantState);
+    // setPlant(newPlantState); // Context update
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
@@ -577,12 +592,13 @@ export default function PlantDetailPage() {
         const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
         newPrimaryPhotoUrl = sortedRemainingPhotos[0].url;
       } else {
-        newPrimaryPhotoUrl = undefined;
+        newPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(plant.commonName || 'Plant')}`;
       }
     }
 
     const newPlantState = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
     updatePlant(plant.id, newPlantState);
+    // setPlant(newPlantState); // Context update
 
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
@@ -638,6 +654,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); // Context update
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
@@ -659,8 +676,8 @@ export default function PlantDetailPage() {
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.isHealthy ? 'healthy' :
-                                    (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
-                                     newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
+                                   (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
+                                    newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
   return (
     <AppLayout>
@@ -865,11 +882,11 @@ export default function PlantDetailPage() {
                 </div>
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
-                     {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant ? (
+                    { !newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant ? (
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
                        </Button>
-                     ) : <div className="flex-1" />}
+                     ) : <div className="flex-1" /> }
                     <DialogClose asChild>
                         <Button type="button" variant="outline">
                             {t('common.close')}
@@ -880,14 +897,14 @@ export default function PlantDetailPage() {
         </Dialog>
 
 
-        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
+        <Dialog open={isGridPhotoDialogVisible} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>{t('plantDetail.photoDetailsDialog.title', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}</DialogTitle>
                 </DialogHeader>
                 {selectedGridPhoto && (
                     <div className="space-y-3 py-3">
-                        <Image src={selectedGridPhoto.url} alt={t('plantDetail.photoDetailsDialog.title', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
+                        <Image src={selectedGridPhoto.url} alt={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
                         <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
@@ -996,7 +1013,7 @@ export default function PlantDetailPage() {
                 {photoToEdit && (
                     <div className="space-y-4 py-4">
                         <div className="flex justify-center mb-4">
-                             <Image src={photoToEdit.url} alt={t('plantDetail.editPhotoDialog.title')} width={200} height={200} className="rounded-md object-contain max-h-[200px]" data-ai-hint="plant detail edit"/>
+                             <Image src={photoToEdit.url} alt={t('plantDetail.editPhotoDialog.photoAlt', {date: formatDateForDialog(photoToEdit.dateTaken)})} width={200} height={200} className="rounded-md object-contain max-h-[200px]" data-ai-hint="plant detail edit"/>
                         </div>
                         <div>
                             <Label htmlFor="edit-photo-date">{t('plantDetail.editPhotoDialog.dateTakenLabel')}</Label>

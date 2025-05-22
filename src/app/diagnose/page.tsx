@@ -16,7 +16,7 @@ import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDisplay';
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
-import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
 
 export default function DiagnosePlantPage() {
@@ -45,24 +45,29 @@ export default function DiagnosePlantPage() {
   const { t, language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const calculateNextDueDate = (frequency: string): string | undefined => {
-    const now = new Date();
-    if (frequency === 'Ad-hoc' || frequency === 'As needed' || t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase().includes(frequency.toLowerCase())) return undefined;
-    if (t('carePlanTaskForm.frequencyOptions.daily').toLowerCase().includes(frequency.toLowerCase())) return addDays(now, 1).toISOString();
-    if (t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase().includes(frequency.toLowerCase())) return addWeeks(now, 1).toISOString();
-    if (t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase().includes(frequency.toLowerCase())) return addMonths(now, 1).toISOString();
-    if (t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase().includes(frequency.toLowerCase())) return addYears(now, 1).toISOString();
+  const calculateNextDueDate = (frequency: string, startDate?: string): string | undefined => {
+    const baseDate = startDate ? parseISO(startDate) : new Date();
+    const now = new Date(baseDate); // Use provided startDate or today as base
   
-    const everyXDaysMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    if (!frequency) return undefined;
+    const freqLower = frequency.toLowerCase();
+  
+    if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
+    if (freqLower === 'daily') return addDays(now, 1).toISOString();
+    if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
+    if (freqLower === 'monthly') return addMonths(now, 1).toISOString();
+    if (freqLower === 'yearly') return addYears(now, 1).toISOString();
+  
+    const everyXDaysMatch = freqLower.match(/^every (\d+) days$/);
     if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1], 10)).toISOString();
   
-    const everyXWeeksMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks$/);
     if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1], 10)).toISOString();
   
-    const everyXMonthsMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    const everyXMonthsMatch = freqLower.match(/^every (\d+) months$/);
     if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1], 10)).toISOString();
   
-    console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}". Returning undefined.`);
+    console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}" in DiagnosePage. Returning undefined.`);
     return undefined;
   };
 
@@ -134,12 +139,12 @@ export default function DiagnosePlantPage() {
 
     setIsLoadingDiagnosis(true);
     setDiagnosisError(null);
-    setDiagnosisResult(null); // Clear previous diagnosis result
-    setCarePlanResult(null); // Clear previous care plan
+    setDiagnosisResult(null); 
+    setCarePlanResult(null); 
     setGeneratedPlanMode(null);
-    setShowSavePlantForm(false); // Hide save form if it was open
-    setPlantSaved(false); // Reset plant saved state
-    setLastSavedPlantId(null); // Reset last saved plant ID
+    setShowSavePlantForm(false); 
+    setPlantSaved(false); 
+    setLastSavedPlantId(null); 
 
     const readFileAsDataURL = (fileToRead: File): Promise<string> => {
       return new Promise((resolve, reject) => {
@@ -167,11 +172,6 @@ export default function DiagnosePlantPage() {
         description: result.identification.commonName ? t('diagnosePage.toasts.diagnosisCompleteDesc', { plantName: result.identification.commonName }) : t('diagnosePage.toasts.analysisCompleteDesc'),
       });
       
-      // Determine if care plan generator should be shown: if plant identified but maybe not enough info to save
-      if (result.identification.isPlant && !result.identification.commonName) {
-        // No specific action to show care plan generator immediately if plant is not fully identified
-      }
-
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.toasts.diagnosisErrorTitle'));
       setDiagnosisError(errorMessage);
@@ -186,16 +186,15 @@ export default function DiagnosePlantPage() {
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
-    let finalPhotoUrl: string;
+    let finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+    let initialPhotoDataUrl = data.diagnosedPhotoDataUrl;
 
-    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      // If diagnosedPhotoDataUrl is a data URL (from new upload or diagnosis preview), replace with placeholder
-      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
-    } else if (data.diagnosedPhotoDataUrl) {
-      // If it's already a placeholder or other non-data URL (e.g., selected from gallery in edit mode)
-      finalPhotoUrl = data.diagnosedPhotoDataUrl;
-    } else {
-      finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+    if (data.primaryPhoto && data.primaryPhoto[0]) {
+      // If new file uploaded, it's already a data URL in diagnosedPhotoDataUrl via SavePlantForm
+      initialPhotoDataUrl = data.diagnosedPhotoDataUrl; 
+    } else if (data.diagnosedPhotoDataUrl && !data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      // If it's an existing placeholder or gallery URL, keep it for placeholder generation
+      // No, this logic is flawed, placeholder is always new from commonName for saving
     }
     
     const newPlant: Plant = {
@@ -203,18 +202,18 @@ export default function DiagnosePlantPage() {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
+      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPhotoUrl,
+      primaryPhotoUrl: finalPhotoUrl, // Always use placeholder for storage
       photos: [{
         id: `p-${newPlantId}-initial-${Date.now()}`,
-        url: finalPhotoUrl,
+        url: finalPhotoUrl, // Store placeholder URL
         dateTaken: new Date().toISOString(),
         healthCondition: data.healthCondition,
-        diagnosisNotes: t('diagnosePage.resultDisplay.initialDiagnosisNotes'),
+        diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
       }],
       careTasks: [],
       plantingDate: new Date().toISOString(),
@@ -261,7 +260,7 @@ export default function DiagnosePlantPage() {
       }
       setCarePlanResult(result);
       setGeneratedPlanMode(carePlanMode);
-      toast({ title: t('diagnosePage.toasts.carePlanGeneratedTitle'), description: t('diagnosePage.toasts.carePlanGeneratedDesc', { mode: carePlanMode, plantName: input.plantCommonName }) });
+      toast({ title: t('diagnosePage.toasts.carePlanGeneratedTitle'), description: t('diagnosePage.toasts.carePlanGeneratedDesc', { mode: t(`common.${carePlanMode}`), plantName: input.plantCommonName }) });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.carePlanGenerator.errorAlertTitle'));
       setCarePlanError(errorMessage);
@@ -288,18 +287,18 @@ export default function DiagnosePlantPage() {
     const newCareTasks: CareTask[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
       id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       plantId: lastSavedPlantId,
-      name: aiTask.taskName,
-      description: aiTask.taskDescription,
-      frequency: aiTask.suggestedFrequency,
-      timeOfDay: aiTask.suggestedTimeOfDay,
+      name: aiTask.taskName, // This will be in the AI's language (e.g., Vietnamese if languageCode='vi')
+      description: aiTask.taskDescription, // Also in AI's language
+      frequency: aiTask.suggestedFrequency, // English structured string, e.g., "Daily", "Every 3 Days"
+      timeOfDay: aiTask.suggestedTimeOfDay, // English structured string, e.g., "09:00", "All day"
       isPaused: false,
-      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency),
+      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency, new Date().toISOString()), // Use current date as base for first due date
       level: aiTask.taskLevel,
     }));
 
     const updatedPlant = {
       ...currentPlant,
-      careTasks: [...currentPlant.careTasks, ...newCareTasks]
+      careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]
     };
     updatePlant(lastSavedPlantId, updatedPlant);
 
@@ -315,8 +314,8 @@ export default function DiagnosePlantPage() {
     scientificName: diagnosisResult.identification.scientificName || '',
     familyCategory: diagnosisResult.identification.familyCategory || '',
     ageEstimateYears: diagnosisResult.identification.ageEstimateYears,
-    healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : 'needs_attention' as PlantHealthCondition,
-    diagnosedPhotoDataUrl: previewUrl, // This previewUrl is a data URL from the diagnosis file input
+    healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : (diagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || diagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention') as PlantHealthCondition,
+    diagnosedPhotoDataUrl: previewUrl, 
   } : undefined;
 
   const shouldShowCarePlanGenerator = diagnosisResult?.identification.isPlant && plantSaved;
