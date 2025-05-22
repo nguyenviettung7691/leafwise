@@ -23,10 +23,10 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))', 
-  needs_attention: 'hsl(var(--chart-4))', 
-  sick: 'hsl(var(--destructive))', 
-  unknown: 'hsl(var(--muted-foreground))', 
+  healthy: 'hsl(var(--primary))',
+  needs_attention: 'hsl(var(--chart-4))', // Assuming chart-4 is a yellow/orange
+  sick: 'hsl(var(--destructive))',
+  unknown: 'hsl(var(--muted-foreground))',
 };
 
 
@@ -65,7 +65,7 @@ interface PlantGrowthTrackerProps {
   onOpenGridPhotoDialog: (photo: PlantPhoto) => void;
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
-  growthPhotoInputRef: React.RefObject<HTMLInputElement>; 
+  growthPhotoInputRef: React.RefObject<HTMLInputElement>;
   onChartDotClick: (chartDotPayload: any) => void;
   isManagingPhotos: boolean;
   onToggleManagePhotos: () => void;
@@ -89,7 +89,7 @@ export function PlantGrowthTracker({
   onDeleteSelectedPhotos,
   onOpenEditPhotoDialog,
 }: PlantGrowthTrackerProps) {
-  const { t } = useLanguage();
+  const { t, dateFnsLocale } = useLanguage();
 
   const healthScoreLabels: Record<number, string> = {
     0: t('common.unknown'),
@@ -103,15 +103,15 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url, 
-        date: format(parseISO(photo.dateTaken), 'MMM d, yy'),
+        photoUrl: photo.url,
+        date: format(parseISO(photo.dateTaken), 'MMM d, yy', { locale: dateFnsLocale }),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
         healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition.replace('_', '')}` as any, photo.healthCondition.replace(/_/g, ' ')),
         healthCondition: photo.healthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plant, t]);
+  }, [plant, t, dateFnsLocale]);
 
   const sortedPhotosForGallery = useMemo(() => {
     if (!plant || !plant.photos) return [];
@@ -121,7 +121,7 @@ export function PlantGrowthTracker({
   const chartConfig = {
     health: {
       label: t('plantDetail.growthTracker.healthTrendTitle'),
-      color: 'hsl(var(--primary))', 
+      color: 'hsl(var(--primary))',
     },
   } satisfies ChartConfig;
 
@@ -140,14 +140,14 @@ export function PlantGrowthTracker({
   };
 
   const handleCheckboxClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
   };
 
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
     try {
       const date = parseISO(dateString);
-      return format(date, 'MMM d, yyyy');
+      return format(date, 'MMM d, yyyy', { locale: dateFnsLocale });
     } catch (error) {
       console.error("Error parsing date:", dateString, error);
       return t('common.error');
@@ -195,7 +195,7 @@ export function PlantGrowthTracker({
           )}
         </div>
       </div>
-      
+
       {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
         <div className="mt-4 pt-4 border-t">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
@@ -275,7 +275,7 @@ export function PlantGrowthTracker({
                       "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
                        isManagingPhotos && isSelected ? 'opacity-75' : ''
                   )}>
-                    <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p> 
+                    <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p>
                     <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
                       {t(`plantDetail.healthConditions.${photo.healthCondition.replace('_','')}` as any, photo.healthCondition.replace('_', ' '))}
                     </Badge>
@@ -288,7 +288,7 @@ export function PlantGrowthTracker({
       )}
 
       {!isManagingPhotos && chartData.length > 0 && (
-        <div className="mt-4 mb-6 pt-4 border-t"> 
+        <div className="mt-4 mb-6 pt-4 border-t">
           <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             {t('plantDetail.growthTracker.healthTrendTitle')}
@@ -298,7 +298,7 @@ export function PlantGrowthTracker({
               accessibilityLayer
               data={chartData}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              onClick={(data) => { 
+              onClick={(data) => {
                 if (data && data.activePayload && data.activePayload.length > 0) {
                   handleRechartsDotClick(data.activePayload[0].payload);
                 }
@@ -310,7 +310,7 @@ export function PlantGrowthTracker({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 6)} 
+                tickFormatter={(value) => value.slice(0, 6)}
               />
               <YAxis
                 dataKey="health"
@@ -354,7 +354,7 @@ export function PlantGrowthTracker({
                 type="monotone"
                 stroke="var(--color-health)"
                 strokeWidth={2}
-                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />} 
+                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
                 activeDot={{r: 7, style: { cursor: 'pointer' }}}
               />
             </LineChart>
@@ -368,5 +368,3 @@ export function PlantGrowthTracker({
     </div>
   );
 }
-
-    

@@ -41,15 +41,15 @@ const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
     const [hours, minutes] = timeOfDay.split(':').map(Number);
     newDate.setHours(hours, minutes, 0, 0);
   } else {
-    newDate.setHours(0, 0, 0, 0); 
+    newDate.setHours(0, 0, 0, 0);
   }
   return newDate;
 };
 
 const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 1): Date => {
   const newDate = new Date(date);
-  if (frequency.toLowerCase() === 'ad-hoc') { 
-    return newDate; 
+  if (frequency.toLowerCase() === 'ad-hoc') {
+    return newDate;
   }
   if (frequency === 'Daily' || frequency.toLowerCase() === 'daily') return addDays(newDate, 1 * multiplier);
   if (frequency === 'Weekly' || frequency.toLowerCase() === 'weekly') return addWeeks(newDate, 1 * multiplier);
@@ -64,7 +64,7 @@ const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 
     if (unit.toLowerCase() === 'weeks') return addWeeks(newDate, value * multiplier);
     if (unit.toLowerCase() === 'months') return addMonths(newDate, value * multiplier);
   }
-  
+
   if (multiplier !== 1) return new Date(multiplier > 0 ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER);
   return newDate;
 };
@@ -76,12 +76,12 @@ interface WeeklyCareCalendarViewProps {
 }
 
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
-  const { t } = useLanguage();
+  const { t, dateFnsLocale } = useLanguage();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
 
-  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; 
+  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1;
 
   const currentWeekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
   const currentWeekEnd = useMemo(() => endOfWeek(currentDate, { weekStartsOn }), [currentDate, weekStartsOn]);
@@ -95,7 +95,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         return date >= parseISO(task.resumeDate);
       } catch { return false; }
     }
-    return false; 
+    return false;
   };
 
   useEffect(() => {
@@ -124,10 +124,10 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         return occurrences;
       }
 
-      
+
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      while (currentOccurrenceForward <= rangeEndDate && safetyForward < 100) { 
+      while (currentOccurrenceForward <= rangeEndDate && safetyForward < 100) {
         if (currentOccurrenceForward >= rangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceForward) });
         }
@@ -136,10 +136,10 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         safetyForward++;
       }
 
-      
+
       let currentOccurrenceBackward = addFrequencyHelper(new Date(seedDate), task.frequency, -1);
       let safetyBackward = 0;
-      while (currentOccurrenceBackward >= rangeStartDate && safetyBackward < 100) { 
+      while (currentOccurrenceBackward >= rangeStartDate && safetyBackward < 100) {
          if (currentOccurrenceBackward <= rangeEndDate && isActive(task, currentOccurrenceBackward)) {
            occurrences.push({ originalTask: task, occurrenceDate: new Date(currentOccurrenceBackward) });
          }
@@ -147,8 +147,8 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         if (isNaN(currentOccurrenceBackward.getTime())) break;
         safetyBackward++;
       }
-      
-      
+
+
       if (isWithinInterval(seedDate, { start: rangeStartDate, end: rangeEndDate }) && isActive(task, seedDate)) {
         if (!occurrences.find(o => o.occurrenceDate.getTime() === seedDate.getTime())) {
            occurrences.push({ originalTask: task, occurrenceDate: new Date(seedDate) });
@@ -157,7 +157,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
 
       const uniqueOccurrencesMap = new Map<string, DisplayableTaskOccurrence>();
       occurrences.forEach(o => uniqueOccurrencesMap.set(o.occurrenceDate.toISOString() + o.originalTask.id, o));
-      
+
       return Array.from(uniqueOccurrencesMap.values()).sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());
     };
 
@@ -199,7 +199,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         return [];
     }
     if (uniqueHoursWithTasks.size === 0 && tasksThisWeek.some(o => o.originalTask.timeOfDay && o.originalTask.timeOfDay.toLowerCase() !== 'all day')) {
-      return []; 
+      return [];
     }
     return Array.from(uniqueHoursWithTasks).sort((a, b) => a - b);
 
@@ -217,7 +217,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium w-auto text-center tabular-nums px-2">
-            {format(currentWeekStart, 'MMM d')} - {format(currentWeekEnd, 'MMM d, yyyy')}
+            {format(currentWeekStart, 'MMM d', { locale: dateFnsLocale })} - {format(currentWeekEnd, 'MMM d, yyyy', { locale: dateFnsLocale })}
             {isCurrentActualWeek && <span className="text-primary font-semibold"> {t('weeklyCareCalendar.currentWeekIndicator')}</span>}
           </span>
           <Button variant="outline" size="icon" onClick={goToNextWeek} aria-label={t('weeklyCareCalendar.nextWeekAria')}>
@@ -256,8 +256,8 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                   today ? "bg-primary/10" : ""
                 )}
               >
-                <div className={dayNameClassName}>{format(day, 'EEE')}</div>
-                <div className={cn("text-muted-foreground", today ? "font-semibold" : "")}>{format(day, 'd')}</div>
+                <div className={dayNameClassName}>{format(day, 'EEE', { locale: dateFnsLocale })}</div>
+                <div className={cn("text-muted-foreground", today ? "font-semibold" : "")}>{format(day, 'd', { locale: dateFnsLocale })}</div>
               </div>
             );
           })}
@@ -268,7 +268,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
               <React.Fragment key={hour}>
                 <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center min-w-[70px]">
                   <div className="flex items-center gap-1">
-                    <span>{format(new Date(0, 0, 0, hour), 'ha')}</span>
+                    <span>{format(new Date(0, 0, 0, hour), 'ha', { locale: dateFnsLocale })}</span>
                     {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
                   </div>
                 </div>
@@ -297,7 +297,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                             occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border shadow-sm"
                           )}
                           onClick={() => onEditTask(occurrence.originalTask)}
-                          title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm')})`}
+                          title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale })})`}
                         >
                            <span className="font-semibold">{occurrence.originalTask.name}</span>
                             <Button
@@ -362,5 +362,3 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
-
-    

@@ -91,7 +91,7 @@ export function CareCalendarView({
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
-  const { t } = useLanguage();
+  const { t, dateFnsLocale } = useLanguage();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
@@ -105,9 +105,9 @@ export function CareCalendarView({
   const currentPeriodEnd = useMemo(() => {
     return viewMode === 'week' ? endOfWeek(currentDate, { weekStartsOn }) : endOfMonth(currentDate);
   }, [currentDate, viewMode, weekStartsOn]);
-  
+
   const daysInWeek = useMemo(() => eachDayOfInterval({ start: currentPeriodStart, end: currentPeriodEnd }), [currentPeriodStart, currentPeriodEnd]);
-  
+
   const currentMonth = useMemo(() => startOfMonth(currentDate), [currentDate]);
   const daysForMonthGrid = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -183,7 +183,7 @@ export function CareCalendarView({
 
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < (viewMode === 'week' ? 100 : 400) ) { 
+      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < (viewMode === 'week' ? 100 : 400) ) {
         if (currentOccurrenceForward >= calcRangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(currentOccurrenceForward) });
         }
@@ -202,7 +202,7 @@ export function CareCalendarView({
         if (isNaN(currentOccurrenceBackward.getTime())) break;
         safetyBackward++;
       }
-      
+
       if (isWithinInterval(seedDate, { start: calcRangeStartDate, end: calcRangeEndDate }) && isActive(task, seedDate)) {
          if (!occurrences.find(o => o.occurrenceDate.getTime() === seedDate.getTime())) {
            occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(seedDate) });
@@ -211,7 +211,7 @@ export function CareCalendarView({
 
       const uniqueOccurrencesMap = new Map<string, DisplayableTaskOccurrence>();
       occurrences.forEach(o => uniqueOccurrencesMap.set(o.occurrenceDate.toISOString() + o.originalTask.id + o.plantId, o));
-      
+
       return Array.from(uniqueOccurrencesMap.values()).sort((a, b) => a.occurrenceDate.getTime() - b.occurrenceDate.getTime());
     };
 
@@ -238,7 +238,7 @@ export function CareCalendarView({
             if (timeCategory === 'allday') {
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
             }
-            if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false; 
+            if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false;
             if (timeCategory === 'daytime') return hour >= 7 && hour < 19; // 7 AM to 6:59 PM
             if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; // 7 PM to 6:59 AM
             return false;
@@ -263,7 +263,7 @@ export function CareCalendarView({
     });
 
     if (uniqueHoursWithTasks.size === 0 && displayedOccurrences.some(o => o.originalTask.timeOfDay && o.originalTask.timeOfDay.toLowerCase() !== 'all day')) {
-      return []; 
+      return [];
     }
     if (uniqueHoursWithTasks.size === 0 && displayedOccurrences.length > 0 && !displayedOccurrences.some(o => o.originalTask.timeOfDay && o.originalTask.timeOfDay.toLowerCase() !== 'all day')) {
       return [];
@@ -286,7 +286,7 @@ export function CareCalendarView({
     }
   };
 
-  const dayHeaders = [
+  const dayHeaders = useMemo(() => [
     { key: "mon", name: t('calendarPage.calendarView.dayHeaders.mon'), isWeekend: false },
     { key: "tue", name: t('calendarPage.calendarView.dayHeaders.tue'), isWeekend: false },
     { key: "wed", name: t('calendarPage.calendarView.dayHeaders.wed'), isWeekend: false },
@@ -294,7 +294,7 @@ export function CareCalendarView({
     { key: "fri", name: t('calendarPage.calendarView.dayHeaders.fri'), isWeekend: false },
     { key: "sat", name: t('calendarPage.calendarView.dayHeaders.sat'), isWeekend: true },
     { key: "sun", name: t('calendarPage.calendarView.dayHeaders.sun'), isWeekend: true }
-  ];
+  ], [t]);
 
 
   const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false) => (
@@ -326,7 +326,7 @@ export function CareCalendarView({
         </TooltipTrigger>
         <TooltipContent className="text-xs">
           <p className="font-semibold">{t('calendarPage.calendarView.taskTooltipTitle', { plantName: occurrence.plantName, taskName: occurrence.originalTask.name})}</p>
-          <p>{t('calendarPage.calendarView.taskTooltipTime', { time: format(occurrence.occurrenceDate, 'HH:mm') })}</p>
+          <p>{t('calendarPage.calendarView.taskTooltipTime', { time: format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale }) })}</p>
           {occurrence.originalTask.description && <p className="text-muted-foreground max-w-xs">{t('calendarPage.calendarView.taskTooltipDesc', { description: occurrence.originalTask.description })}</p>}
         </TooltipContent>
       </Tooltip>
@@ -357,7 +357,9 @@ export function CareCalendarView({
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm font-medium w-auto text-center tabular-nums px-1 whitespace-nowrap">
-                    {viewMode === 'week' ? `${format(currentPeriodStart, 'MMM d')} - ${format(currentPeriodEnd, 'MMM d, yyyy')}` : format(currentMonth, 'MMMM yyyy')}
+                    {viewMode === 'week'
+                      ? `${format(currentPeriodStart, 'MMM d', { locale: dateFnsLocale })} - ${format(currentPeriodEnd, 'MMM d, yyyy', { locale: dateFnsLocale })}`
+                      : format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
                     {isCurrentActualPeriod && <span className="text-primary font-semibold"> {t('calendarPage.calendarView.currentPeriodIndicator')}</span>}
                 </span>
                 <Button variant="outline" size="icon" onClick={goToNextPeriod} aria-label={t(viewMode === 'week' ? 'calendarPage.calendarView.nextPeriodAriaWeek' : 'calendarPage.calendarView.nextPeriodAriaMonth')}>
@@ -383,7 +385,7 @@ export function CareCalendarView({
               <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('calendarPage.calendarView.timeColumnHeader')}</div>
               {daysInWeek.map(day => {
                 const dayOfWeek = getDay(day);
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                 const today = isToday(day);
                 return (
                   <div
@@ -393,8 +395,8 @@ export function CareCalendarView({
                       today ? "bg-primary/10" : ""
                     )}
                   >
-                    <div className={cn("font-semibold", isWeekend ? "text-primary" : "text-foreground", today ? "text-primary dark:text-primary" : "")}>{format(day, 'EEE')}</div>
-                    <div className={cn("text-muted-foreground", today ? "font-semibold" : "")}>{format(day, 'd')}</div>
+                    <div className={cn("font-semibold", isWeekend ? "text-primary" : "text-foreground", today ? "text-primary dark:text-primary" : "")}>{format(day, 'EEE', { locale: dateFnsLocale })}</div>
+                    <div className={cn("text-muted-foreground", today ? "font-semibold" : "")}>{format(day, 'd', { locale: dateFnsLocale })}</div>
                   </div>
                 );
               })}
@@ -405,7 +407,7 @@ export function CareCalendarView({
                   <React.Fragment key={`hour-row-${hour}`}>
                     <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 min-h-[3.5rem] flex items-center justify-center min-w-[70px]">
                       <div className="flex items-center gap-1">
-                        <span>{format(new Date(0, 0, 0, hour), 'ha')}</span>
+                        <span>{format(new Date(0, 0, 0, hour), 'ha', { locale: dateFnsLocale })}</span>
                         {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
                       </div>
                     </div>
@@ -469,7 +471,7 @@ export function CareCalendarView({
                                 )}
                             >
                                 <div className={cn(
-                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5", 
+                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5",
                                     !isCurrentMonthDay ? "text-muted-foreground/50" : "text-foreground",
                                     today ? "text-primary font-bold" : ""
                                 )}>
@@ -481,15 +483,15 @@ export function CareCalendarView({
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
                                         </div>
                                     )}
-                                    
+
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto",
                                         isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto", 
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto",
                                         isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
@@ -506,5 +508,3 @@ export function CareCalendarView({
     </Card>
   );
 }
-
-    

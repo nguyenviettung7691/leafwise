@@ -5,40 +5,51 @@ import type { ReactNode} from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import enTranslations from '@/locales/en.json';
 import viTranslations from '@/locales/vi.json';
+import { enUS, vi } from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
 
-type Locale = 'en' | 'vi';
+type AppLocale = 'en' | 'vi';
 
 interface Translations {
   [key: string]: string | Translations;
 }
 
 interface LanguageContextType {
-  language: Locale;
-  setLanguage: (language: Locale) => void;
+  language: AppLocale;
+  setLanguage: (language: AppLocale) => void;
   t: (key: string, replacements?: {[key: string]: string | number}) => string;
   translations: Translations;
+  dateFnsLocale: DateFnsLocale;
 }
 
-const translationsData: Record<Locale, Translations> = {
+const translationsData: Record<AppLocale, Translations> = {
   en: enTranslations,
   vi: viTranslations,
+};
+
+const dateFnsLocalesMap: Record<AppLocale, DateFnsLocale> = {
+  en: enUS,
+  vi: vi,
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Locale>('en'); // Default to English
+  const [language, setLanguageState] = useState<AppLocale>('en'); // Default to English
+  const [dateFnsLocale, setDateFnsLocaleState] = useState<DateFnsLocale>(enUS);
 
   useEffect(() => {
-    const storedLanguage = localStorage.getItem('appLanguage') as Locale | null;
+    const storedLanguage = localStorage.getItem('appLanguage') as AppLocale | null;
     if (storedLanguage && (storedLanguage === 'en' || storedLanguage === 'vi')) {
       setLanguageState(storedLanguage);
+      setDateFnsLocaleState(dateFnsLocalesMap[storedLanguage]);
     }
   }, []);
 
-  const setLanguage = (lang: Locale) => {
+  const setLanguage = (lang: AppLocale) => {
     if (translationsData[lang]) {
       setLanguageState(lang);
+      setDateFnsLocaleState(dateFnsLocalesMap[lang]);
       localStorage.setItem('appLanguage', lang);
     } else {
       console.warn(`Language ${lang} not supported or translations missing.`);
@@ -67,11 +78,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
     // Fallback for missing keys
     console.warn(`Translation key "${key}" not found for language "${language}".`);
-    return key; 
+    return key;
   }, [language]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, translations: translationsData[language] }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, translations: translationsData[language], dateFnsLocale }}>
       {children}
     </LanguageContext.Provider>
   );
