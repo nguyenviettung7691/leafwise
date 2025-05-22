@@ -505,7 +505,31 @@
       "destroyEmailMismatch": "Email confirmation failed.",
       "destroySuccess": "All your personal data has been removed."
     }
+  },
+  "loginPage": {
+    "title": "Welcome Back",
+    "description": "Sign in to access your LeafWise dashboard.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "signInButton": "Sign In",
+    "noAccountText": "Don't have an account?",
+    "signUpLink": "Sign up"
+  },
+  "registerPage": {
+    "title": "Create Your Account",
+    "description": "Join LeafWise and start managing your plants today.",
+    "nameLabel": "Full Name",
+    "namePlaceholder": "John Doe",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "confirmPasswordLabel": "Confirm Password",
+    "confirmPasswordPlaceholder": "••••••••",
+    "signUpButton": "Sign Up",
+    "hasAccountText": "Already have an account?",
+    "signInLink": "Sign in"
   }
 }
-
-    

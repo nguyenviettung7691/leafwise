@@ -505,7 +505,31 @@
       "destroyEmailMismatch": "Xác nhận email không thành công.",
       "destroySuccess": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
     }
+  },
+  "loginPage": {
+    "title": "[VI] Welcome Back",
+    "description": "[VI] Sign in to access your LeafWise dashboard.",
+    "emailLabel": "[VI] Email Address",
+    "emailPlaceholder": "[VI] you@example.com",
+    "passwordLabel": "[VI] Password",
+    "passwordPlaceholder": "[VI] ••••••••",
+    "signInButton": "[VI] Sign In",
+    "noAccountText": "[VI] Don't have an account?",
+    "signUpLink": "[VI] Sign up"
+  },
+  "registerPage": {
+    "title": "[VI] Create Your Account",
+    "description": "[VI] Join LeafWise and start managing your plants today.",
+    "nameLabel": "[VI] Full Name",
+    "namePlaceholder": "[VI] John Doe",
+    "emailLabel": "[VI] Email Address",
+    "emailPlaceholder": "[VI] you@example.com",
+    "passwordLabel": "[VI] Password",
+    "passwordPlaceholder": "[VI] ••••••••",
+    "confirmPasswordLabel": "[VI] Confirm Password",
+    "confirmPasswordPlaceholder": "[VI] ••••••••",
+    "signUpButton": "[VI] Sign Up",
+    "hasAccountText": "[VI] Already have an account?",
+    "signInLink": "[VI] Sign in"
   }
 }
-
-    

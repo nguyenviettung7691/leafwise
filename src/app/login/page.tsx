@@ -39,17 +39,17 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <LogIn className="mx-auto h-12 w-12 text-primary mb-4" />
-          <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to access your LeafWise dashboard.</CardDescription>
+          <CardTitle className="text-3xl font-bold">{t('loginPage.title')}</CardTitle>
+          <CardDescription>{t('loginPage.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">{t('loginPage.emailLabel')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('loginPage.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -57,11 +57,11 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('loginPage.passwordLabel')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('loginPage.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -74,13 +74,13 @@ export default function LoginPage() {
               ) : (
                 <LogIn className="mr-2 h-5 w-5" />
               )}
-              Sign In
+              {t('loginPage.signInButton')}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{' '}
+            {t('loginPage.noAccountText')}{' '}
             <Link href="/register" className="font-medium text-primary hover:underline">
-              Sign up
+              {t('loginPage.signUpLink')}
             </Link>
           </p>
         </CardContent>

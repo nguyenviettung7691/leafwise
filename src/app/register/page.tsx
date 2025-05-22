@@ -45,17 +45,17 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <UserPlus className="mx-auto h-12 w-12 text-primary mb-4" />
-          <CardTitle className="text-3xl font-bold">Create Your Account</CardTitle>
-          <CardDescription>Join LeafWise and start managing your plants today.</CardDescription>
+          <CardTitle className="text-3xl font-bold">{t('registerPage.title')}</CardTitle>
+          <CardDescription>{t('registerPage.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">{t('registerPage.nameLabel')}</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="John Doe"
+                placeholder={t('registerPage.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -63,11 +63,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">{t('registerPage.emailLabel')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t('registerPage.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -75,11 +75,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('registerPage.passwordLabel')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('registerPage.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -87,11 +87,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('registerPage.confirmPasswordLabel')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('registerPage.confirmPasswordPlaceholder')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -104,13 +104,13 @@ export default function RegisterPage() {
               ) : (
                 <UserPlus className="mr-2 h-5 w-5" />
               )}
-              Sign Up
+              {t('registerPage.signUpButton')}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
+            {t('registerPage.hasAccountText')}{' '}
             <Link href="/login" className="font-medium text-primary hover:underline">
-              Sign in
+              {t('registerPage.signInLink')}
             </Link>
           </p>
         </CardContent>
