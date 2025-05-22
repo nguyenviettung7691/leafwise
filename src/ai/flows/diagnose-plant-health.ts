@@ -25,20 +25,20 @@ export type DiagnosePlantHealthInput = z.infer<typeof DiagnosePlantHealthInputSc
 const DiagnosePlantHealthOutputSchema = z.object({
   identification: z.object({
     isPlant: z.boolean().describe('Whether or not the input image likely contains a plant.'),
-    commonName: z.string().optional().describe('The common name of the identified plant, if identifiable.'),
-    scientificName: z.string().optional().describe('The scientific name of the identified plant, if identifiable.'),
-    familyCategory: z.string().optional().describe('The family category of the plant (e.g., Araceae, Asparagaceae, Cactaceae, Fabaceae). Used for broad categorization and filtering.'),
+    commonName: z.string().optional().describe('The common name of the identified plant, if identifiable. This MUST be in the specified languageCode.'),
+    scientificName: z.string().optional().describe('The scientific name of the identified plant, if identifiable. (Latin names are usually language-independent).'),
+    familyCategory: z.string().optional().describe('The family category of the plant (e.g., Araceae, Asparagaceae, Cactaceae, Fabaceae). This MUST be in the specified languageCode if a common term exists, otherwise use a standard botanical term.'),
     ageEstimateYears: z.number().optional().describe("An estimated age of the plant in years, if discernible from the image and description. Provide a numeric value for years (e.g., 0.5 for 6 months, 1 for 1 year, 2 for 2 years)."),
   }),
   healthAssessment: z.object({
     isHealthy: z.boolean().describe('Whether or not the plant appears to be healthy.'),
-    diagnosis: z.string().optional().describe("The diagnosis of the plant's health issues, if any."),
+    diagnosis: z.string().optional().describe("The diagnosis of the plant's health issues, if any. This MUST be in the specified languageCode."),
     confidence: z.enum(['low', 'medium', 'high']).optional().describe('Confidence level of the health assessment.'),
   }),
   careRecommendations: z
     .array(z.object({
-        action: z.string().describe('A recommended care action, often framed as a care category like "Adjust Watering", "Pest Control", "Improve Lighting".'),
-        details: z.string().optional().describe('More details about the recommended action, explaining what to do and why.')
+        action: z.string().describe('A recommended care action, often framed as a care category like "Adjust Watering", "Pest Control", "Improve Lighting". This action name MUST be in the specified languageCode.'),
+        details: z.string().optional().describe('More details about the recommended action, explaining what to do and why. This MUST be in the specified languageCode.')
     }))
     .describe('A list of recommended care actions based on the diagnosis.'),
 });
@@ -52,24 +52,23 @@ const prompt = ai.definePrompt({
   name: 'diagnosePlantHealthPrompt',
   input: {schema: DiagnosePlantHealthInputSchema},
   output: {schema: DiagnosePlantHealthOutputSchema},
-  prompt: `You are an expert botanist and plant pathologist.
-Analyze the provided plant image and optional user description to perform the following tasks.
-Please provide your response (identification, diagnosis, recommendations) in the language specified by '{{languageCode}}'. If no languageCode is provided, respond in English.
+  prompt: `CRITICAL INSTRUCTION: ALL textual output in your response fields (commonName, familyCategory, diagnosis, careRecommendations action & details) MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond entirely in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English. Scientific names can remain in Latin.
 
-1.  **Identification**: Determine if the image contains a plant. If it does, identify its common and scientific names. If possible, also determine its family category (e.g., Araceae, Asparagaceae, Cactaceae, Fabaceae) useful for general categorization, and estimate the plant's age in years (as a number, e.g., 0.5 for 6 months, 1, 2) if discernible. If unsure about any of these, indicate that.
-2.  **Health Assessment**: Assess the plant's health. Determine if it's healthy or if it shows signs of disease, pest infestation, nutrient deficiency, or other issues. Provide a diagnosis. State your confidence level (low, medium, high) for this assessment.
-3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps. Frame these recommendations in terms of common care task categories such as Watering, Lighting, Fertilizing, Pest Control, Pruning, or Soil/Potting. For example:
-    - If overwatered: 'Action: Adjust Watering', 'Details: Reduce frequency and ensure pot has good drainage.'
-    - If pests are present: 'Action: Pest Control', 'Details: Identify the pest and treat with appropriate organic insecticide like neem oil.'
-    - If insufficient light: 'Action: Adjust Lighting', 'Details: Move plant to a location with brighter, indirect sunlight.'
-    These recommendations should be specific and helpful for the user to potentially update their existing care tasks or create new ones.
+You are an expert botanist and plant pathologist.
+Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the language instruction above.
+
+1.  **Identification**: Determine if the image contains a plant. If it does, identify its common name (in '{{languageCode}}'), scientific name, family category (in '{{languageCode}}' if a common term exists, otherwise standard botanical term), and estimate the plant's age in years (as a number). If unsure, indicate that.
+2.  **Health Assessment**: Assess the plant's health. Determine if it's healthy or shows signs of disease, pest, deficiency, etc. Provide a diagnosis (in '{{languageCode}}'). State your confidence level (low, medium, high).
+3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps. Frame these as common care task categories (e.g., Watering, Lighting, Pest Control) with action names and details in '{{languageCode}}'. Examples:
+    - If overwatered: 'Action: Điều chỉnh Tưới nước', 'Details: Giảm tần suất và đảm bảo chậu thoát nước tốt.' (if languageCode='vi')
+    - If pests: 'Action: Pest Control', 'Details: Identify pest and treat with organic insecticide.' (if languageCode='en')
 
 User Description (if provided): {{{description}}}
 Plant Photo: {{media url=photoDataUri}}
 
-Provide your response in the structured format defined by the output schema.
-If the image does not appear to be a plant, set 'isPlant' to false and leave other fields blank or indicate non-applicability.
-If the plant is healthy, reflect this in the 'isHealthy' field and diagnosis, and provide general care tips if appropriate.
+Provide your response ONLY in the structured JSON format defined by the output schema.
+If the image does not appear to be a plant, set 'isPlant' to false and leave other text fields blank or indicate non-applicability in the specified language.
+If the plant is healthy, reflect this in 'isHealthy' and 'diagnosis' (in '{{languageCode}}'), and provide general care tips if appropriate (in '{{languageCode}}').
 `,
 });
 
@@ -81,16 +80,17 @@ const diagnosePlantHealthFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    // Ensure output is not null, providing a default structure if the model fails to produce one.
-    // This helps prevent runtime errors if the model's output is unexpectedly empty.
     if (!output) {
         console.warn('Diagnose plant health prompt returned null output. Returning default structure.');
+        const lang = input.languageCode === 'vi' ? 'vi' : 'en';
+        const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
         return {
             identification: { isPlant: false },
-            healthAssessment: { isHealthy: false, diagnosis: "Unable to analyze image." },
+            healthAssessment: { isHealthy: false, diagnosis: errorMsg },
             careRecommendations: [],
         };
     }
     return output;
   }
 );
+
