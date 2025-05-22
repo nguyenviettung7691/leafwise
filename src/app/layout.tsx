@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
 import { ProgressProvider } from '@/contexts/ProgressContext';
 import { ProgressBar } from '@/components/layout/ProgressBar';
+import { PlantDataProvider } from '@/contexts/PlantDataContext'; // Added import
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,13 +50,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <LanguageProvider> {/* LanguageProvider now wraps AuthProvider */}
+          <LanguageProvider>
             <AuthProvider>
-              <ProgressProvider>
-                <ProgressBar />
-                {children}
-                <Toaster />
-              </ProgressProvider>
+              <PlantDataProvider> {/* Added PlantDataProvider */}
+                <ProgressProvider>
+                  <ProgressBar />
+                  {children}
+                  <Toaster />
+                </ProgressProvider>
+              </PlantDataProvider> {/* Closed PlantDataProvider */}
             </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>

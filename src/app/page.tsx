@@ -4,7 +4,6 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
-import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantHealthCondition, PlantFormData, PlantPhoto } from '@/types';
 import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Added import
 
 
 const initialFiltersState: Filters = {
@@ -58,8 +58,8 @@ const getNextCareTaskDate = (plant: Plant): Date | null => {
 
 
 export default function MyPlantsPage() {
-  const [plants, setPlants] = useState<Plant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { plants: plantsFromContext, isLoading: isLoadingPlants, deleteMultiplePlants, updatePlant: updateContextPlant } = usePlantData(); // Using context
+  const [plants, setPlants] = useState<Plant[]>([]); // Local state for display, derived from context
   const [isNavigatingToNewPlant, setIsNavigatingToNewPlant] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
@@ -79,9 +79,10 @@ export default function MyPlantsPage() {
 
 
   useEffect(() => {
-    setPlants(mockPlants);
-    setIsLoading(false);
-  }, []);
+    if (!isLoadingPlants) {
+      setPlants(plantsFromContext);
+    }
+  }, [plantsFromContext, isLoadingPlants]);
 
   const handleAddNewPlantClick = () => {
     setIsNavigatingToNewPlant(true);
@@ -89,7 +90,7 @@ export default function MyPlantsPage() {
   };
 
   const handleOpenEditPlantDialog = useCallback((plantId: string) => {
-    const foundPlant = mockPlants.find(p => p.id === plantId);
+    const foundPlant = plantsFromContext.find(p => p.id === plantId);
     if (foundPlant) {
       setPlantToEdit(foundPlant);
       let ageYears: number | undefined = undefined;
@@ -113,7 +114,7 @@ export default function MyPlantsPage() {
     } else {
       toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: "destructive" });
     }
-  }, [t, toast]);
+  }, [plantsFromContext, t, toast]);
 
   const handleSaveEditedPlant = async (data: PlantFormData) => {
     if (!plantToEdit) return;
@@ -121,52 +122,48 @@ export default function MyPlantsPage() {
 
     await new Promise(resolve => setTimeout(resolve, 1000)); 
 
-    const plantIndex = mockPlants.findIndex(p => p.id === plantToEdit.id);
-    if (plantIndex !== -1) {
-      let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
-      let updatedPhotos = [...mockPlants[plantIndex].photos];
+    let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+    let updatedPhotos = [...plantToEdit.photos];
 
-      if (data.primaryPhoto && data.primaryPhoto[0]) {
-        newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(data.primaryPhoto![0]);
-        });
-        if (newPrimaryPhotoUrl) {
-          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
-          if (existingPhotoIndex === -1) { 
-            updatedPhotos.unshift({ 
-              id: `p-${plantToEdit.id}-new-${Date.now()}`,
-              url: newPrimaryPhotoUrl,
-              dateTaken: new Date().toISOString(),
-              healthCondition: data.healthCondition,
-              diagnosisNotes: "Primary photo updated via edit form."
-            });
-          }
+    if (data.primaryPhoto && data.primaryPhoto[0]) {
+      newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(data.primaryPhoto![0]);
+      });
+      if (newPrimaryPhotoUrl) {
+        const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
+        if (existingPhotoIndex === -1) { 
+          updatedPhotos.unshift({ 
+            id: `p-${plantToEdit.id}-new-${Date.now()}`,
+            url: newPrimaryPhotoUrl,
+            dateTaken: new Date().toISOString(),
+            healthCondition: data.healthCondition, // Use form's health condition for new photo
+            diagnosisNotes: "Primary photo updated via edit form."
+          });
         }
       }
-
-
-      mockPlants[plantIndex] = {
-        ...mockPlants[plantIndex],
-        commonName: data.commonName,
-        scientificName: data.scientificName || undefined,
-        familyCategory: data.familyCategory || '',
-        ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
-        ageEstimateYears: data.ageEstimateYears,
-        healthCondition: data.healthCondition,
-        location: data.location || undefined,
-        customNotes: data.customNotes || undefined,
-        primaryPhotoUrl: newPrimaryPhotoUrl || mockPlants[plantIndex].primaryPhotoUrl,
-        photos: updatedPhotos,
-      };
-      setPlants([...mockPlants]); 
-      toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
-    } else {
-      toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: "destructive" });
     }
 
+    const updatedPlant: Plant = {
+      ...plantToEdit,
+      commonName: data.commonName,
+      scientificName: data.scientificName || undefined,
+      familyCategory: data.familyCategory || '',
+      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
+      ageEstimateYears: data.ageEstimateYears,
+      healthCondition: data.healthCondition,
+      location: data.location || undefined,
+      customNotes: data.customNotes || undefined,
+      primaryPhotoUrl: newPrimaryPhotoUrl || plantToEdit.primaryPhotoUrl,
+      photos: updatedPhotos,
+    };
+    
+    updateContextPlant(plantToEdit.id, updatedPlant); // Update context
+
+    toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
+    
     setIsSavingEditedPlant(false);
     setIsEditPlantDialogOpen(false);
     setPlantToEdit(null);
@@ -208,7 +205,7 @@ export default function MyPlantsPage() {
   };
 
   const filteredAndSortedPlants = useMemo(() => {
-    let processedPlants = [...plants];
+    let processedPlants = [...plants]; // Use local plants state for filtering/sorting
 
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
@@ -234,8 +231,8 @@ export default function MyPlantsPage() {
         valA = getNextCareTaskDate(a);
         valB = getNextCareTaskDate(b);
         if (valA === null && valB === null) return 0;
-        if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1;
-        if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1; // Nulls last for asc
+        if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1; // Nulls last for asc
       } else {
         valA = a[sortConfig.key as keyof Plant];
         valB = b[sortConfig.key as keyof Plant];
@@ -313,10 +310,7 @@ export default function MyPlantsPage() {
 
   const handleDeleteSelectedPlants = () => {
     const numSelected = selectedPlantIds.size;
-    const updatedPlants = mockPlants.filter(p => !selectedPlantIds.has(p.id));
-    mockPlants.length = 0;
-    mockPlants.push(...updatedPlants);
-    setPlants(updatedPlants);
+    deleteMultiplePlants(selectedPlantIds); // Use context function
 
     toast({
       title: t('myPlantsPage.plantsDeletedToastTitle'),
@@ -372,7 +366,7 @@ export default function MyPlantsPage() {
         onResetAll={handleResetAll}
       />
 
-      {isLoading ? (
+      {isLoadingPlants ? (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="ml-4 text-lg text-muted-foreground">{t('myPlantsPage.loadingPlants')}</p>

@@ -16,10 +16,11 @@ import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { DiagnosisResultDisplay } from '@/components/diagnose/DiagnosisResultDisplay';
 import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
-import { mockPlants } from '@/lib/mock-data';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { usePlantData } from '@/contexts/PlantDataContext'; // Added import
 
 export default function DiagnosePlantPage() {
+  const { addPlant, updatePlant } = usePlantData(); // Using context
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -46,20 +47,21 @@ export default function DiagnosePlantPage() {
 
   const calculateNextDueDate = (frequency: string): string | undefined => {
     const now = new Date();
-    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
-    if (frequency === 'Daily') return addDays(now, 1).toISOString();
-    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
-    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
-    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
-
-    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
-    if (everyXMatch) {
-      const value = parseInt(everyXMatch[1], 10);
-      const unit = everyXMatch[2];
-      if (unit.toLowerCase() === 'days') return addDays(now, value).toISOString();
-      if (unit.toLowerCase() === 'weeks') return addWeeks(now, value).toISOString();
-      if (unit.toLowerCase() === 'months') return addMonths(now, value).toISOString();
-    }
+    if (frequency === 'Ad-hoc' || frequency === 'As needed' || t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase().includes(frequency.toLowerCase())) return undefined;
+    if (t('carePlanTaskForm.frequencyOptions.daily').toLowerCase().includes(frequency.toLowerCase())) return addDays(now, 1).toISOString();
+    if (t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase().includes(frequency.toLowerCase())) return addWeeks(now, 1).toISOString();
+    if (t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase().includes(frequency.toLowerCase())) return addMonths(now, 1).toISOString();
+    if (t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase().includes(frequency.toLowerCase())) return addYears(now, 1).toISOString();
+  
+    const everyXDaysMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1], 10)).toISOString();
+  
+    const everyXWeeksMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1], 10)).toISOString();
+  
+    const everyXMonthsMatch = frequency.match(new RegExp(t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: "(\\d+)" }).replace("{{count}}", "(\\d+)"), "i"));
+    if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1], 10)).toISOString();
+  
     console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}". Returning undefined.`);
     return undefined;
   };
@@ -172,7 +174,7 @@ export default function DiagnosePlantPage() {
 
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
-    console.log("Saving plant data (simulated):", data);
+    
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     const newPlantId = `mock-plant-${Date.now()}`;
@@ -198,7 +200,7 @@ export default function DiagnosePlantPage() {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
+      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
@@ -209,14 +211,14 @@ export default function DiagnosePlantPage() {
         url: newPhotoUrl,
         dateTaken: new Date().toISOString(),
         healthCondition: data.healthCondition,
-        diagnosisNotes: 'Initial diagnosis when saved from diagnose page.',
+        diagnosisNotes: t('diagnosePage.resultDisplay.initialDiagnosisNotes'),
       }] : [],
       careTasks: [],
       plantingDate: new Date().toISOString(),
       lastCaredDate: undefined,
     };
 
-    mockPlants.unshift(newPlant);
+    addPlant(newPlant); // Use context function
     setLastSavedPlantId(newPlantId);
 
     toast({
@@ -271,8 +273,9 @@ export default function DiagnosePlantPage() {
       toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNoPlant'), variant: "destructive" });
       return;
     }
-    const plantIndex = mockPlants.findIndex(p => p.id === lastSavedPlantId);
-    if (plantIndex === -1) {
+    
+    const currentPlant = usePlantData().getPlantById(lastSavedPlantId); // Get current plant from context
+    if (!currentPlant) {
       toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNotFound'), variant: "destructive" });
       return;
     }
@@ -291,11 +294,15 @@ export default function DiagnosePlantPage() {
       level: aiTask.taskLevel,
     }));
 
-    mockPlants[plantIndex].careTasks.push(...newCareTasks);
+    const updatedPlant = {
+      ...currentPlant,
+      careTasks: [...currentPlant.careTasks, ...newCareTasks]
+    };
+    updatePlant(lastSavedPlantId, updatedPlant); // Use context function to update the plant
 
     toast({
       title: t('diagnosePage.toasts.carePlanSavedTitle'),
-      description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: mockPlants[plantIndex].commonName }),
+      description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: currentPlant.commonName }),
     });
   };
 

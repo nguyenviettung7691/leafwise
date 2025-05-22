@@ -10,8 +10,8 @@ const sixMonthsAgo = new Date(now.getTime() - 6 * 30 * 24 * 60 * 60 * 1000);
 const oneYearAgo = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
 const twoYearsAgo = new Date(now.getTime() - 2 * 12 * 30 * 24 * 60 * 60 * 1000);
 
-// Changed from const to let to allow reassignment for import feature
-export let mockPlants: Plant[] = [
+// Renamed mockPlants to defaultPlants and made it const
+export const defaultPlants: Plant[] = [
   {
     id: '1',
     commonName: 'Monstera Deliciosa',
