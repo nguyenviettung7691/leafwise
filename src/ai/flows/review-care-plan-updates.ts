@@ -11,9 +11,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { CareTask, AIGeneratedTask, AITaskSuggestionDetails } from '@/types';
+// AIGeneratedTask and AITaskSuggestionDetails are part of the output schema defined here,
+// not directly from '@/types' for the AI flow definition.
 
-// Schemas for the new flow
 const CareTaskSchemaForAI = z.object({
     id: z.string(),
     name: z.string(),
@@ -29,38 +29,39 @@ const ReviewCarePlanInputSchema = z.object({
   newPhotoDiagnosisNotes: z.string().describe("The textual diagnosis from the new photo analysis."),
   newPhotoHealthIsHealthy: z.boolean().describe("Whether the new photo diagnosis indicates the plant is healthy."),
   currentCareTasks: z.array(CareTaskSchemaForAI).describe("The plant's current list of care tasks."),
+  languageCode: z.string().optional().describe("The language for the response (e.g., 'en', 'vi'). Default 'en'.")
 });
 export type ReviewCarePlanInput = z.infer<typeof ReviewCarePlanInputSchema>;
 
 
-const AITaskSuggestionDetailsSchema = z.object({
-    name: z.string().optional(),
-    description: z.string().optional(),
+const AITaskSuggestionDetailsSchemaForOutput = z.object({
+    name: z.string().optional().describe("Suggested new task name. MUST be in the specified languageCode."),
+    description: z.string().optional().describe("Suggested new task description. MUST be in the specified languageCode."),
     frequency: z.string().optional().describe("Suggested new frequency. Use formats like 'Daily', 'Weekly', 'Every X Days'. See main prompt for full list of allowed formats."),
     timeOfDay: z.string().optional().describe("Suggested new time of day. Use 'All day' or HH:MM format."),
     level: z.enum(['basic', 'advanced']).optional(),
-}).describe("Details for updating an existing task. Only include fields that need to change.");
+}).describe("Details for updating an existing task. Only include fields that need to change. All text MUST be in the specified languageCode.");
 
 const ExistingTaskModificationSuggestionSchema = z.object({
     taskId: z.string().describe("The ID of the existing task being referenced."),
-    currentTaskName: z.string().describe("The name of the current task being referenced, for clarity."),
+    currentTaskName: z.string().describe("The name of the current task being referenced, for clarity. This may be in the original language of the task definition if not translated by user yet."),
     suggestedAction: z.enum(['keep_as_is', 'pause', 'resume', 'remove', 'update_details']).describe("The suggested action for this existing task."),
-    updatedDetails: AITaskSuggestionDetailsSchema.optional().describe("If action is 'update_details', provide the new details here."),
-    reasoning: z.string().optional().describe("A brief reasoning for the suggested modification."),
+    updatedDetails: AITaskSuggestionDetailsSchemaForOutput.optional().describe("If action is 'update_details', provide the new details here. All text MUST be in the specified languageCode."),
+    reasoning: z.string().optional().describe("A brief reasoning for the suggested modification. MUST be in the specified languageCode."),
 });
 
-const AIGeneratedTaskSchema = z.object({
-    taskName: z.string().describe("The specific name of the care task (e.g., 'Watering', 'Check Soil Moisture', 'Fertilize with Balanced NPK')."),
-    taskDescription: z.string().describe("A brief description or specific instructions for the task."),
+const AIGeneratedTaskSchemaForOutput = z.object({
+    taskName: z.string().describe("The specific name of the care task. MUST be in the specified languageCode."),
+    taskDescription: z.string().describe("A brief description or specific instructions for the task. MUST be in the specified languageCode."),
     suggestedFrequency: z.string().describe("How often the task should be performed. Use formats like 'Daily', 'Weekly', 'Every X Days'. See main prompt for exact formats."),
     suggestedTimeOfDay: z.string().describe("When the task should be performed. Use 'All day' or HH:MM format (e.g., '09:00')."),
     taskLevel: z.enum(['basic', 'advanced']).describe("The level of this task, either 'basic' or 'advanced'.")
 });
 
 const ReviewCarePlanOutputSchema = z.object({
-  overallAssessment: z.string().describe("A brief, human-readable summary of the recommended changes to the care plan based on the new diagnosis."),
+  overallAssessment: z.string().describe("A brief, human-readable summary of the recommended changes to the care plan based on the new diagnosis. MUST be in the specified languageCode."),
   taskModifications: z.array(ExistingTaskModificationSuggestionSchema).describe("Suggestions for modifying existing tasks."),
-  newTasks: z.array(AIGeneratedTaskSchema).describe("Suggestions for entirely new tasks to add to the care plan."),
+  newTasks: z.array(AIGeneratedTaskSchemaForOutput).describe("Suggestions for entirely new tasks to add to the care plan."),
 });
 export type ReviewCarePlanOutput = z.infer<typeof ReviewCarePlanOutputSchema>;
 
@@ -72,7 +73,9 @@ const prompt = ai.definePrompt({
   name: 'reviewCarePlanUpdatesPrompt',
   input: { schema: ReviewCarePlanInputSchema },
   output: { schema: ReviewCarePlanOutputSchema },
-  prompt: `You are an expert horticulturalist assisting a user with updating their plant's care plan.
+  prompt: `CRITICAL INSTRUCTION: ALL textual output in your response fields ('overallAssessment', 'reasoning' in taskModifications, 'name' and 'description' in updatedDetails, 'taskName' and 'taskDescription' in newTasks) MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond entirely in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English.
+
+You are an expert horticulturalist assisting a user with updating their plant's care plan, strictly adhering to the language instruction above.
 Plant Name: {{plantCommonName}}
 
 A new photo diagnosis has been performed:
@@ -89,29 +92,24 @@ The plant's current care plan tasks are:
 {{/if}}
 
 Based on the new diagnosis, please:
-1.  Provide an 'overallAssessment' summarizing your recommendations for the care plan.
+1.  Provide an 'overallAssessment' (in '{{languageCode}}') summarizing your recommendations for the care plan.
 2.  For 'taskModifications':
     *   Review each of the 'currentCareTasks'.
-    *   For each task, decide on a 'suggestedAction':
-        *   'keep_as_is': If the task is still appropriate and needs no changes.
-        *   'pause': If the task should be temporarily paused (e.g., stop fertilizing a sick plant).
-        *   'resume': If a currently paused task should be resumed.
-        *   'remove': If the task is no longer needed or is detrimental.
-        *   'update_details': If the task's details (name, description, frequency, timeOfDay, level) should change. If so, provide *only* the changed fields in 'updatedDetails'.
-            *   For 'frequency' in 'updatedDetails', use one of these formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', 'Every X Months'.
-            *   For 'timeOfDay' in 'updatedDetails', use 'All day' or HH:MM format (e.g., "09:00").
+    *   For each task, decide on a 'suggestedAction'.
+    *   If 'suggestedAction' is 'update_details', provide *only* the changed fields in 'updatedDetails'. Textual fields in 'updatedDetails' (name, description) MUST be in '{{languageCode}}'.
+    *   For 'frequency' in 'updatedDetails', use one of these formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', 'Every X Months'.
+    *   For 'timeOfDay' in 'updatedDetails', use 'All day' or HH:MM format (e.g., "09:00").
     *   You MUST include the original 'taskId' and 'currentTaskName' for each modification.
-    *   Provide a brief 'reasoning' for each suggested modification, especially for 'pause', 'remove', or 'update_details'.
+    *   Provide a brief 'reasoning' (in '{{languageCode}}') for each suggested modification, especially for 'pause', 'remove', or 'update_details'.
 3.  For 'newTasks':
-    *   Suggest any entirely new tasks that should be added to the care plan based on the new diagnosis.
-    *   For each new task, provide: 'taskName', 'taskDescription', 'suggestedFrequency', 'suggestedTimeOfDay', and 'taskLevel'.
-        *   For 'suggestedFrequency', use one of these formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', 'Every X Months'.
-        *   For 'suggestedTimeOfDay', use 'All day' or HH:MM format (e.g., "09:00").
-        *   'taskLevel' must be 'basic' or 'advanced'.
+    *   Suggest any entirely new tasks. 'taskName' and 'taskDescription' MUST be in '{{languageCode}}'.
+    *   For 'suggestedFrequency', use one of these formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', 'Every X Months'.
+    *   For 'suggestedTimeOfDay', use 'All day' or HH:MM format (e.g., "09:00").
+    *   'taskLevel' must be 'basic' or 'advanced'.
 
-Return ONLY the JSON object adhering to the output schema. If no changes or new tasks are needed for a perfectly healthy plant with an adequate plan, reflect this in the 'overallAssessment' and return empty arrays for 'taskModifications' and 'newTasks' (or 'taskModifications' where all actions are 'keep_as_is').
-Consider the new health status ({{newPhotoHealthIsHealthy}}) and diagnosis notes ("{{newPhotoDiagnosisNotes}}") carefully when making suggestions.
-Example for 'updatedDetails': If only frequency needs to change for a task, 'updatedDetails' would be { "frequency": "Every 10 Days" }. Other fields like name, description, timeOfDay, level for that task would be omitted from 'updatedDetails' if they don't change.
+Return ONLY the JSON object adhering to the output schema.
+Example for 'updatedDetails': If only frequency needs to change for a task, 'updatedDetails' would be { "frequency": "Every 10 Days" }.
+If the new diagnosis indicates a shift in health (e.g. from healthy to sick, or sick to needing attention), suggest appropriate task modifications such as pausing fertilization for a sick plant or adding a pest check if symptoms appear. If the plant improves, suggest resuming paused tasks if relevant.
 `,
 });
 
@@ -122,7 +120,6 @@ const reviewCarePlanFlow = ai.defineFlow(
     outputSchema: ReviewCarePlanOutputSchema,
   },
   async (input: ReviewCarePlanInput) => {
-    // Ensure currentCareTasks is always an array, even if undefined in input (though schema should prevent this)
     const saneInput = {
       ...input,
       currentCareTasks: Array.isArray(input.currentCareTasks) ? input.currentCareTasks : [],
@@ -130,17 +127,19 @@ const reviewCarePlanFlow = ai.defineFlow(
     const { output } = await prompt(saneInput);
     if (!output) {
       console.warn('Review Care Plan Updates prompt returned null output. Returning default structure.');
+      const lang = input.languageCode === 'vi' ? 'vi' : 'en';
+      const errorMsg = lang === 'vi' ? "Không thể xem xét kế hoạch chăm sóc vào lúc này. AI không cung cấp phản hồi." : "Unable to review care plan at this time. The AI did not provide a response.";
       return {
-        overallAssessment: "Unable to review care plan at this time. The AI did not provide a response.",
+        overallAssessment: errorMsg,
         taskModifications: [],
         newTasks: [],
       };
     }
-    // Ensure arrays are present in output, even if AI omits them
     return {
-      overallAssessment: output.overallAssessment || "AI assessment was not provided.",
+      overallAssessment: output.overallAssessment || (input.languageCode === 'vi' ? "Đánh giá của AI không được cung cấp." : "AI assessment was not provided."),
       taskModifications: Array.isArray(output.taskModifications) ? output.taskModifications : [],
       newTasks: Array.isArray(output.newTasks) ? output.newTasks : [],
     };
   }
 );
+

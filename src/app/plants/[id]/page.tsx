@@ -4,13 +4,13 @@
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantPhoto, PlantHealthCondition, ComparePlantHealthInput, ComparePlantHealthOutput, CareTask, CarePlanTaskFormData, ReviewCarePlanInput, ReviewCarePlanOutput, ExistingTaskModificationSuggestion, AIGeneratedTask, OnSaveTaskData } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ComparePlantHealthOutput, ReviewCarePlanInput, ReviewCarePlanOutput as ReviewCarePlanOutputFlow } from '@/types'; // Renamed ReviewCarePlanOutput to ReviewCarePlanOutputFlow
 import { useParams, notFound, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle as DialogTitlePrimitive, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'; // Added CardFooter
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -35,7 +35,7 @@ import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { diagnosePlantHealth, type DiagnosePlantHealthOutput } from '@/ai/flows/diagnose-plant-health';
+import { diagnosePlantHealth, type DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow } from '@/ai/flows/diagnose-plant-health'; // Renamed to avoid conflict
 import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
 import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } from 'date-fns';
@@ -57,39 +57,33 @@ const transformCareTaskToFormData = (task: CareTask): CarePlanTaskFormData => {
     startDate: task.nextDueDate || new Date().toISOString(), 
   };
 
-  // Simplified frequency parsing - assumes format "Every X Unit" or direct keywords
-  // This part needs to be robust and match how frequencies are stored/translated
-  // For prototype, simple direct mapping. Real app might need more complex parsing or store structured frequency.
   const freqLower = task.frequency.toLowerCase();
-  if (freqLower === 'ad-hoc' || freqLower === 'theo nhu cầu (khi cần)') formData.frequencyMode = 'adhoc';
-  else if (freqLower === 'daily' || freqLower === 'hàng ngày') formData.frequencyMode = 'daily';
-  else if (freqLower === 'weekly' || freqLower === 'hàng tuần') formData.frequencyMode = 'weekly';
-  else if (freqLower === 'monthly' || freqLower === 'hàng tháng') formData.frequencyMode = 'monthly';
-  else if (freqLower === 'yearly' || freqLower === 'hàng năm') formData.frequencyMode = 'yearly';
+  if (freqLower.includes('ad-hoc') || freqLower.includes('khi cần')) formData.frequencyMode = 'adhoc';
+  else if (freqLower.includes('daily') || freqLower.includes('hàng ngày')) formData.frequencyMode = 'daily';
+  else if (freqLower.includes('weekly') || freqLower.includes('hàng tuần')) formData.frequencyMode = 'weekly';
+  else if (freqLower.includes('monthly') || freqLower.includes('hàng tháng')) formData.frequencyMode = 'monthly';
+  else if (freqLower.includes('yearly') || freqLower.includes('hàng năm')) formData.frequencyMode = 'yearly';
   else {
-    const everyXMatch = task.frequency.match(/(?:Every|Mỗi) (\d+) (?:Days|Weeks|Months|ngày|tuần|tháng)/i);
+    const everyXMatch = task.frequency.match(/(?:Every|Mỗi)\s*(\d+)\s*(?:Days|Weeks|Months|ngày|tuần|tháng)/i);
     if (everyXMatch) {
       formData.frequencyValue = parseInt(everyXMatch[1], 10);
       const unit = everyXMatch[2].toLowerCase();
       if (unit.includes('days') || unit.includes('ngày')) formData.frequencyMode = 'every_x_days';
       else if (unit.includes('weeks') || unit.includes('tuần')) formData.frequencyMode = 'every_x_weeks';
       else if (unit.includes('months') || unit.includes('tháng')) formData.frequencyMode = 'every_x_months';
-      else formData.frequencyMode = 'adhoc'; // Fallback
+      else formData.frequencyMode = 'adhoc';
     } else {
-      formData.frequencyMode = 'adhoc'; // Fallback
+      formData.frequencyMode = 'adhoc';
     }
   }
 
-
-  // Time of day parsing
-  if (task.timeOfDay === 'All day' || task.timeOfDay?.toLowerCase() === 'cả ngày' || !task.timeOfDay) {
+  if (task.timeOfDay && (task.timeOfDay.toLowerCase() === 'all day' || task.timeOfDay.toLowerCase() === 'cả ngày')) {
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    // Fallback for unexpected timeOfDay format
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   }
@@ -115,16 +109,16 @@ export default function PlantDetailPage() {
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
-    newPhotoDiagnosisResult?: DiagnosePlantHealthOutput;
+    newPhotoDiagnosisResult?: DiagnosePlantHealthOutputFlow;
     healthComparisonResult?: ComparePlantHealthOutput;
-    carePlanReviewResult?: ReviewCarePlanOutput;
+    carePlanReviewResult?: ReviewCarePlanOutputFlow;
     newPhotoPreviewUrl?: string;
     isLoadingCarePlanReview?: boolean;
     isApplyingCarePlanChanges?: boolean;
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
-  const [isGridPhotoDialogValid, setIsGridPhotoDialogValid] = useState(false); // Corrected state variable name
+  const [isGridPhotoDialogVisible, setIsGridPhotoDialogVisible] = useState(false);
 
   const [isTaskFormDialogOpen, setIsTaskFormDialogOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<CareTask | null>(null);
@@ -161,7 +155,6 @@ export default function PlantDetailPage() {
             }))
         };
         setPlant(plantWithPhotoIds);
-      } else {
       }
     }
     setIsLoadingPage(false);
@@ -274,7 +267,8 @@ export default function PlantDetailPage() {
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
-                newPhotoHealthStatus: newHealthStatusFromDiagnosis
+                newPhotoHealthStatus: newHealthStatusFromDiagnosis,
+                languageCode: language
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
@@ -301,6 +295,7 @@ export default function PlantDetailPage() {
                   isPaused: ct.isPaused,
                   level: ct.level,
                 })),
+                languageCode: language,
             };
             const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput);
 
@@ -366,19 +361,19 @@ export default function PlantDetailPage() {
 
   const calculateNextDueDateForAIMain = (frequency: string): string | undefined => {
     const now = new Date();
-    if (frequency === 'Ad-hoc' || frequency === 'As needed') return undefined;
-    if (frequency === 'Daily') return addDays(now, 1).toISOString();
-    if (frequency === 'Weekly') return addWeeks(now, 1).toISOString();
-    if (frequency === 'Monthly') return addMonths(now, 1).toISOString();
-    if (frequency === 'Yearly') return addYears(now, 1).toISOString();
+    if (frequency.toLowerCase().includes('ad-hoc') || frequency.toLowerCase().includes('as needed')) return undefined;
+    if (frequency.toLowerCase().includes('daily')) return addDays(now, 1).toISOString();
+    if (frequency.toLowerCase().includes('weekly')) return addWeeks(now, 1).toISOString();
+    if (frequency.toLowerCase().includes('monthly')) return addMonths(now, 1).toISOString();
+    if (frequency.toLowerCase().includes('yearly')) return addYears(now, 1).toISOString();
 
-    const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+    const everyXMatch = frequency.match(/Every (\d+) (Days|Weeks|Months)/i);
     if (everyXMatch) {
       const value = parseInt(everyXMatch[1], 10);
       const unit = everyXMatch[2];
-      if (unit === 'Days') return addDays(now, value).toISOString();
-      if (unit === 'Weeks') return addWeeks(now, value).toISOString();
-      if (unit === 'Months') return addMonths(now, value).toISOString();
+      if (unit.toLowerCase() === 'days') return addDays(now, value).toISOString();
+      if (unit.toLowerCase() === 'weeks') return addWeeks(now, value).toISOString();
+      if (unit.toLowerCase() === 'months') return addMonths(now, value).toISOString();
     }
     console.warn(`Next due date calculation not fully implemented for frequency: ${frequency}`);
     return undefined; 
@@ -463,10 +458,10 @@ export default function PlantDetailPage() {
 
   const openGridPhotoDialog = (photo: PlantPhoto) => {
     setSelectedGridPhoto(photo);
-    setIsGridPhotoDialogValid(true);
+    setIsGridPhotoDialogVisible(true);
   };
   const closeGridPhotoDialog = () => {
-    setIsGridPhotoDialogValid(false);
+    setIsGridPhotoDialogVisible(false);
     setTimeout(() => setSelectedGridPhoto(null), 300); 
   };
 
@@ -726,6 +721,8 @@ export default function PlantDetailPage() {
     return null;
   }
 
+  const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -757,7 +754,6 @@ export default function PlantDetailPage() {
           selectedTaskIds={selectedTaskIds}
           onToggleTaskSelection={handleToggleTaskSelection}
           onDeleteSelectedTasks={() => {
-            
             setShowDeleteSelectedTasksDialog(true);
           }}
         />
@@ -821,7 +817,9 @@ export default function PlantDetailPage() {
                                       newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500 hover:bg-green-600" : ""
                                     )}
                                   >
-                                    {t(newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'plantDetail.healthConditions.healthy' : 'plantDetail.healthConditions.needs_attention')}
+                                    {t(newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'plantDetail.healthConditions.healthy' : (
+                                       newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'plantDetail.healthConditions.sick' : 'plantDetail.healthConditions.needs_attention'
+                                    ))}
                                   </Badge>
                                 </p>
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>{t('plantDetail.newPhotoDialog.diagnosisLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
@@ -945,7 +943,7 @@ export default function PlantDetailPage() {
         </Dialog>
 
         
-        <Dialog open={isGridPhotoDialogValid} onOpenChange={closeGridPhotoDialog}>
+        <Dialog open={isGridPhotoDialogVisible} onOpenChange={closeGridPhotoDialog}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitlePrimitive>{t('plantDetail.photoDetailsDialog.title', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}</DialogTitlePrimitive>
@@ -1141,3 +1139,4 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
