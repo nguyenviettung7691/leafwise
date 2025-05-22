@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; 
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CarePlanGeneratorProps {
@@ -22,15 +22,42 @@ interface CarePlanGeneratorProps {
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;
-  resultMode: 'basic' | 'advanced' | null; 
+  resultMode: 'basic' | 'advanced' | null;
   locationClimate: string;
   onLocationClimateChange: (value: string) => void;
-  carePlanMode: 'basic' | 'advanced'; 
+  carePlanMode: 'basic' | 'advanced';
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
-  lastSavedPlantId?: string | null; 
+  lastSavedPlantId?: string | null;
 }
+
+const translateFrequencyDisplay = (frequency: string, t: Function): string => {
+  if (!frequency) return '';
+  const lowerFreq = frequency.toLowerCase();
+  if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+  if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+  if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+  if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+  if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+
+  const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+  if (everyXMatch) {
+    const count = parseInt(everyXMatch[1], 10);
+    const unit = everyXMatch[2].toLowerCase();
+    if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
+    if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
+    if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
+  }
+  return frequency; // Fallback to original if no match
+};
+
+const translateTimeOfDayDisplay = (timeOfDay: string, t: Function): string => {
+  if (!timeOfDay) return '';
+  if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
+  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay; // HH:MM format is usually universal
+  return timeOfDay; // Fallback
+};
 
 const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
   const { t } = useLanguage();
@@ -49,8 +76,8 @@ const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
         </Badge>
       </h4>
       {task.taskDescription && <p className="text-xs text-muted-foreground mt-1 mb-1 whitespace-pre-wrap">{task.taskDescription}</p>}
-      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.frequencyLabel')}:</strong> {task.suggestedFrequency}</p>
-      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.timeOfDayLabel')}:</strong> {task.suggestedTimeOfDay}</p>
+      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.frequencyLabel')}:</strong> {translateFrequencyDisplay(task.suggestedFrequency, t)}</p>
+      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.timeOfDayLabel')}:</strong> {translateTimeOfDayDisplay(task.suggestedTimeOfDay, t)}</p>
     </Card>
   );
 };
@@ -67,7 +94,7 @@ export function CarePlanGenerator({
   onCarePlanModeChange,
   onGenerateCarePlan,
   onSaveCarePlan,
-  lastSavedPlantId, 
+  lastSavedPlantId,
 }: CarePlanGeneratorProps) {
   const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
   const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
@@ -90,6 +117,7 @@ export function CarePlanGenerator({
   };
 
   React.useEffect(() => {
+    // Reset saved state if the care plan result changes (e.g., a new plan is generated)
     setCarePlanEffectivelySaved(false);
   }, [carePlanResult]);
 
@@ -169,7 +197,7 @@ export function CarePlanGenerator({
                 </CardDescription>
               )}
             </CardHeader>
-            
+
             {Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0 ? (
               <div className="space-y-3">
                 {carePlanResult.generatedTasks.map((task, index) => (
@@ -205,12 +233,12 @@ export function CarePlanGenerator({
                   </ProgressBarLink>
                 ) : (
                   <Button
-                    variant="default" 
+                    variant="default"
                     className="w-full"
                     onClick={handleSaveClick}
                     disabled={
-                      isCarePlanSavedProcessing || 
-                      !diagnosisResult?.identification.isPlant || 
+                      isCarePlanSavedProcessing ||
+                      !diagnosisResult?.identification.isPlant ||
                       !(Array.isArray(carePlanResult.generatedTasks) && carePlanResult.generatedTasks.length > 0)
                     }
                   >
@@ -234,5 +262,3 @@ export function CarePlanGenerator({
     </Card>
   );
 }
-
-    

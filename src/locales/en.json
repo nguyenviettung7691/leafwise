@@ -45,7 +45,9 @@
     "manage": "Manage",
     "close": "Close",
     "areYouSure": "Are you sure?",
-    "health": "Health"
+    "health": "Health",
+    "resume": "Resume",
+    "pause": "Pause"
   },
   "myPlantsPage": {
     "addNewPlant": "Add New Plant",
@@ -260,8 +262,9 @@
       "deleteSelectedButton": "Delete ({{count}})",
       "taskPausedBadge": "Paused",
       "taskResumesDate": "Resumes: {{date}}",
-      "taskFrequency": "Frequency: {{frequency}}",
-      "taskTimeOfDay": "Time: {{time}}",
+      "taskFrequencyLabel": "Frequency",
+      "taskTimeOfDayLabel": "Time",
+      "nextDueDateLabel": "Next",
       "noTasksManage": "No care tasks defined yet. Click 'Manage' to add tasks.",
       "noTasksNormal": "No care tasks defined yet.",
       "atTimePrefix": "at "

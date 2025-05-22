@@ -24,11 +24,41 @@ const formatDate = (dateString?: string, t?: Function) => {
   }
 };
 
+const translateFrequencyDisplay = (frequency: string, t: Function): string => {
+  if (!frequency) return '';
+  const lowerFreq = frequency.toLowerCase();
+  if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+  if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+  if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+  if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+  if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+
+  const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+  if (everyXMatch) {
+    const count = parseInt(everyXMatch[1], 10);
+    const unit = everyXMatch[2].toLowerCase();
+    if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
+    if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
+    if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
+  }
+  return frequency; // Fallback to original if no match
+};
+
+const translateTimeOfDayDisplay = (timeOfDay: string | undefined, t: Function): string => {
+  if (!timeOfDay) return '';
+  if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
+  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay; // HH:MM format is usually universal
+  return timeOfDay; // Fallback
+};
+
 const formatDateTime = (dateString?: string, timeString?: string, t?: Function) => {
-  if (!dateString) return t ? t('common.notApplicable') : 'N/A';
+  if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
   let formattedString = formatDate(dateString, t);
-  if (timeString && timeString !== 'All day' && /^\d{2}:\d{2}$/.test(timeString)) {
-    formattedString += ` ${t ? t('plantDetail.careManagement.atTimePrefix', {time:timeString}) : `at ${timeString}`}`;
+  if (timeString && timeString.toLowerCase() !== 'all day' && /^\d{2}:\d{2}$/.test(timeString)) {
+    formattedString += ` ${t('plantDetail.careManagement.atTimePrefix', {time:timeString})}`;
+  } else if (timeString && timeString.toLowerCase() === 'all day') {
+     // Optionally, append nothing or a generic "All Day" translated string if needed
+     // For now, if it's "All day", just the date will show from formatDate.
   }
   return formattedString;
 };
@@ -38,11 +68,11 @@ interface PlantCareManagementProps {
   loadingTaskId: string | null;
   onToggleTaskPause: (taskId: string) => Promise<void>;
   onOpenEditTaskDialog: (task: CareTask) => void;
-  onOpenDeleteTaskDialog: (taskId: string) => void; 
+  onOpenDeleteTaskDialog: (taskId: string) => void;
   onOpenAddTaskDialog: () => void;
   selectedTaskIds: Set<string>;
   onToggleTaskSelection: (taskId: string) => void;
-  onDeleteSelectedTasks: () => void; 
+  onDeleteSelectedTasks: () => void;
 }
 
 
@@ -79,7 +109,9 @@ export function PlantCareManagement({
 
   const toggleManageMode = () => {
     setIsManagingCarePlan(prev => {
-      if (prev) { 
+      if (prev) {
+        // Logic if needed when exiting manage mode, e.g., clear selections
+        // setSelectedTaskIds(new Set()); // This would be done in parent if parent owns selectedTaskIds
       }
       return !prev;
     });
@@ -117,6 +149,9 @@ export function PlantCareManagement({
           {sortedTasks.map(task => {
             const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate!));
             const isSelected = selectedTaskIds.has(task.id);
+            const displayableFrequency = translateFrequencyDisplay(task.frequency, t);
+            const displayableTimeOfDay = translateTimeOfDayDisplay(task.timeOfDay, t);
+
             return (
             <Card
               key={task.id}
@@ -135,7 +170,7 @@ export function PlantCareManagement({
                     <Checkbox
                         checked={isSelected}
                         onCheckedChange={() => onToggleTaskSelection(task.id)}
-                        onClick={(e) => e.stopPropagation()} 
+                        onClick={(e) => e.stopPropagation()}
                         aria-label={`Select task ${task.name}`}
                     />
                   </div>
@@ -150,7 +185,7 @@ export function PlantCareManagement({
                         task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
-                      {task.level}
+                      {t(task.level === 'advanced' ? 'common.advanced' : 'common.basic')}
                     </Badge>
                     {task.isPaused && (
                       <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
@@ -162,17 +197,17 @@ export function PlantCareManagement({
                     <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
                   )}
                   <p className="text-xs text-muted-foreground mt-1">
-                    {t('plantDetail.careManagement.taskFrequency', {frequency: task.frequency})}
-                    {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDay', {time: task.timeOfDay})}`}
+                    {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
+                    {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
                     {task.isPaused ? (
                       task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                     ) : (
-                      task.nextDueDate ? ` | ${formatDateTime(task.nextDueDate, task.timeOfDay, t)}` : ''
+                      task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t)}` : ''
                     )}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
-                  {isManagingCarePlan && !isSelected && ( 
+                  {isManagingCarePlan && !isSelected && (
                     <>
                       <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label={t('common.edit')}>
                         <EditTaskIcon className="h-4 w-4" />
@@ -188,7 +223,7 @@ export function PlantCareManagement({
                       size="sm"
                       onClick={() => onToggleTaskPause(task.id)}
                       disabled={loadingTaskId === task.id}
-                      className="w-28 text-xs" 
+                      className="w-28 text-xs"
                     >
                       {loadingTaskId === task.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -223,5 +258,3 @@ export function PlantCareManagement({
     </div>
   );
 }
-
-    

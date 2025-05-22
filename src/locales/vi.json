@@ -45,7 +45,9 @@
     "manage": "Quản lý",
     "close": "Đóng",
     "areYouSure": "Bạn có chắc không?",
-    "health": "Sức khỏe"
+    "health": "Sức khỏe",
+    "resume": "Tiếp tục",
+    "pause": "Tạm dừng"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -260,8 +262,9 @@
       "deleteSelectedButton": "Xóa ({{count}})",
       "taskPausedBadge": "Đã tạm dừng",
       "taskResumesDate": "Tiếp tục: {{date}}",
-      "taskFrequency": "Tần suất: {{frequency}}",
-      "taskTimeOfDay": "Thời gian: {{time}}",
+      "taskFrequencyLabel": "Tần suất",
+      "taskTimeOfDayLabel": "Thời gian",
+      "nextDueDateLabel": "Tiếp theo",
       "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Quản lý' để thêm.",
       "noTasksNormal": "Chưa có công việc chăm sóc nào.",
       "atTimePrefix": "lúc "
