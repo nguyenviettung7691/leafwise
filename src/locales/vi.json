@@ -113,13 +113,13 @@
       "ascending": "Tăng dần",
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc",
-      "noPlantsFound": "Không tìm thấy cây nào.",
-      "noPlantsHint": "Hãy thử điều chỉnh bộ lọc hoặc thêm cây mới!"
+      "noPlantsFound": "Bộ sưu tập cây của bạn đang trống!",
+      "noPlantsHint": "Bắt đầu bằng cách thêm cây đầu tiên hoặc thử điều chỉnh tìm kiếm/bộ lọc của bạn."
     }
   },
   "addNewPlantPage": {
     "formTitle": "Thêm cây mới",
-    "formDescription": "Nhập thủ công chi tiết cho cây mới.",
+    "formDescription": "Nhập thủ công chi tiết cho cây mới của bạn.",
     "submitButtonText": "Thêm cây",
     "savingText": "Đang lưu cây...",
     "toastPlantAddedTitle": "Đã thêm cây!",
@@ -183,7 +183,7 @@
       "recommendationsTitle": "Hành động đề xuất ban đầu:",
       "saveToMyPlantsButton": "Lưu vào Cây của tôi",
       "plantSavedAlertTitle": "Đã lưu cây!",
-      "plantSavedAlertDescription": "{{plantName}} đã được lưu (mô phỏng) vào Cây của tôi.",
+      "plantSavedAlertDescription": "{{plantName}} đã được lưu vào Cây của tôi.",
       "viewPlantLink": "Xem {{plantName}} trong Cây của tôi",
       "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
       "saveFormTitle": "Lưu vào Cây của tôi",
@@ -221,7 +221,7 @@
       "analysisCompleteDesc": "Phân tích hoàn tất.",
       "diagnosisErrorTitle": "Lỗi chẩn đoán",
       "plantSavedTitle": "Đã lưu cây!",
-      "plantSavedDesc": "{{plantName}} đã được lưu (mô phỏng) vào Cây của tôi.",
+      "plantSavedDesc": "{{plantName}} đã được lưu vào Cây của tôi.",
       "missingInfoTitle": "Thiếu thông tin",
       "missingInfoDesc": "Cần nhận dạng cây để tạo kế hoạch chăm sóc.",
       "carePlanGeneratedTitle": "Đã tạo kế hoạch chăm sóc!",
@@ -239,14 +239,14 @@
     "headerCard": {
       "close": "Đóng",
       "deleteConfirmTitle": "Bạn có chắc không?",
-      "deleteConfirmDescription": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn (mô phỏng) cây \"{{plantName}}\" của bạn.",
+      "deleteConfirmDescription": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn cây \"{{plantName}}\" của bạn.",
       "cancel": "Hủy",
       "delete": "Xóa",
       "caredForDurationPrefix": "Đã chăm sóc ",
       "durationYears": "{{count}} năm",
       "durationMonths": "{{count}} tháng",
       "durationDays": "{{count}} ngày",
-      "lastCaredDatePrefix": "Chăm sóc cuối",
+      "lastCaredDatePrefix": "Chăm sóc cuối:",
       "editPlantAriaLabel": "Chỉnh sửa cây",
       "deletePlantAriaLabel": "Xóa cây",
       "fullSizePhotoTitle": "{{plantName}} - Ảnh kích thước đầy đủ",
@@ -399,7 +399,7 @@
       "taskPaused": "Công việc \"{{taskName}}\" đã được tạm dừng.",
       "taskResumed": "Công việc \"{{taskName}}\" đã được tiếp tục.",
       "plantDeletedTitle": "{{plantName}} đã bị xóa",
-      "plantDeletedDesc": "{{plantName}} đã được xóa (mô phỏng) khỏi bộ sưu tập của bạn."
+      "plantDeletedDesc": "{{plantName}} đã được xóa khỏi bộ sưu tập của bạn."
     },
     "footer": {
       "lastUpdated": "Cập nhật lần cuối: {{date}} (Mô phỏng - phản ánh tương tác cuối cùng)"
@@ -557,7 +557,6 @@
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
-      "exportErrorNoData": "Không có dữ liệu người dùng để xuất.",
       "exportSuccessTitle": "Xuất thành công",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
@@ -600,7 +599,7 @@
     "formDescription": "Cập nhật chi tiết cho {{plantName}}.",
     "submitButtonText": "Cập nhật Cây",
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
-    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật (mô phỏng).",
+    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
     "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật."
   },
   "authContextToasts": {

@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Settings",
@@ -112,13 +113,13 @@
       "ascending": "Ascending",
       "descending": "Descending",
       "resetAllButton": "Reset All Filters",
-      "noPlantsFound": "No plants found.",
-      "noPlantsHint": "Try adjusting your filters or add new plants!"
+      "noPlantsFound": "Your plant collection is empty!",
+      "noPlantsHint": "Start by adding your first plant or try adjusting your search/filters."
     }
   },
   "addNewPlantPage": {
     "formTitle": "Add New Plant",
-    "formDescription": "Manually input the details for new plant.",
+    "formDescription": "Manually input the details for your new plant.",
     "submitButtonText": "Add Plant",
     "savingText": "Saving plant...",
     "toastPlantAddedTitle": "Plant Added!",
@@ -182,7 +183,7 @@
       "recommendationsTitle": "Initial Recommended Actions:",
       "saveToMyPlantsButton": "Save to My Plants",
       "plantSavedAlertTitle": "Plant Saved!",
-      "plantSavedAlertDescription": "{{plantName}} has been (simulated) saved to My Plants.",
+      "plantSavedAlertDescription": "{{plantName}} has been saved to My Plants.",
       "viewPlantLink": "View {{plantName}} in My Plants",
       "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
       "saveFormTitle": "Save to My Plants",
@@ -220,7 +221,7 @@
       "analysisCompleteDesc": "Analysis complete.",
       "diagnosisErrorTitle": "Diagnosis Error",
       "plantSavedTitle": "Plant Saved!",
-      "plantSavedDesc": "{{plantName}} has been (simulated) saved to My Plants.",
+      "plantSavedDesc": "{{plantName}} has been saved to My Plants.",
       "missingInfoTitle": "Missing Information",
       "missingInfoDesc": "Plant identification is needed to generate a care plan.",
       "carePlanGeneratedTitle": "Care Plan Generated!",
@@ -238,14 +239,14 @@
     "headerCard": {
       "close": "Close",
       "deleteConfirmTitle": "Are you sure?",
-      "deleteConfirmDescription": "This action cannot be undone. This will permanently (simulate) delete your plant \"{{plantName}}\".",
+      "deleteConfirmDescription": "This action cannot be undone. This will permanently delete your plant \"{{plantName}}\".",
       "cancel": "Cancel",
       "delete": "Delete",
       "caredForDurationPrefix": "Cared for ",
       "durationYears": "{{count}} year(s)",
       "durationMonths": "{{count}} month(s)",
       "durationDays": "{{count}} day(s)",
-      "lastCaredDatePrefix": "Last Cared",
+      "lastCaredDatePrefix": "Last Cared:",
       "editPlantAriaLabel": "Edit Plant",
       "deletePlantAriaLabel": "Delete Plant",
       "fullSizePhotoTitle": "{{plantName}} - Full Size Photo",
@@ -283,7 +284,7 @@
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
-      "addPhotoDiagnoseButton": "Add Photo &amp; Diagnose",
+      "addPhotoDiagnoseButton": "Add Photo & Diagnose",
       "diagnosingButton": "Diagnosing...",
       "manageButton": "Manage",
       "doneButton": "Done",
@@ -297,7 +298,7 @@
       "selectPhotoAriaLabel": "Select photo from {{date}}"
     },
     "newPhotoDialog": {
-      "title": "New Photo Analysis &amp; Care Plan Review",
+      "title": "New Photo Analysis & Care Plan Review",
       "description": "Review the latest diagnosis, health comparison, and care plan suggestions for your {{plantName}}.",
       "latestDiagnosisTitle": "Latest Diagnosis",
       "plantLabel": "Plant:",
@@ -398,7 +399,7 @@
       "taskPaused": "Task \"{{taskName}}\" has been paused.",
       "taskResumed": "Task \"{{taskName}}\" has been resumed.",
       "plantDeletedTitle": "{{plantName}} Deleted",
-      "plantDeletedDesc": "{{plantName}} has been (simulated) removed from your collection."
+      "plantDeletedDesc": "{{plantName}} has been removed from your collection."
     },
     "footer": {
       "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"
@@ -556,7 +557,6 @@
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
-      "exportErrorNoData": "No user data to export.",
       "exportSuccessTitle": "Export Successful",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "importFailedGeneral": "Could not parse or apply the imported data.",
@@ -599,7 +599,7 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
     "toastErrorFindingPlant": "Could not find plant to update."
   },
   "authContextToasts": {
