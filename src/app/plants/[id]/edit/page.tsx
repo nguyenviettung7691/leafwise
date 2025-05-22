@@ -9,13 +9,15 @@ import { useParams, useRouter, notFound } from 'next/navigation';
 import { mockPlants } from '@/lib/mock-data';
 import type { Plant, PlantFormData, PlantPhoto } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { SavePlantForm } from '@/components/plants/SavePlantForm'; 
+import { SavePlantForm } from '@/components/plants/SavePlantForm';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function EditPlantPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [plant, setPlant] = useState<Plant | null>(null);
   const [initialFormData, setInitialFormData] = useState<Partial<PlantFormData> | undefined>(undefined);
@@ -61,10 +63,10 @@ export default function EditPlantPage() {
 
     const plantIndex = mockPlants.findIndex(p => p.id === id);
     if (plantIndex !== -1 && plant) {
-        let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl; // This will be the gallery selection or initial URL
+        let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl; 
 
         if (data.primaryPhoto && data.primaryPhoto[0]) {
-            // A new file was uploaded, convert it to data URL
+            
             newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result as string);
@@ -78,7 +80,7 @@ export default function EditPlantPage() {
           commonName: data.commonName,
           scientificName: data.scientificName || undefined,
           familyCategory: data.familyCategory || '',
-          ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} years` : undefined,
+          ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
           ageEstimateYears: data.ageEstimateYears,
           healthCondition: data.healthCondition,
           location: data.location || undefined,
@@ -88,7 +90,7 @@ export default function EditPlantPage() {
       
         if (newPrimaryPhotoUrl && newPrimaryPhotoUrl !== plant.primaryPhotoUrl) {
             const existingPhotoIndex = mockPlants[plantIndex].photos.findIndex(p => p.url === newPrimaryPhotoUrl);
-            if (existingPhotoIndex === -1) { // If it's a truly new photo (from upload)
+            if (existingPhotoIndex === -1) { 
                 mockPlants[plantIndex].photos.unshift({
                     id: `p-${id}-new-${Date.now()}`,
                     url: newPrimaryPhotoUrl,
@@ -101,13 +103,13 @@ export default function EditPlantPage() {
 
 
         toast({
-          title: 'Plant Updated!',
-          description: `${data.commonName} has been (simulated) updated.`,
+          title: t('editPlantPage.toastPlantUpdatedTitle'),
+          description: t('editPlantPage.toastPlantUpdatedDescription', { plantName: data.commonName }),
         });
     } else {
       toast({
-        title: 'Error',
-        description: 'Could not find plant to update.',
+        title: t('common.error'),
+        description: t('editPlantPage.toastErrorFindingPlant'),
         variant: 'destructive'
       });
     }
@@ -139,9 +141,9 @@ export default function EditPlantPage() {
           onSave={handleUpdatePlant}
           onCancel={() => router.push(`/plants/${id}`)}
           isLoading={isSaving}
-          formTitle="Edit Plant"
-          formDescription={`Update the details for ${plant.commonName}.`}
-          submitButtonText="Update Plant"
+          formTitle={t('editPlantPage.formTitle')}
+          formDescription={t('editPlantPage.formDescription', { plantName: plant.commonName })}
+          submitButtonText={t('editPlantPage.submitButtonText')}
         />
       </div>
     </AppLayout>

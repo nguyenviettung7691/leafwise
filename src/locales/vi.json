@@ -397,9 +397,9 @@
     }
   },
   "plantCard": {
-    "nextPrefix": "Tiếp theo:",
+    "nextPrefix": "Tiếp:",
     "lastCaredPrefix": "Chăm sóc cuối:",
-    "noUpcomingTasks": "Không có công việc sắp tới",
+    "noUpcomingTasks": "Không có việc sắp tới",
     "dueToday": "Hôm nay",
     "dueTomorrow": "Ngày mai",
     "dueInDays": "Trong {{count}} ngày",
@@ -583,5 +583,24 @@
     "signUpButton": "Đăng ký",
     "hasAccountText": "Đã có tài khoản?",
     "signInLink": "Đăng nhập"
+  },
+  "editPlantPage": {
+    "formTitle": "Chỉnh sửa Cây",
+    "formDescription": "Cập nhật chi tiết cho {{plantName}}.",
+    "submitButtonText": "Cập nhật Cây",
+    "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
+    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật (mô phỏng).",
+    "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật."
+  },
+  "authContextToasts": {
+    "loginSuccessTitle": "Đăng nhập Thành công",
+    "loginSuccessDescription": "Chào mừng trở lại, {{name}}!",
+    "registrationSuccessTitle": "Đăng ký Thành công",
+    "registrationSuccessDescription": "Chào mừng, {{name}}!",
+    "loggedOutTitle": "Đã Đăng xuất",
+    "loggedOutDescription": "Bạn đã đăng xuất thành công.",
+    "profileUpdatedTitle": "Hồ sơ Đã cập nhật",
+    "profileUpdatedDescription": "Hồ sơ của bạn đã được cập nhật thành công.",
+    "errorNoUserSession": "Không tìm thấy phiên người dùng."
   }
 }

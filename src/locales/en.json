@@ -583,5 +583,24 @@
     "signUpButton": "Sign Up",
     "hasAccountText": "Already have an account?",
     "signInLink": "Sign in"
+  },
+  "editPlantPage": {
+    "formTitle": "Edit Plant",
+    "formDescription": "Update the details for {{plantName}}.",
+    "submitButtonText": "Update Plant",
+    "toastPlantUpdatedTitle": "Plant Updated!",
+    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
+    "toastErrorFindingPlant": "Could not find plant to update."
+  },
+  "authContextToasts": {
+    "loginSuccessTitle": "Login Successful",
+    "loginSuccessDescription": "Welcome back, {{name}}!",
+    "registrationSuccessTitle": "Registration Successful",
+    "registrationSuccessDescription": "Welcome, {{name}}!",
+    "loggedOutTitle": "Logged Out",
+    "loggedOutDescription": "You have been successfully logged out.",
+    "profileUpdatedTitle": "Profile Updated",
+    "profileUpdatedDescription": "Your profile has been successfully updated.",
+    "errorNoUserSession": "No user session found."
   }
 }

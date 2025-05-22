@@ -6,6 +6,7 @@ import type { ReactNode} from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from './LanguageContext';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage(); // Initialize useLanguage
 
   useEffect(() => {
     try {
@@ -50,9 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mockUserData);
     localStorage.setItem('leafwiseUser', JSON.stringify(mockUserData));
     setIsLoading(false);
-    toast({ title: "Login Successful", description: `Welcome back, ${mockUserData.name}!` });
+    toast({ 
+      title: t('authContextToasts.loginSuccessTitle'), 
+      description: t('authContextToasts.loginSuccessDescription', { name: mockUserData.name }) 
+    });
     router.push('/');
-  }, [router, toast]);
+  }, [router, toast, t]);
 
   const register = useCallback(async (name: string, email: string, _pass: string) => {
     setIsLoading(true);
@@ -67,20 +72,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mockNewUserData);
     localStorage.setItem('leafwiseUser', JSON.stringify(mockNewUserData));
     setIsLoading(false);
-    toast({ title: "Registration Successful", description: `Welcome, ${mockNewUserData.name}!` });
+    toast({ 
+      title: t('authContextToasts.registrationSuccessTitle'), 
+      description: t('authContextToasts.registrationSuccessDescription', { name: mockNewUserData.name }) 
+    });
     router.push('/');
-  }, [router, toast]);
+  }, [router, toast, t]);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('leafwiseUser');
-    toast({ title: "Logged Out", description: "You have been successfully logged out." });
+    toast({ 
+      title: t('authContextToasts.loggedOutTitle'), 
+      description: t('authContextToasts.loggedOutDescription') 
+    });
     router.push('/login');
-  }, [router, toast]);
+  }, [router, toast, t]);
 
   const updateUser = useCallback(async (updatedData: Partial<Omit<User, 'id' | 'email'>>) => {
     if (!user) {
-      toast({ title: "Error", description: "No user session found.", variant: "destructive" });
+      toast({ 
+        title: t('common.error'), 
+        description: t('authContextToasts.errorNoUserSession'), 
+        variant: "destructive" 
+      });
       return;
     }
     setIsLoading(true);
@@ -99,8 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUserState);
     localStorage.setItem('leafwiseUser', JSON.stringify(newUserState));
     setIsLoading(false);
-    toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
-  }, [user, toast]);
+    toast({ 
+      title: t('authContextToasts.profileUpdatedTitle'), 
+      description: t('authContextToasts.profileUpdatedDescription') 
+    });
+  }, [user, toast, t]);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, updateUser, isLoading }}>

@@ -6,8 +6,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from 'next-themes';
-import { ProgressProvider } from '@/contexts/ProgressContext'; // New import
-import { ProgressBar } from '@/components/layout/ProgressBar'; // New import
+import { ProgressProvider } from '@/contexts/ProgressContext';
+import { ProgressBar } from '@/components/layout/ProgressBar';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,15 +49,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <LanguageProvider>
-              <ProgressProvider> {/* Wrap with ProgressProvider */}
-                <ProgressBar /> {/* Add ProgressBar here, outside main content flow */}
+          <LanguageProvider> {/* LanguageProvider now wraps AuthProvider */}
+            <AuthProvider>
+              <ProgressProvider>
+                <ProgressBar />
                 {children}
                 <Toaster />
               </ProgressProvider>
-            </LanguageProvider>
-          </AuthProvider>
+            </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
