@@ -46,7 +46,6 @@
     "areYouSure": "Are you sure?"
   },
   "myPlantsPage": {
-    "title": "My Plants",
     "addNewPlant": "Add New Plant",
     "navigating": "Navigating...",
     "managePlants": "Manage",
@@ -61,6 +60,7 @@
     "plantUpdatedToastTitle": "Plant Updated!",
     "plantUpdatedToastDescription": "{{plantName}} has been updated.",
     "plantNotFoundError": "Plant not found for editing.",
+    "loadingPlants": "Loading your beautiful plants...",
     "filterSortCard": {
       "title": "Filter & Sort Plants",
       "searchChipPrefix": "Search: \"{{term}}\"",
@@ -137,17 +137,18 @@
       "statusLabel": "Status:",
       "diagnosisLabel": "Diagnosis:",
       "confidenceLabel": "Confidence:",
-      "confidence": {
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High"
-      },
+      "confidenceLow": "Low",
+      "confidenceMedium": "Medium",
+      "confidenceHigh": "High",
       "recommendationsTitle": "Initial Recommended Actions:",
       "saveToMyPlantsButton": "Save to My Plants",
       "plantSavedAlertTitle": "Plant Saved!",
       "plantSavedAlertDescription": "{{plantName}} has been (simulated) saved to My Plants. You can now generate a detailed care plan below.",
       "viewPlantLink": "View {{plantName}} in My Plants",
-      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure."
+      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
+      "saveFormTitle": "Save to My Plants",
+      "saveFormDescription": "Confirm or update the details for {{plantName}} before saving.",
+      "saveFormSubmitButton": "Save Plant"
     },
     "carePlanGenerator": {
       "title": "Generate Detailed Care Plan",
@@ -156,8 +157,6 @@
       "locationLabel": "Your Location/Climate (Optional)",
       "locationPlaceholder": "e.g., Sunny balcony, Indoor office, Temperate zone",
       "modeLabel": "Care Plan Mode",
-      "modeBasic": "Basic",
-      "modeAdvanced": "Advanced",
       "getPlanButton": "Get Plan",
       "getPlanButtonLoading": "Generating Plan...",
       "errorAlertTitle": "Care Plan Error",
@@ -169,7 +168,8 @@
       "activityTrackingPlaceholder": "Activity completion tracking for your care tasks will be implemented in a future version.",
       "saveCarePlanButton": "Save Care Plan for {{plantName}}",
       "viewPlantDetailsLink": "View {{plantName}}'s Details",
-      "aiDisclaimer": "This care plan is AI-generated. Adapt to your specific plant and environment."
+      "aiDisclaimer": "This care plan is AI-generated. Adapt to your specific plant and environment.",
+      "footerDisclaimer": "This care plan is AI-generated. Adapt to your specific plant and environment."
     },
     "toasts": {
       "imageTooLargeTitle": "Image Too Large",
@@ -231,8 +231,6 @@
       "deleteSelectedButton": "Delete ({{count}})",
       "taskPausedBadge": "Paused",
       "taskResumesDate": "Resumes: {{date}}",
-      "taskNextDueDate": "Next: {{date}}",
-      "taskNextDueDateTime": "Next: {{date}} at {{time}}",
       "taskFrequency": "Frequency: {{frequency}}",
       "taskTimeOfDay": "Time: {{time}}",
       "noTasksManage": "No care tasks defined yet. Click 'Manage' to add tasks.",
@@ -533,3 +531,5 @@
     "signInLink": "Sign in"
   }
 }
+
+    

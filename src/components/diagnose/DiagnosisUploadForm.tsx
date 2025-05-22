@@ -41,13 +41,13 @@ export function DiagnosisUploadForm({
           <Stethoscope className="h-7 w-7 text-primary" />
           {t('nav.diagnosePlant')}
         </CardTitle>
-        <CardDescription>Upload a photo of your plant and add any observations. Our AI will analyze it and provide a health assessment and care tips.</CardDescription>
+        <CardDescription>{t('diagnosePage.uploadForm.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmitDiagnosis} className="space-y-6">
           <div>
             <Label htmlFor="plant-image-diagnose" className="block text-sm font-medium text-foreground mb-1">
-              Plant Image (Max 4MB)
+              {t('diagnosePage.uploadForm.imageLabel')}
             </Label>
             <Input
               id="plant-image-diagnose"
@@ -63,7 +63,7 @@ export function DiagnosisUploadForm({
             <div className="mt-4 p-2 border rounded-md bg-muted/50 flex justify-center">
               <Image
                 src={previewUrl}
-                alt="Plant preview for diagnosis"
+                alt={t('diagnosePage.resultDisplay.imageAlt')}
                 width={250}
                 height={250}
                 className="rounded-md object-contain max-h-[250px] shadow-md"
@@ -74,11 +74,11 @@ export function DiagnosisUploadForm({
 
           <div>
             <Label htmlFor="plant-description" className="block text-sm font-medium text-foreground mb-1">
-              Optional Description
+              {t('diagnosePage.uploadForm.descriptionLabel')}
             </Label>
             <Textarea
               id="plant-description"
-              placeholder="e.g., Yellowing leaves, brown spots, wilting..."
+              placeholder={t('diagnosePage.uploadForm.descriptionPlaceholder')}
               value={description}
               onChange={(e) => onDescriptionChange(e.target.value)}
               rows={3}
@@ -87,9 +87,9 @@ export function DiagnosisUploadForm({
 
           <Button type="submit" disabled={isLoadingDiagnosis || !isFileSelected} className="w-full text-base py-3">
             {isLoadingDiagnosis ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Analyzing Plant...</>
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.uploadForm.submitButtonLoading')}</>
             ) : (
-              <><Sparkles className="mr-2 h-5 w-5" />Diagnose Plant</>
+              <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.uploadForm.submitButton')}</>
             )}
           </Button>
         </form>
@@ -97,3 +97,5 @@ export function DiagnosisUploadForm({
     </Card>
   );
 }
+
+    

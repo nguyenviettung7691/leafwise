@@ -5,7 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
 import { mockPlants } from '@/lib/mock-data';
-import type { Plant, PlantHealthCondition, PlantFormData } from '@/types';
+import type { Plant, PlantHealthCondition, PlantFormData, PlantPhoto } from '@/types';
 import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -111,9 +111,9 @@ export default function MyPlantsPage() {
       });
       setIsEditPlantDialogOpen(true);
     } else {
-      toast({ title: "Error", description: "Plant not found for editing.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: "destructive" });
     }
-  }, [toast]);
+  }, [t, toast]);
 
   const handleSaveEditedPlant = async (data: PlantFormData) => {
     if (!plantToEdit) return;
@@ -162,9 +162,9 @@ export default function MyPlantsPage() {
         photos: updatedPhotos,
       };
       setPlants([...mockPlants]); 
-      toast({ title: "Plant Updated!", description: `${data.commonName} has been updated.` });
+      toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
     } else {
-      toast({ title: "Error", description: "Could not find plant to update.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: "destructive" });
     }
 
     setIsSavingEditedPlant(false);
@@ -263,32 +263,32 @@ export default function MyPlantsPage() {
   }, [plants, filters, sortConfig]);
 
 
-  const sortOptions: { value: SortConfig['key']; label: string }[] = [
-    { value: 'commonName', label: 'Common Name' },
-    { value: 'scientificName', label: 'Scientific Name' },
-    { value: 'ageEstimateYears', label: 'Age' },
-    { value: 'location', label: 'Location' },
-    { value: 'familyCategory', label: 'Family Category' },
-    { value: 'healthCondition', label: 'Health Condition' },
-    { value: 'plantingDate', label: 'Created Date' },
-    { value: 'lastCaredDate', label: 'Last Cared Date' },
-    { value: 'nextCareDate', label: 'Next Care Task' },
-  ];
+  const sortOptions = useMemo(() => [
+    { value: 'commonName', label: t('myPlantsPage.filterSortCard.commonNameSort') },
+    { value: 'scientificName', label: t('myPlantsPage.filterSortCard.scientificNameSort') },
+    { value: 'ageEstimateYears', label: t('myPlantsPage.filterSortCard.ageSort') },
+    { value: 'location', label: t('myPlantsPage.filterSortCard.locationSort') },
+    { value: 'familyCategory', label: t('myPlantsPage.filterSortCard.familyCategorySort') },
+    { value: 'healthCondition', label: t('myPlantsPage.filterSortCard.healthConditionSort') },
+    { value: 'plantingDate', label: t('myPlantsPage.filterSortCard.createdDateSort') },
+    { value: 'lastCaredDate', label: t('myPlantsPage.filterSortCard.lastCaredDateSort') },
+    { value: 'nextCareDate', label: t('myPlantsPage.filterSortCard.nextCareTaskSort') },
+  ], [t]);
 
-  const healthConditionOptions: { value: PlantHealthCondition | 'all'; label: string }[] = [
-    { value: 'all', label: 'All Health Conditions' },
-    { value: 'healthy', label: 'Healthy' },
-    { value: 'needs_attention', label: 'Needs Attention' },
-    { value: 'sick', label: 'Sick' },
-    { value: 'unknown', label: 'Unknown' },
-  ];
+  const healthConditionOptions: { value: PlantHealthCondition | 'all'; label: string }[] = useMemo(() => [
+    { value: 'all', label: t('myPlantsPage.filterSortCard.allHealthConditions') },
+    { value: 'healthy', label: t('common.healthy') },
+    { value: 'needs_attention', label: t('common.needs_attention') },
+    { value: 'sick', label: t('common.sick') },
+    { value: 'unknown', label: t('common.unknown') },
+  ], [t]);
 
-  const ageRangeOptions = [
-    { value: 'all', label: 'All Ages' },
-    { value: '<1', label: 'Less than 1 year' },
-    { value: '1-3', label: '1-3 years' },
-    { value: '>3', label: 'Over 3 years' },
-  ];
+  const ageRangeOptions = useMemo(() => [
+    { value: 'all', label: t('myPlantsPage.filterSortCard.allAges') },
+    { value: '<1', label: t('myPlantsPage.filterSortCard.ageLessThanOneYear') },
+    { value: '1-3', label: t('myPlantsPage.filterSortCard.ageOneToThreeYears') },
+    { value: '>3', label: t('myPlantsPage.filterSortCard.ageOverThreeYears') },
+  ], [t]);
 
   const toggleManagePlantsMode = () => {
     setIsManagingPlants(prev => {
@@ -319,8 +319,8 @@ export default function MyPlantsPage() {
     setPlants(updatedPlants);
 
     toast({
-      title: "Plants Deleted",
-      description: `${numSelected} plant${numSelected > 1 ? 's have' : ' has'} been deleted.`,
+      title: t('myPlantsPage.plantsDeletedToastTitle'),
+      description: t('myPlantsPage.plantsDeletedToastDescription', { count: numSelected }),
     });
     setSelectedPlantIds(new Set());
     setIsManagingPlants(false);
@@ -340,12 +340,12 @@ export default function MyPlantsPage() {
                 size="sm"
             >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete ({selectedPlantIds.size})
+                {t('myPlantsPage.deleteSelected', { count: selectedPlantIds.size })}
             </Button>
           )}
           <Button variant="outline" onClick={toggleManagePlantsMode} size="sm">
             {isManagingPlants ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
-            {isManagingPlants ? 'Done' : 'Manage'}
+            {isManagingPlants ? t('myPlantsPage.doneManaging') : t('myPlantsPage.managePlants')}
           </Button>
           <Button onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant || isManagingPlants}>
             {isNavigatingToNewPlant ? (
@@ -353,7 +353,7 @@ export default function MyPlantsPage() {
             ) : (
               <PlusCircle className="mr-2 h-5 w-5" />
             )}
-            {isNavigatingToNewPlant ? 'Navigating...' : 'Add New Plant'}
+            {isNavigatingToNewPlant ? t('myPlantsPage.navigating') : t('myPlantsPage.addNewPlant')}
           </Button>
         </div>
       </div>
@@ -375,7 +375,7 @@ export default function MyPlantsPage() {
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="ml-4 text-lg text-muted-foreground">Loading your beautiful plants...</p>
+            <p className="ml-4 text-lg text-muted-foreground">{t('myPlantsPage.loadingPlants')}</p>
         </div>
       ) : (
         <PlantGrid
@@ -390,15 +390,15 @@ export default function MyPlantsPage() {
       <AlertDialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>{t('myPlantsPage.confirmDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected {selectedPlantIds.size} plant{selectedPlantIds.size > 1 ? 's' : ''}.
+              {t('myPlantsPage.confirmDeleteDescription', { count: selectedPlantIds.size })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteSelectedPlants} className="bg-destructive hover:bg-destructive/90">
-              Delete
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -406,24 +406,22 @@ export default function MyPlantsPage() {
 
       <Dialog open={isEditPlantDialogOpen} onOpenChange={setIsEditPlantDialogOpen}>
         <DialogContent className="sm:max-w-2xl p-0">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitlePrimitive>{t('myPlantsPage.editPlantDialogTitle')}</DialogTitlePrimitive>
+            <DialogDescriptionPrimitive>
+              {plantToEdit ? t('myPlantsPage.editPlantDialogDescription', { plantName: plantToEdit.commonName }) : ''}
+            </DialogDescriptionPrimitive>
+          </DialogHeader>
           {plantToEdit && initialEditFormData && (
-            <>
-              <DialogHeader className="p-6 pb-0">
-                <DialogTitlePrimitive>Edit Plant</DialogTitlePrimitive>
-                <DialogDescriptionPrimitive>
-                  Update the details for {plantToEdit.commonName}.
-                </DialogDescriptionPrimitive>
-              </DialogHeader>
-              <SavePlantForm
-                initialData={initialEditFormData}
-                galleryPhotos={plantToEdit.photos}
-                onSave={handleSaveEditedPlant}
-                onCancel={handleCancelEditPlantDialog}
-                isLoading={isSavingEditedPlant}
-                hideInternalHeader={true} 
-                submitButtonText="Update Plant"
-              />
-            </>
+            <SavePlantForm
+              initialData={initialEditFormData}
+              galleryPhotos={plantToEdit.photos}
+              onSave={handleSaveEditedPlant}
+              onCancel={handleCancelEditPlantDialog}
+              isLoading={isSavingEditedPlant}
+              hideInternalHeader={true} 
+              submitButtonText={t('common.update')}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -431,3 +429,5 @@ export default function MyPlantsPage() {
     </AppLayout>
   );
 }
+
+    

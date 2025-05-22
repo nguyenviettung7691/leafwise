@@ -9,12 +9,13 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon, Eye } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; 
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CarePlanGeneratorProps {
   diagnosisResult: DiagnosePlantHealthOutput | null;
@@ -32,6 +33,7 @@ interface CarePlanGeneratorProps {
 }
 
 const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
+  const { t } = useLanguage();
   return (
     <Card className="bg-muted/50 p-3">
       <h4 className="font-semibold text-sm flex items-center">
@@ -43,12 +45,12 @@ const AIGeneratedTaskItem = ({ task }: { task: AIGeneratedTask }) => {
                 task.taskLevel === 'advanced' ? "bg-primary text-primary-foreground" : ""
             )}
         >
-          {task.taskLevel}
+          {t(task.taskLevel === 'advanced' ? 'common.advanced' : 'common.basic')}
         </Badge>
       </h4>
       {task.taskDescription && <p className="text-xs text-muted-foreground mt-1 mb-1 whitespace-pre-wrap">{task.taskDescription}</p>}
-      <p className="text-xs"><strong className="text-muted-foreground">Frequency:</strong> {task.suggestedFrequency}</p>
-      <p className="text-xs"><strong className="text-muted-foreground">Time:</strong> {task.suggestedTimeOfDay}</p>
+      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.frequencyLabel')}:</strong> {task.suggestedFrequency}</p>
+      <p className="text-xs"><strong className="text-muted-foreground">{t('carePlanTaskForm.timeOfDayLabel')}:</strong> {task.suggestedTimeOfDay}</p>
     </Card>
   );
 };
@@ -69,8 +71,9 @@ export function CarePlanGenerator({
 }: CarePlanGeneratorProps) {
   const [isCarePlanSavedProcessing, setIsCarePlanSavedProcessing] = React.useState(false);
   const [carePlanEffectivelySaved, setCarePlanEffectivelySaved] = React.useState(false);
+  const { t } = useLanguage();
 
-  const plantNameForButton = diagnosisResult?.identification.commonName || "this plant";
+  const plantNameForDisplay = diagnosisResult?.identification.commonName || t('common.unknown');
 
   const handleSaveClick = async () => {
     if (carePlanResult) {
@@ -96,42 +99,42 @@ export function CarePlanGenerator({
       <CardHeader>
         <CardTitle className="text-xl flex items-center gap-2">
           <ClipboardList className="h-6 w-6 text-primary" />
-          Generate Detailed Care Plan
+          {t('diagnosePage.carePlanGenerator.title')}
         </CardTitle>
-        {diagnosisResult?.identification.commonName && <CardDescription>For {diagnosisResult.identification.commonName}</CardDescription>}
-        {diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && <CardDescription>Plant not fully identified, generic tips might be provided.</CardDescription>}
+        {diagnosisResult?.identification.commonName && <CardDescription>{t('diagnosePage.carePlanGenerator.descriptionForPlant', { plantName: diagnosisResult.identification.commonName })}</CardDescription>}
+        {diagnosisResult && diagnosisResult.identification.isPlant && !diagnosisResult.identification.commonName && <CardDescription>{t('diagnosePage.carePlanGenerator.descriptionGeneric')}</CardDescription>}
       </CardHeader>
       <CardContent>
         <form onSubmit={onGenerateCarePlan} className="space-y-6">
           <div>
             <Label htmlFor="locationClimate" className="block text-sm font-medium text-foreground mb-1">
-              Your Location/Climate (Optional)
+              {t('diagnosePage.carePlanGenerator.locationLabel')}
             </Label>
             <Input
               id="locationClimate"
-              placeholder="e.g., Sunny balcony, Indoor office, Temperate zone"
+              placeholder={t('diagnosePage.carePlanGenerator.locationPlaceholder')}
               value={locationClimate}
               onChange={(e) => onLocationClimateChange(e.target.value)}
             />
           </div>
           <div>
-            <Label className="block text-sm font-medium text-foreground mb-2">Care Plan Mode</Label>
+            <Label className="block text-sm font-medium text-foreground mb-2">{t('diagnosePage.carePlanGenerator.modeLabel')}</Label>
             <RadioGroup value={carePlanMode} onValueChange={(value) => onCarePlanModeChange(value as 'basic' | 'advanced')} className="flex gap-4">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="basic" id="mode-basic" />
-                <Label htmlFor="mode-basic">Basic</Label>
+                <Label htmlFor="mode-basic">{t('common.basic')}</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="advanced" id="mode-advanced" />
-                <Label htmlFor="mode-advanced">Advanced</Label>
+                <Label htmlFor="mode-advanced">{t('common.advanced')}</Label>
               </div>
             </RadioGroup>
           </div>
           <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName && !diagnosisResult)} className="w-full text-base py-2.5">
             {isLoadingCarePlan ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Plan...</>
+              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.carePlanGenerator.getPlanButtonLoading')}</>
             ) : (
-              'Get Plan'
+              t('diagnosePage.carePlanGenerator.getPlanButton')
             )}
           </Button>
         </form>
@@ -139,7 +142,7 @@ export function CarePlanGenerator({
         {carePlanError && (
           <Alert variant="destructive" className="mt-6">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Care Plan Error</AlertTitle>
+            <AlertTitle>{t('diagnosePage.carePlanGenerator.errorAlertTitle')}</AlertTitle>
             <AlertDescription>{carePlanError}</AlertDescription>
           </Alert>
         )}
@@ -149,11 +152,11 @@ export function CarePlanGenerator({
             <CardHeader className="p-0 mb-4">
               <CardTitle className="text-lg flex items-center">
                 <CheckCircle className="text-primary mr-2 h-5 w-5" />
-                Generated Care Plan for {diagnosisResult?.identification.commonName || "Selected Plant"}
+                {t('diagnosePage.carePlanGenerator.generatedPlanTitle', { plantName: diagnosisResult?.identification.commonName || t('common.unknown')})}
               </CardTitle>
               {resultMode && (
                 <CardDescription>
-                  Mode:
+                  {t('diagnosePage.carePlanGenerator.modeBadgeLabel')}
                   <Badge
                     variant={resultMode === 'advanced' ? 'default' : 'outline'}
                     className={cn(
@@ -161,7 +164,7 @@ export function CarePlanGenerator({
                       resultMode === 'advanced' ? "bg-primary text-primary-foreground" : ""
                     )}
                   >
-                    {resultMode}
+                    {t(resultMode === 'advanced' ? 'common.advanced' : 'common.basic')}
                   </Badge>
                 </CardDescription>
               )}
@@ -175,20 +178,20 @@ export function CarePlanGenerator({
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-3 px-2 border border-dashed rounded-md bg-muted/30">
-                No specific tasks were generated by the AI for this plan. You can still save this as an empty plan or try generating again with different options.
+                {t('diagnosePage.carePlanGenerator.noTasksGenerated')}
               </p>
             )}
 
               <Separator className="my-4" />
-              <h3 className="font-bold text-lg text-primary mt-4">Future Enhancements</h3>
+              <h3 className="font-bold text-lg text-primary mt-4">{t('diagnosePage.carePlanGenerator.futureEnhancementsTitle')}</h3>
               <div className="space-y-3 text-xs text-muted-foreground">
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{carePlanResult.pushNotificationsPlaceholder}</p>
+                  <p>{t('diagnosePage.carePlanGenerator.notificationsPlaceholder')}</p>
                 </div>
                 <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
                   <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{carePlanResult.activityTrackingPlaceholder}</p>
+                  <p>{t('diagnosePage.carePlanGenerator.activityTrackingPlaceholder')}</p>
                 </div>
               </div>
 
@@ -198,7 +201,7 @@ export function CarePlanGenerator({
                     href={`/plants/${lastSavedPlantId}`}
                     className="text-sm text-primary hover:underline"
                   >
-                    View {plantNameForButton}'s Details
+                    {t('diagnosePage.carePlanGenerator.viewPlantDetailsLink', { plantName: plantNameForDisplay })}
                   </ProgressBarLink>
                 ) : (
                   <Button
@@ -216,7 +219,7 @@ export function CarePlanGenerator({
                     ) : (
                       <SaveIcon className="mr-2 h-4 w-4" />
                     )}
-                    Save Care Plan for {plantNameForButton}
+                    {t('diagnosePage.carePlanGenerator.saveCarePlanButton', { plantName: plantNameForDisplay })}
                   </Button>
                 )}
               </div>
@@ -225,10 +228,11 @@ export function CarePlanGenerator({
       </CardContent>
       {carePlanResult && (
         <CardFooter className="border-t pt-4 mt-4">
-          <p className="text-xs text-muted-foreground">This care plan is AI-generated. Adapt to your specific plant and environment.</p>
+          <p className="text-xs text-muted-foreground">{t('diagnosePage.carePlanGenerator.footerDisclaimer')}</p>
         </CardFooter>
       )}
     </Card>
   );
 }
 
+    

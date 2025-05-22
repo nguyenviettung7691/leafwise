@@ -82,25 +82,23 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear previous results and form states related to diagnosis & care plan
     setDiagnosisResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
     setPlantSaved(false);
-    setLastSavedPlantId(null); // Reset last saved plant ID as well
+    setLastSavedPlantId(null); 
     setCarePlanResult(null);
     setCarePlanError(null);
     setGeneratedPlanMode(null);
-    // Note: Not clearing 'description' or 'locationClimate' here, as user might want to reuse them
 
     const selectedFile = event.target.files?.[0];
 
     if (selectedFile) {
-      if (selectedFile.size > 4 * 1024 * 1024) { // 4MB limit
+      if (selectedFile.size > 4 * 1024 * 1024) { 
         toast({
           variant: 'destructive',
-          title: 'Image Too Large',
-          description: 'Please select an image file smaller than 4MB.',
+          title: t('diagnosePage.toasts.imageTooLargeTitle'),
+          description: t('diagnosePage.toasts.imageTooLargeDesc'),
         });
         setFile(null);
         setPreviewUrl(null);
@@ -124,8 +122,8 @@ export default function DiagnosePlantPage() {
   const handleDiagnosisSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!file) {
-      setDiagnosisError('Please select an image file.');
-      toast({ title: "No Image Selected", description: "Please select an image file for diagnosis.", variant: "destructive" });
+      setDiagnosisError(t('diagnosePage.toasts.noImageDesc'));
+      toast({ title: t('diagnosePage.toasts.noImageTitle'), description: t('diagnosePage.toasts.noImageDesc'), variant: "destructive" });
       return;
     }
 
@@ -155,13 +153,13 @@ export default function DiagnosePlantPage() {
       const result = await diagnosePlantHealth({ photoDataUri: base64Image, description });
       setDiagnosisResult(result);
       toast({
-        title: "Diagnosis Complete!",
-        description: result.identification.commonName ? `Analyzed ${result.identification.commonName}.` : "Analysis complete.",
+        title: t('diagnosePage.toasts.diagnosisCompleteTitle'),
+        description: result.identification.commonName ? t('diagnosePage.toasts.diagnosisCompleteDesc', { plantName: result.identification.commonName }) : t('diagnosePage.toasts.analysisCompleteDesc'),
       });
     } catch (e: any) {
-      const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred during diagnosis.');
+      const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.toasts.diagnosisErrorTitle'));
       setDiagnosisError(errorMessage);
-      toast({ title: "Diagnosis Error", description: errorMessage, variant: "destructive" });
+      toast({ title: t('diagnosePage.toasts.diagnosisErrorTitle'), description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoadingDiagnosis(false);
     }
@@ -217,8 +215,8 @@ export default function DiagnosePlantPage() {
     setLastSavedPlantId(newPlantId);
 
     toast({
-      title: "Plant Saved!",
-      description: `${data.commonName} has been (simulated) saved to My Plants.`,
+      title: t('diagnosePage.toasts.plantSavedTitle'),
+      description: t('diagnosePage.toasts.plantSavedDesc', { plantName: data.commonName }),
     });
     setPlantSaved(true);
     setShowSavePlantForm(false);
@@ -228,8 +226,8 @@ export default function DiagnosePlantPage() {
   const handleGenerateCarePlan = async (event: FormEvent) => {
     event.preventDefault();
     if (!diagnosisResult || !diagnosisResult.identification.isPlant) {
-      setCarePlanError('Cannot generate care plan without a plant identification from diagnosis.');
-      toast({ title: "Missing Information", description: "Plant identification is needed to generate a care plan.", variant: "destructive" });
+      setCarePlanError(t('diagnosePage.toasts.missingInfoDesc'));
+      toast({ title: t('diagnosePage.toasts.missingInfoTitle'), description: t('diagnosePage.toasts.missingInfoDesc'), variant: "destructive" });
       return;
     }
 
@@ -252,11 +250,11 @@ export default function DiagnosePlantPage() {
       }
       setCarePlanResult(result);
       setGeneratedPlanMode(carePlanMode);
-      toast({ title: "Care Plan Generated!", description: `Detailed ${carePlanMode} care plan ready for ${input.plantCommonName}.` });
+      toast({ title: t('diagnosePage.toasts.carePlanGeneratedTitle'), description: t('diagnosePage.toasts.carePlanGeneratedDesc', { mode: carePlanMode, plantName: input.plantCommonName }) });
     } catch (e: any) {
-      const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : 'An unexpected error occurred generating the care plan.');
+      const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.carePlanGenerator.errorAlertTitle'));
       setCarePlanError(errorMessage);
-      toast({ title: "Care Plan Error", description: errorMessage, variant: "destructive" });
+      toast({ title: t('diagnosePage.toasts.carePlanErrorTitle'), description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoadingCarePlan(false);
     }
@@ -264,12 +262,12 @@ export default function DiagnosePlantPage() {
 
   const handleSaveCarePlan = (plan: GenerateDetailedCarePlanOutput) => {
     if (!lastSavedPlantId) {
-      toast({ title: "Error", description: "No recently saved plant to attach care plan to.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNoPlant'), variant: "destructive" });
       return;
     }
     const plantIndex = mockPlants.findIndex(p => p.id === lastSavedPlantId);
     if (plantIndex === -1) {
-      toast({ title: "Error", description: "Could not find the saved plant.", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNotFound'), variant: "destructive" });
       return;
     }
 
@@ -290,8 +288,8 @@ export default function DiagnosePlantPage() {
     mockPlants[plantIndex].careTasks.push(...newCareTasks);
 
     toast({
-      title: "Care Plan Saved!",
-      description: `Care plan tasks added to ${mockPlants[plantIndex].commonName}.`,
+      title: t('diagnosePage.toasts.carePlanSavedTitle'),
+      description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: mockPlants[plantIndex].commonName }),
     });
   };
 
@@ -324,7 +322,7 @@ export default function DiagnosePlantPage() {
         {diagnosisError && (
           <Alert variant="destructive">
             <CheckCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t('common.error')}</AlertTitle>
             <AlertDescription>{diagnosisError}</AlertDescription>
           </Alert>
         )}
@@ -348,9 +346,9 @@ export default function DiagnosePlantPage() {
               setShowSavePlantForm(false);
             }}
             isLoading={isSavingPlant}
-            formTitle="Save to My Plants"
-            formDescription={`Confirm or update the details for ${diagnosisResult.identification.commonName || 'this plant'} before saving.`}
-            submitButtonText="Save Plant"
+            formTitle={t('diagnosePage.resultDisplay.saveFormTitle')}
+            formDescription={t('diagnosePage.resultDisplay.saveFormDescription', { plantName: diagnosisResult.identification.commonName || t('common.unknown')})}
+            submitButtonText={t('diagnosePage.resultDisplay.saveFormSubmitButton')}
           />
         )}
 
@@ -371,9 +369,11 @@ export default function DiagnosePlantPage() {
           />
         )}
          <div className="text-center mt-8">
-            <Button variant="outline" onClick={fullResetDiagnosisForm}>Reset Diagnosis Page</Button>
+            <Button variant="outline" onClick={fullResetDiagnosisForm}>{t('diagnosePage.resetPageButton')}</Button>
         </div>
       </div>
     </AppLayout>
   );
 }
+
+    
