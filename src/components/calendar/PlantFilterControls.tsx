@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useLanguage } from '@/contexts/LanguageContext';
+
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -23,6 +25,8 @@ export function PlantFilterControls({
   selectedPlantIds,
   onSelectedPlantIdsChange,
 }: PlantFilterControlsProps) {
+  const { t } = useLanguage();
+
   const handleTogglePlant = (plantId: string) => {
     const newSelectedIds = new Set(selectedPlantIds);
     if (newSelectedIds.has(plantId)) {
@@ -45,11 +49,11 @@ export function PlantFilterControls({
   const isAllSelected = allPlants.length > 0 && selectedCount === allPlants.length;
   const totalPlants = allPlants.length;
 
-  let tooltipText = "Select All Plants";
+  let tooltipText = t('calendarPage.filterControls.tooltipSelectAll');
   if (isAllSelected) {
-    tooltipText = `Deselect All (${selectedCount} plants)`;
+    tooltipText = t('calendarPage.filterControls.tooltipDeselectAll', { count: selectedCount });
   } else if (selectedCount > 0) {
-    tooltipText = `Select All (${selectedCount} of ${totalPlants} plants currently selected)`;
+    tooltipText = t('calendarPage.filterControls.tooltipSelectAllWithCount', { selectedCount: selectedCount, totalCount: totalPlants });
   }
 
   return (
@@ -57,7 +61,7 @@ export function PlantFilterControls({
       <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
         <CardTitle className="text-lg flex items-center gap-2 font-medium">
           <Filter className="h-5 w-5 text-primary" />
-          Filter by Plant
+          {t('calendarPage.filterControls.title')}
         </CardTitle>
         <div className="relative">
           <TooltipProvider>
@@ -80,7 +84,7 @@ export function PlantFilterControls({
           </TooltipProvider>
           {selectedCount > 0 && (
             <Badge
-              variant="default" // Changed to default for solid background
+              variant="default"
               className="absolute -top-1.5 -right-1.5 h-5 w-5 min-w-[1.25rem] p-0 flex items-center justify-center rounded-full text-xs pointer-events-none"
             >
               {selectedCount}
@@ -91,7 +95,7 @@ export function PlantFilterControls({
 
       <CardContent className="p-0">
         {allPlants.length > 0 ? (
-          <ScrollArea className="w-full max-h-80 rounded-b-md border-t"> {/* Added border-t here */}
+          <ScrollArea className="w-full max-h-80 rounded-b-md border-t">
             <div className="p-3 space-y-2">
               {allPlants.map(plant => (
                 <TooltipProvider key={plant.id} delayDuration={200}>
@@ -121,7 +125,7 @@ export function PlantFilterControls({
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{plant.commonName}</p>
-                      <p className="text-xs text-muted-foreground">{selectedPlantIds.has(plant.id) ? "Selected" : "Click to select"}</p>
+                      <p className="text-xs text-muted-foreground">{t(selectedPlantIds.has(plant.id) ? 'calendarPage.filterControls.plantTooltipSelected' : 'calendarPage.filterControls.plantTooltipUnselected')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -130,9 +134,11 @@ export function PlantFilterControls({
             <ScrollBar orientation="vertical" />
           </ScrollArea>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-4 px-3">No plants available to filter.</p>
+          <p className="text-sm text-muted-foreground text-center py-4 px-3">{t('calendarPage.filterControls.noPlantsToFilter')}</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
+    

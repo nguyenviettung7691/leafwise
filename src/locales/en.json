@@ -236,7 +236,8 @@
       "taskFrequency": "Frequency: {{frequency}}",
       "taskTimeOfDay": "Time: {{time}}",
       "noTasksManage": "No care tasks defined yet. Click 'Manage' to add tasks.",
-      "noTasksNormal": "No care tasks defined yet."
+      "noTasksNormal": "No care tasks defined yet.",
+      "atTimePrefix": "at "
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
@@ -376,14 +377,28 @@
     "updateButton": "Update Task",
     "addButton": "Add Task",
     "savingButton": "Saving...",
+    "taskTypes": {
+      "watering": "Watering",
+      "lighting_adjustment": "Lighting Adjustment",
+      "fertilizing": "Fertilizing",
+      "pruning": "Pruning",
+      "repotting": "Repotting",
+      "pest_check": "Pest Check",
+      "soil_aeration": "Soil Aeration",
+      "dusting_leaves": "Dusting Leaves",
+      "rotate_pot": "Rotate Pot"
+    },
     "frequencyOptions": {
       "adhoc": "Ad-hoc (As needed)",
       "daily": "Daily",
       "every_x_days": "Every X Days",
+      "every_x_days_formatted": "Every {{count}} Days",
       "weekly": "Weekly",
       "every_x_weeks": "Every X Weeks",
+      "every_x_weeks_formatted": "Every {{count}} Weeks",
       "monthly": "Monthly",
       "every_x_months": "Every X Months",
+      "every_x_months_formatted": "Every {{count}} Months",
       "yearly": "Yearly"
     }
   },
@@ -400,7 +415,44 @@
     "taskTooltipDesc": "Desc: {{description}}",
     "taskEditTitle": "Edit",
     "taskDeleteAria": "Delete task"
+  },
+  "calendarPage": {
+    "filterControls": {
+      "title": "Filter by Plant",
+      "tooltipSelectAll": "Select All Plants",
+      "tooltipDeselectAll": "Deselect All ({{count}} plants)",
+      "tooltipSelectAllWithCount": "Select All ({{selectedCount}} of {{totalCount}} plants currently selected)",
+      "plantTooltipSelected": "Selected",
+      "plantTooltipUnselected": "Click to select",
+      "noPlantsToFilter": "No plants available to filter."
+    },
+    "calendarView": {
+      "weeklyViewTitle": "Weekly View",
+      "monthlyViewTitle": "Monthly View",
+      "viewModeWeekly": "Weekly",
+      "viewModeMonthly": "Monthly",
+      "previousPeriodAriaWeek": "Previous week",
+      "previousPeriodAriaMonth": "Previous month",
+      "nextPeriodAriaWeek": "Next week",
+      "nextPeriodAriaMonth": "Next month",
+      "currentPeriodIndicator": "(Current)",
+      "checkboxShowOnlyHoursWithTasks": "Show only time slots with tasks",
+      "timeColumnHeader": "Time",
+      "allDayLabel": "All Day",
+      "dayHeaders": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "taskTooltipTitle": "{{plantName}}: {{taskName}}",
+      "taskTooltipTime": "Time: {{time}}",
+      "taskTooltipDesc": "Desc: {{description}}",
+      "taskMarkCompleteAria": "Mark task as complete"
+    }
   }
 }
-
     

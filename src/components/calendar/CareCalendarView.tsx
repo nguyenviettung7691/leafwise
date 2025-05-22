@@ -35,6 +35,7 @@ import {
   getDate,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
@@ -90,6 +91,7 @@ export function CareCalendarView({
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
@@ -285,13 +287,13 @@ export function CareCalendarView({
   };
 
   const dayHeaders = [
-    { name: "Mon", isWeekend: false },
-    { name: "Tue", isWeekend: false },
-    { name: "Wed", isWeekend: false },
-    { name: "Thu", isWeekend: false },
-    { name: "Fri", isWeekend: false },
-    { name: "Sat", isWeekend: true },
-    { name: "Sun", isWeekend: true }
+    { key: "mon", name: t('calendarPage.calendarView.dayHeaders.mon'), isWeekend: false },
+    { key: "tue", name: t('calendarPage.calendarView.dayHeaders.tue'), isWeekend: false },
+    { key: "wed", name: t('calendarPage.calendarView.dayHeaders.wed'), isWeekend: false },
+    { key: "thu", name: t('calendarPage.calendarView.dayHeaders.thu'), isWeekend: false },
+    { key: "fri", name: t('calendarPage.calendarView.dayHeaders.fri'), isWeekend: false },
+    { key: "sat", name: t('calendarPage.calendarView.dayHeaders.sat'), isWeekend: true },
+    { key: "sun", name: t('calendarPage.calendarView.dayHeaders.sun'), isWeekend: true }
   ];
 
 
@@ -316,16 +318,16 @@ export function CareCalendarView({
               size="icon"
               className={cn("p-0 opacity-70 hover:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0 shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}
               onClick={(e) => { e.stopPropagation(); onTaskAction(occurrence.originalTask, occurrence.plantId);}}
-              aria-label="Mark task as complete"
+              aria-label={t('calendarPage.calendarView.taskMarkCompleteAria')}
             >
               <Check className={cn(occurrence.originalTask.level === 'advanced' ? 'text-primary-foreground/80 hover:text-primary-foreground' : 'text-foreground/70 hover:text-foreground', compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
             </Button>
           </div>
         </TooltipTrigger>
         <TooltipContent className="text-xs">
-          <p className="font-semibold">{occurrence.plantName}: {occurrence.originalTask.name}</p>
-          <p>Time: {format(occurrence.occurrenceDate, 'HH:mm')}</p>
-          {occurrence.originalTask.description && <p className="text-muted-foreground max-w-xs">Desc: {occurrence.originalTask.description}</p>}
+          <p className="font-semibold">{t('calendarPage.calendarView.taskTooltipTitle', { plantName: occurrence.plantName, taskName: occurrence.originalTask.name})}</p>
+          <p>{t('calendarPage.calendarView.taskTooltipTime', { time: format(occurrence.occurrenceDate, 'HH:mm') })}</p>
+          {occurrence.originalTask.description && <p className="text-muted-foreground max-w-xs">{t('calendarPage.calendarView.taskTooltipDesc', { description: occurrence.originalTask.description })}</p>}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -337,28 +339,28 @@ export function CareCalendarView({
       <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary"/>
-            {viewMode === 'week' ? 'Weekly View' : 'Monthly View'}
+            {viewMode === 'week' ? t('calendarPage.calendarView.weeklyViewTitle') : t('calendarPage.calendarView.monthlyViewTitle')}
         </CardTitle>
         <div className="flex items-center gap-4">
             <RadioGroup value={viewMode} onValueChange={(value) => setViewMode(value as 'week' | 'month')} className="flex">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="week" id="view-week" />
-                <Label htmlFor="view-week" className="text-xs">Weekly</Label>
+                <Label htmlFor="view-week" className="text-xs">{t('calendarPage.calendarView.viewModeWeekly')}</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="month" id="view-month" />
-                <Label htmlFor="view-month" className="text-xs">Monthly</Label>
+                <Label htmlFor="view-month" className="text-xs">{t('calendarPage.calendarView.viewModeMonthly')}</Label>
               </div>
             </RadioGroup>
             <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={goToPreviousPeriod} aria-label={viewMode === 'week' ? "Previous week" : "Previous month"}>
+                <Button variant="outline" size="icon" onClick={goToPreviousPeriod} aria-label={t(viewMode === 'week' ? 'calendarPage.calendarView.previousPeriodAriaWeek' : 'calendarPage.calendarView.previousPeriodAriaMonth')}>
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm font-medium w-auto text-center tabular-nums px-1 whitespace-nowrap">
                     {viewMode === 'week' ? `${format(currentPeriodStart, 'MMM d')} - ${format(currentPeriodEnd, 'MMM d, yyyy')}` : format(currentMonth, 'MMMM yyyy')}
-                    {isCurrentActualPeriod && <span className="text-primary font-semibold"> (Current)</span>}
+                    {isCurrentActualPeriod && <span className="text-primary font-semibold"> {t('calendarPage.calendarView.currentPeriodIndicator')}</span>}
                 </span>
-                <Button variant="outline" size="icon" onClick={goToNextPeriod} aria-label={viewMode === 'week' ? "Next week" : "Next month"}>
+                <Button variant="outline" size="icon" onClick={goToNextPeriod} aria-label={t(viewMode === 'week' ? 'calendarPage.calendarView.nextPeriodAriaWeek' : 'calendarPage.calendarView.nextPeriodAriaMonth')}>
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
@@ -374,11 +376,11 @@ export function CareCalendarView({
                 onCheckedChange={(checked) => setShowOnlyHoursWithTasks(Boolean(checked))}
               />
               <Label htmlFor="show-only-hours-with-tasks-global" className="text-xs font-normal">
-                Show only time slots with tasks
+                {t('calendarPage.calendarView.checkboxShowOnlyHoursWithTasks')}
               </Label>
             </div>
             <div className="grid grid-cols-[auto_repeat(7,minmax(120px,1fr))] border-t">
-              <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">Time</div>
+              <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('calendarPage.calendarView.timeColumnHeader')}</div>
               {daysInWeek.map(day => {
                 const dayOfWeek = getDay(day);
                 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
@@ -429,7 +431,7 @@ export function CareCalendarView({
                 );
               })}
 
-              <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] min-h-[3.5rem]">All Day</div>
+              <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] min-h-[3.5rem]">{t('calendarPage.calendarView.allDayLabel')}</div>
               {daysInWeek.map(day => {
                  const allDayTasksForDay = getTasksForDay(day, 'allday');
                  return (
@@ -447,7 +449,7 @@ export function CareCalendarView({
         {viewMode === 'month' && (
           <div className="grid grid-cols-7 border-t">
             {dayHeaders.map(header => (
-                <div key={header.name} className={cn("p-2 border-r border-b text-center text-xs font-semibold h-10 flex items-center justify-center", header.isWeekend ? "text-primary" : "text-muted-foreground")}>{header.name}</div>
+                <div key={header.key} className={cn("p-2 border-r border-b text-center text-xs font-semibold h-10 flex items-center justify-center", header.isWeekend ? "text-primary" : "text-muted-foreground")}>{header.name}</div>
             ))}
             {weeksInMonthGrid.map((week, weekIndex) => (
                 <React.Fragment key={`month-week-${weekIndex}`}>
@@ -505,3 +507,4 @@ export function CareCalendarView({
   );
 }
 
+    

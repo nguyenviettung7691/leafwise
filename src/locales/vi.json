@@ -236,7 +236,8 @@
       "taskFrequency": "[VI] Frequency: {{frequency}}",
       "taskTimeOfDay": "[VI] Time: {{time}}",
       "noTasksManage": "[VI] No care tasks defined yet. Click 'Manage' to add tasks.",
-      "noTasksNormal": "[VI] No care tasks defined yet."
+      "noTasksNormal": "[VI] No care tasks defined yet.",
+      "atTimePrefix": "[VI] at "
     },
     "growthTracker": {
       "sectionTitle": "[VI] Growth Monitoring",
@@ -376,14 +377,28 @@
     "updateButton": "[VI] Update Task",
     "addButton": "[VI] Add Task",
     "savingButton": "[VI] Saving...",
+    "taskTypes": {
+      "watering": "[VI] Watering",
+      "lighting_adjustment": "[VI] Lighting Adjustment",
+      "fertilizing": "[VI] Fertilizing",
+      "pruning": "[VI] Pruning",
+      "repotting": "[VI] Repotting",
+      "pest_check": "[VI] Pest Check",
+      "soil_aeration": "[VI] Soil Aeration",
+      "dusting_leaves": "[VI] Dusting Leaves",
+      "rotate_pot": "[VI] Rotate Pot"
+    },
     "frequencyOptions": {
       "adhoc": "[VI] Ad-hoc (As needed)",
       "daily": "[VI] Daily",
       "every_x_days": "[VI] Every X Days",
+      "every_x_days_formatted": "[VI] Every {{count}} Days",
       "weekly": "[VI] Weekly",
       "every_x_weeks": "[VI] Every X Weeks",
+      "every_x_weeks_formatted": "[VI] Every {{count}} Weeks",
       "monthly": "[VI] Monthly",
       "every_x_months": "[VI] Every X Months",
+      "every_x_months_formatted": "[VI] Every {{count}} Months",
       "yearly": "[VI] Yearly"
     }
   },
@@ -400,7 +415,44 @@
     "taskTooltipDesc": "[VI] Desc: {{description}}",
     "taskEditTitle": "[VI] Edit",
     "taskDeleteAria": "[VI] Delete task"
+  },
+  "calendarPage": {
+    "filterControls": {
+      "title": "[VI] Filter by Plant",
+      "tooltipSelectAll": "[VI] Select All Plants",
+      "tooltipDeselectAll": "[VI] Deselect All ({{count}} plants)",
+      "tooltipSelectAllWithCount": "[VI] Select All ({{selectedCount}} of {{totalCount}} plants currently selected)",
+      "plantTooltipSelected": "[VI] Selected",
+      "plantTooltipUnselected": "[VI] Click to select",
+      "noPlantsToFilter": "[VI] No plants available to filter."
+    },
+    "calendarView": {
+      "weeklyViewTitle": "[VI] Weekly View",
+      "monthlyViewTitle": "[VI] Monthly View",
+      "viewModeWeekly": "[VI] Weekly",
+      "viewModeMonthly": "[VI] Monthly",
+      "previousPeriodAriaWeek": "[VI] Previous week",
+      "previousPeriodAriaMonth": "[VI] Previous month",
+      "nextPeriodAriaWeek": "[VI] Next week",
+      "nextPeriodAriaMonth": "[VI] Next month",
+      "currentPeriodIndicator": "[VI] (Current)",
+      "checkboxShowOnlyHoursWithTasks": "[VI] Show only time slots with tasks",
+      "timeColumnHeader": "[VI] Time",
+      "allDayLabel": "[VI] All Day",
+      "dayHeaders": {
+        "mon": "[VI] Mon",
+        "tue": "[VI] Tue",
+        "wed": "[VI] Wed",
+        "thu": "[VI] Thu",
+        "fri": "[VI] Fri",
+        "sat": "[VI] Sat",
+        "sun": "[VI] Sun"
+      },
+      "taskTooltipTitle": "[VI] {{plantName}}: {{taskName}}",
+      "taskTooltipTime": "[VI] Time: {{time}}",
+      "taskTooltipDesc": "[VI] Desc: {{description}}",
+      "taskMarkCompleteAria": "[VI] Mark task as complete"
+    }
   }
 }
-
     
