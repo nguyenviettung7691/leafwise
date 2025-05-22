@@ -1,8 +1,11 @@
 
 import type { Plant } from '@/types';
 import { PlantCard } from './PlantCard';
-import { Leaf } from 'lucide-react'; // Import an icon for the empty state
+import { Leaf, Sparkles, PlusCircle } from 'lucide-react'; // Import Sparkles and PlusCircle
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // Import ProgressBarLink
+import { Button } from '@/components/ui/button'; // Import Button
+import { cn } from '@/lib/utils'; // Import cn
 
 interface PlantGridProps {
   plants: Plant[];
@@ -17,19 +20,30 @@ export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect
 
   if (plants.length === 0) {
     return (
-      <div className="text-center py-16 px-6 flex flex-col items-center">
-        <Leaf className="h-20 w-20 text-primary/30 mb-6" />
+      <div className="text-center py-16 px-6 flex flex-col items-center bg-card shadow-lg rounded-lg border border-border">
+        <div className="relative mb-6">
+          <Leaf className="h-24 w-24 text-primary/20" />
+          <Sparkles className="h-10 w-10 text-accent absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4" />
+        </div>
         <h3 className="text-2xl font-semibold text-foreground mb-3">
-          {t('myPlantsPage.filterSortCard.noPlantsFound')}
+          {t('myPlantsPage.filterSortCard.noPlantsFoundTitle')}
         </h3>
-        <p className="text-md text-muted-foreground max-w-md">
-          {t('myPlantsPage.filterSortCard.noPlantsHint')}
+        <p className="text-md text-muted-foreground max-w-md mb-6">
+          {t('myPlantsPage.filterSortCard.noPlantsHintAI', {
+            diagnoseLinkStart: '', // Placeholder, actual link is below
+            diagnoseLinkEnd: ''    // Placeholder
+          }).split('{{diagnoseLink}}')[0]}
+          <ProgressBarLink href="/diagnose" className="font-semibold text-primary hover:underline">
+            {t('nav.diagnosePlant')}
+          </ProgressBarLink>
+          {t('myPlantsPage.filterSortCard.noPlantsHintAI').split('{{diagnoseLink}}')[1]}
         </p>
-        {/* Optional: Add a direct "Add New Plant" button here if desired for empty state UX */}
-        {/* <Button onClick={() => router.push('/plants/new')} className="mt-6">
-          <PlusCircle className="mr-2 h-5 w-5" />
-          {t('myPlantsPage.addNewPlant')}
-        </Button> */}
+        <ProgressBarLink href="/plants/new">
+          <Button>
+            <PlusCircle className="mr-2 h-5 w-5" />
+            {t('myPlantsPage.addNewPlant')}
+          </Button>
+        </ProgressBarLink>
       </div>
     );
   }

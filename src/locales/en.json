@@ -113,8 +113,9 @@
       "ascending": "Ascending",
       "descending": "Descending",
       "resetAllButton": "Reset All Filters",
-      "noPlantsFound": "Your plant collection is empty!",
-      "noPlantsHint": "Start by adding your first plant or try adjusting your search/filters."
+      "noPlantsFoundTitle": "Your LeafWise garden is empty!",
+      "noPlantsHint": "Let's add your first green friend, or try adjusting your search/filters if you have plants.",
+      "noPlantsHintAI": "Let's add your first green friend! You can add one manually, or let our AI help you identify and add it from a photo on the {{diagnoseLink}} page."
     }
   },
   "addNewPlantPage": {
@@ -123,7 +124,8 @@
     "submitButtonText": "Add Plant",
     "savingText": "Saving plant...",
     "toastPlantAddedTitle": "Plant Added!",
-    "toastPlantAddedDescription": "{{plantName}} has been added to My Plants."
+    "toastPlantAddedDescription": "{{plantName}} has been added to My Plants.",
+    "initialDiagnosisNotes": "Manually added to collection."
   },
   "savePlantForm": {
     "primaryPhotoLabel": "Primary Photo (Optional)",
@@ -188,7 +190,8 @@
       "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
       "saveFormTitle": "Save to My Plants",
       "saveFormDescription": "Confirm or update the details for {{plantName}} before saving.",
-      "saveFormSubmitButton": "Save Plant"
+      "saveFormSubmitButton": "Save Plant",
+      "initialDiagnosisNotes": "Identified via AI diagnosis"
     },
     "carePlanGenerator": {
       "title": "Generate Detailed Care Plan",

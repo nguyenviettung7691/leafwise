@@ -113,8 +113,9 @@
       "ascending": "Tăng dần",
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc",
-      "noPlantsFound": "Bộ sưu tập cây của bạn đang trống!",
-      "noPlantsHint": "Bắt đầu bằng cách thêm cây đầu tiên hoặc thử điều chỉnh tìm kiếm/bộ lọc của bạn."
+      "noPlantsFoundTitle": "Vườn cây LeafWise của bạn đang trống!",
+      "noPlantsHint": "Hãy thêm người bạn xanh đầu tiên, hoặc thử điều chỉnh tìm kiếm/bộ lọc nếu bạn đã có cây.",
+      "noPlantsHintAI": "Hãy thêm người bạn xanh đầu tiên! Bạn có thể thêm thủ công, hoặc để AI của chúng tôi giúp bạn nhận dạng và thêm cây từ ảnh tại trang {{diagnoseLink}}."
     }
   },
   "addNewPlantPage": {
@@ -123,7 +124,8 @@
     "submitButtonText": "Thêm cây",
     "savingText": "Đang lưu cây...",
     "toastPlantAddedTitle": "Đã thêm cây!",
-    "toastPlantAddedDescription": "{{plantName}} đã được thêm vào Cây của tôi."
+    "toastPlantAddedDescription": "{{plantName}} đã được thêm vào Cây của tôi.",
+    "initialDiagnosisNotes": "Được thêm thủ công vào bộ sưu tập."
   },
   "savePlantForm": {
     "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
@@ -188,7 +190,8 @@
       "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
       "saveFormTitle": "Lưu vào Cây của tôi",
       "saveFormDescription": "Xác nhận hoặc cập nhật chi tiết cho {{plantName}} trước khi lưu.",
-      "saveFormSubmitButton": "Lưu cây"
+      "saveFormSubmitButton": "Lưu cây",
+      "initialDiagnosisNotes": "Nhận dạng qua chẩn đoán AI"
     },
     "carePlanGenerator": {
       "title": "Tạo kế hoạch chăm sóc chi tiết",
@@ -406,7 +409,7 @@
     }
   },
   "plantCard": {
-    "nextPrefix": "Tiếp:",
+    "nextPrefix": "Kế tiếp:",
     "lastCaredPrefix": "Chăm sóc cuối:",
     "noUpcomingTasks": "Không có việc sắp tới",
     "dueToday": "Hôm nay",
