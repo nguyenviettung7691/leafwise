@@ -3,7 +3,7 @@
 
 import Image from 'next/image';
 import type { Plant, PlantHealthCondition } from '@/types';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader import
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import React from 'react';
 import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid, format } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -37,20 +38,25 @@ const getCaredForDuration = (plantingDate?: string): string | null => {
 
   const now = new Date();
   const years = differenceInYears(now, startDate);
-  if (years > 0) return `Cared for ${years} year${years > 1 ? 's' : ''}`;
+  if (years > 0) return `${years} year${years > 1 ? 's' : ''}`;
 
   const months = differenceInMonths(now, startDate);
-  if (months > 0) return `Cared for ${months} month${months > 1 ? 's' : ''}`;
+  if (months > 0) return `${months} month${months > 1 ? 's' : ''}`;
 
   const days = differenceInDays(now, startDate);
-  if (days >= 0) return `Cared for ${days} day${days !== 1 ? 's' : ''}`;
+  if (days >= 0) return `${days} day${days !== 1 ? 's' : ''}`;
 
   return null;
 };
 
 const formatDateSimple = (dateString?: string) => {
     if (!dateString) return 'N/A';
-    return format(parseISO(dateString), 'MMM d, yyyy');
+    try {
+      return format(parseISO(dateString), 'MMM d, yyyy');
+    } catch (error) {
+      console.error("Error parsing date for formatDateSimple:", dateString, error);
+      return 'Invalid Date';
+    }
 };
 
 export function PlantHeaderCard({
@@ -59,12 +65,16 @@ export function PlantHeaderCard({
   onConfirmDelete,
   isDeleting,
 }: PlantHeaderCardProps) {
+  const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const caredForDuration = getCaredForDuration(plant.plantingDate);
 
+  const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition.replace('_', '')}` as keyof typeof enTranslations.plantDetail.healthConditions || `common.${plant.healthCondition.replace('_', '')}` as keyof typeof enTranslations.common;
+
+
   return (
     <Card className="overflow-hidden shadow-xl">
-      <CardHeader className="relative p-0">
+      <div className="relative p-0">
         <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
           <DialogTrigger asChild>
             <div className="aspect-video w-full overflow-hidden bg-muted cursor-pointer group relative">
@@ -77,25 +87,23 @@ export function PlantHeaderCard({
                 data-ai-hint="plant detail"
                 priority
               />
-              {/* Overlay for plant names & health badge */}
-              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 via-black/50 to-transparent pointer-events-none">
+              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none">
                 <div className="flex items-center gap-2 mb-1">
                   <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
-                   <Badge 
+                  <Badge 
                     variant="outline" 
                     className={cn(
                         `capitalize shrink-0 text-xs px-2 py-0.5`, 
                         healthConditionStyles[plant.healthCondition]
                     )}
                   >
-                    {plant.healthCondition.replace('_', ' ')}
+                    {t(healthConditionKey, plant.healthCondition.replace('_', ' '))}
                   </Badge>
                 </div>
                 {plant.scientificName && (
                   <p className="text-lg text-gray-200 italic drop-shadow-md">{plant.scientificName}</p>
                 )}
               </div>
-              {/* Expand icon overlay */}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Expand className="h-12 w-12 text-white" />
               </div>
@@ -103,7 +111,7 @@ export function PlantHeaderCard({
           </DialogTrigger>
           <DialogContent className="max-w-3xl p-2 sm:p-4">
             <DialogHeader className="sr-only">
-              <DialogTitle>{plant.commonName} - Full Size</DialogTitle>
+              <DialogTitle>{t('plantDetail.headerCard.fullSizePhotoTitle', { plantName: plant.commonName })}</DialogTitle>
             </DialogHeader>
             <Image
               src={plant.primaryPhotoUrl || 'https://placehold.co/1200x675.png'}
@@ -114,50 +122,49 @@ export function PlantHeaderCard({
               data-ai-hint="plant detail"
             />
             <DialogClose asChild>
-              <Button variant="outline" className="absolute top-4 right-4 sm:hidden">Close</Button>
+              <Button variant="outline" className="absolute top-4 right-4 sm:hidden">{t('plantDetail.headerCard.close')}</Button>
             </DialogClose>
           </DialogContent>
         </Dialog>
-      </CardHeader>
+      </div>
       <CardContent className="p-4 sm:p-6 space-y-3">
-        <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+         <div className="flex flex-wrap justify-between items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <div className="flex items-center gap-x-4 gap-y-1">
                 {caredForDuration && (
                 <span className="flex items-center gap-1">
                     <HeartPulse className="h-4 w-4 text-primary/80" />
-                    {caredForDuration}
+                    {t('plantDetail.headerCard.caredFor')} {caredForDuration}
                 </span>
                 )}
                 {plant.lastCaredDate && (
                     <span className="flex items-center gap-1">
                         <History className="h-4 w-4" />
-                        Last Cared: {formatDateSimple(plant.lastCaredDate)}
+                        {t('plantDetail.headerCard.lastCared')}: {formatDateSimple(plant.lastCaredDate)}
                     </span>
                 )}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" onClick={onEditPlant} aria-label="Edit Plant">
+              <Button variant="outline" size="icon" onClick={onEditPlant} aria-label={t('plantDetail.headerCard.editPlantAriaLabel')}>
                 <Edit className="h-4 w-4" />
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="icon" aria-label="Delete Plant" disabled={isDeleting}>
+                  <Button variant="destructive" size="icon" aria-label={t('plantDetail.headerCard.deletePlantAriaLabel')} disabled={isDeleting}>
                     {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('plantDetail.headerCard.deleteConfirmTitle')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. This will permanently (simulate) delete your plant
-                      "{plant.commonName}".
+                      {t('plantDetail.headerCard.deleteConfirmDescription', { plantName: plant.commonName })}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel disabled={isDeleting}>{t('plantDetail.headerCard.cancel')}</AlertDialogCancel>
                     <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
                       {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                      Delete
+                      {t('plantDetail.headerCard.delete')}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
