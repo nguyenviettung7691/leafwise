@@ -4,7 +4,8 @@
     "title": "Settings",
     "description": "Application Settings",
     "language": "Language",
-    "featureInProgress": "Settings page is under construction. <br /> Customize your app preferences here soon!"
+    "featureInProgress": "Settings page is under construction. <br /> Customize your app preferences here soon!",
+    "darkMode": "Dark Mode"
   },
   "nav": {
     "myPlants": "My Plants",
@@ -43,7 +44,8 @@
     "done": "Done",
     "manage": "Manage",
     "close": "Close",
-    "areYouSure": "Are you sure?"
+    "areYouSure": "Are you sure?",
+    "health": "Health"
   },
   "myPlantsPage": {
     "addNewPlant": "Add New Plant",
@@ -345,7 +347,9 @@
       "notAPlantDesc": "AI could not identify a plant in the new photo.",
       "errorDiagnosisOrPlan": "An error occurred during diagnosis or care plan review.",
       "taskPaused": "Task \"{{taskName}}\" has been paused.",
-      "taskResumed": "Task \"{{taskName}}\" has been resumed."
+      "taskResumed": "Task \"{{taskName}}\" has been resumed.",
+      "plantDeletedTitle": "{{plantName}} Deleted",
+      "plantDeletedDesc": "{{plantName}} has been (simulated) removed from your collection."
     },
     "footer": {
       "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"

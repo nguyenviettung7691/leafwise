@@ -4,7 +4,8 @@
     "title": "Cài đặt",
     "description": "Cài đặt ứng dụng",
     "language": "Ngôn ngữ",
-    "featureInProgress": "Trang cài đặt đang được xây dựng. <br /> Tùy chỉnh các tùy chọn ứng dụng của bạn tại đây sớm!"
+    "featureInProgress": "Trang cài đặt đang được xây dựng. <br /> Tùy chỉnh các tùy chọn ứng dụng của bạn tại đây sớm!",
+    "darkMode": "Chế độ tối"
   },
   "nav": {
     "myPlants": "Cây của tôi",
@@ -43,7 +44,8 @@
     "done": "Xong",
     "manage": "Quản lý",
     "close": "Đóng",
-    "areYouSure": "Bạn có chắc không?"
+    "areYouSure": "Bạn có chắc không?",
+    "health": "Sức khỏe"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -102,7 +104,7 @@
       "healthConditionSort": "Tình trạng sức khỏe",
       "createdDateSort": "Ngày tạo",
       "lastCaredDateSort": "Ngày chăm sóc cuối",
-      "nextCareTaskSort": "Công việc chăm sóc tiếp theo",
+      "nextCareTaskSort": "Công việc tiếp theo",
       "directionLabel": "Thứ tự",
       "selectDirection": "Chọn thứ tự",
       "ascending": "Tăng dần",
@@ -345,7 +347,9 @@
       "notAPlantDesc": "AI không thể xác định cây trong ảnh mới.",
       "errorDiagnosisOrPlan": "Đã xảy ra lỗi trong quá trình chẩn đoán hoặc xem xét kế hoạch chăm sóc.",
       "taskPaused": "Công việc \"{{taskName}}\" đã được tạm dừng.",
-      "taskResumed": "Công việc \"{{taskName}}\" đã được tiếp tục."
+      "taskResumed": "Công việc \"{{taskName}}\" đã được tiếp tục.",
+      "plantDeletedTitle": "{{plantName}} đã bị xóa",
+      "plantDeletedDesc": "{{plantName}} đã được xóa (mô phỏng) khỏi bộ sưu tập của bạn."
     },
     "footer": {
       "lastUpdated": "Cập nhật lần cuối: {{date}} (Mô phỏng - phản ánh tương tác cuối cùng)"

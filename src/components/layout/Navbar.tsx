@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 import {
   Dialog,
-  DialogTrigger, // Added DialogTrigger
+  DialogTrigger,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -116,7 +116,7 @@ export function Navbar() {
           ) : user ? (
             <>
               <ProgressBarLink href="/profile">
-                <Avatar 
+                <Avatar
                   className={cn(
                     "h-9 w-9 cursor-pointer border-2 hover:border-primary transition-colors",
                     isProfileActive ? "border-primary" : "border-transparent"
@@ -150,14 +150,14 @@ export function Navbar() {
                         <div className='flex items-center gap-3'>
                             <Palette className="h-5 w-5 text-primary" />
                             <Label htmlFor="themePreference-dialog" className="text-base font-medium">
-                            Dark Mode
+                            {t('settings.darkMode')}
                             </Label>
                         </div>
                         <Switch
                             id="themePreference-dialog"
                             checked={theme === 'dark'}
                             onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                            aria-label="Toggle dark mode"
+                            aria-label={t('settings.darkMode')}
                             disabled={authIsLoading}
                         />
                     </div>
@@ -188,7 +188,7 @@ export function Navbar() {
                   <DialogFooter>
                     <DialogClose asChild>
                       <Button type="button" variant="outline">
-                        Close
+                        {t('common.close')}
                       </Button>
                     </DialogClose>
                   </DialogFooter>
@@ -198,7 +198,7 @@ export function Navbar() {
           ) : (
             <ProgressBarLink href="/login" className={cn(Button.name, buttonVariants({ variant: "ghost" }))}>
               <LogIn className="h-5 w-5 mr-2" />
-              Sign In
+              {t('loginPage.signInButton')}
             </ProgressBarLink>
           )}
         </div>
@@ -206,3 +206,5 @@ export function Navbar() {
     </header>
   );
 }
+
+    
