@@ -46,7 +46,8 @@
     "areYouSure": "Are you sure?",
     "health": "Health",
     "resume": "Resume",
-    "pause": "Pause"
+    "pause": "Pause",
+    "thePlant": "The plant"
   },
   "myPlantsPage": {
     "addNewPlant": "Add New Plant",
@@ -549,13 +550,15 @@
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
       "exportErrorNoData": "No user data to export.",
-      "exportSuccess": "Your data has been downloaded.",
+      "exportSuccessTitle": "Export Successful",
+      "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "importFailedGeneral": "Could not parse or apply the imported data.",
       "importFailedReadFile": "Failed to read the selected file.",
       "importFailedInvalidFormat": "Invalid file format. Missing 'userProfile' or 'plants' data.",
       "importSuccess": "Your data has been imported. Refresh or navigate to see changes.",
       "destroyEmailMismatch": "Email confirmation failed.",
-      "destroySuccess": "All your personal data has been removed."
+      "destroySuccessTitle": "Data Destroyed",
+      "destroySuccessDesc": "All your personal data has been removed."
     }
   },
   "loginPage": {
@@ -604,3 +607,5 @@
     "errorNoUserSession": "No user session found."
   }
 }
+
+    

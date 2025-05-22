@@ -46,7 +46,8 @@
     "areYouSure": "Bạn có chắc không?",
     "health": "Sức khỏe",
     "resume": "Tiếp tục",
-    "pause": "Tạm dừng"
+    "pause": "Tạm dừng",
+    "thePlant": "Cây đó"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -549,13 +550,15 @@
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
       "exportErrorNoData": "Không có dữ liệu người dùng để xuất.",
-      "exportSuccess": "Dữ liệu của bạn đã được tải xuống.",
+      "exportSuccessTitle": "Xuất thành công",
+      "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
       "importFailedReadFile": "Không thể đọc tệp đã chọn.",
       "importFailedInvalidFormat": "Định dạng tệp không hợp lệ. Thiếu dữ liệu 'userProfile' hoặc 'plants'.",
       "importSuccess": "Dữ liệu của bạn đã được nhập. Tải lại hoặc điều hướng để xem thay đổi.",
       "destroyEmailMismatch": "Xác nhận email không thành công.",
-      "destroySuccess": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
+      "destroySuccessTitle": "Đã xóa dữ liệu",
+      "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
     }
   },
   "loginPage": {
@@ -604,3 +607,5 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng."
   }
 }
+
+    
