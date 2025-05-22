@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Cài đặt",
@@ -245,7 +246,7 @@
       "durationYears": "{{count}} năm",
       "durationMonths": "{{count}} tháng",
       "durationDays": "{{count}} ngày",
-      "lastCaredDatePrefix": "Lần chăm sóc cuối",
+      "lastCaredDatePrefix": "Chăm sóc cuối",
       "editPlantAriaLabel": "Chỉnh sửa cây",
       "deletePlantAriaLabel": "Xóa cây",
       "fullSizePhotoTitle": "{{plantName}} - Ảnh kích thước đầy đủ",
@@ -283,7 +284,7 @@
     },
     "growthTracker": {
       "sectionTitle": "Theo dõi tăng trưởng",
-      "addPhotoDiagnoseButton": "Thêm ảnh &amp; Chẩn đoán",
+      "addPhotoDiagnoseButton": "Thêm ảnh & Chẩn đoán",
       "diagnosingButton": "Đang chẩn đoán...",
       "manageButton": "Quản lý",
       "doneButton": "Xong",
@@ -297,7 +298,7 @@
       "selectPhotoAriaLabel": "Chọn ảnh từ {{date}}"
     },
     "newPhotoDialog": {
-      "title": "Phân tích ảnh mới &amp; Xem xét kế hoạch chăm sóc",
+      "title": "Phân tích ảnh mới & Xem xét kế hoạch chăm sóc",
       "description": "Xem lại chẩn đoán mới nhất, so sánh sức khỏe và đề xuất kế hoạch chăm sóc cho {{plantName}} của bạn.",
       "latestDiagnosisTitle": "Chẩn đoán mới nhất",
       "plantLabel": "Cây:",
