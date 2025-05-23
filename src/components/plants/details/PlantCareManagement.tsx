@@ -2,7 +2,7 @@
 'use client';
 
 import type { Plant, CareTask } from '@/types';
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -157,7 +157,7 @@ export function PlantCareManagement({
           )}
         </div>
       </div>
-      <div className={cn("space-y-3", isManagingCarePlan ? "filter blur-sm opacity-60 transition-all" : "")}>
+      <div className="space-y-3">
         {sortedTasks && sortedTasks.length > 0 ? (
           sortedTasks.map(task => {
             const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
@@ -192,13 +192,13 @@ export function PlantCareManagement({
                   <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
                     <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
                     <Badge
-                      variant={isAdvanced ? 'default' : 'outline'}
+                      variant={task.level === 'advanced' ? 'default' : 'outline'}
                       className={cn(
                         "text-xs capitalize shrink-0",
-                        isAdvanced ? "bg-primary text-primary-foreground" : ""
+                        task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
-                      {t(isAdvanced ? 'common.advanced' : 'common.basic')}
+                      {t(task.level === 'advanced' ? 'common.advanced' : 'common.basic')}
                     </Badge>
                     {task.isPaused && (
                       <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
@@ -273,4 +273,3 @@ export function PlantCareManagement({
     </div>
   );
 }
-

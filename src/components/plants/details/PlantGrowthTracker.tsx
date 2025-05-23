@@ -2,7 +2,7 @@
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import NextImage from 'next/image'; 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -133,7 +133,6 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           className={cn(
             "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
             isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
-            isManagingPhotos && !isSelected ? 'filter grayscale-[50%] opacity-70' : '' // Example additional style for unselected in manage mode
           )}
           data-ai-hint="plant growth"
           onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`;}}
@@ -281,7 +280,7 @@ export function PlantGrowthTracker({
           </div>
         </CardHeader>
         <CardContent>
-          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4", isManagingPhotos ? "filter blur-sm opacity-60 transition-all" : "")}>
+          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4")}>
             {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
                 sortedPhotosForGallery.map(photo => (
                   <GalleryPhotoItem
@@ -303,24 +302,26 @@ export function PlantGrowthTracker({
         </CardContent>
       </Card>
 
-      {!isManagingPhotos && chartData.length > 0 && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              {t('plantDetail.growthTracker.healthTrendTitle')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DynamicHealthTrendChart
-              chartData={chartData}
-              chartConfig={chartConfig}
-              healthScoreLabels={healthScoreLabels}
-              onChartDotClick={handleRechartsDotClick}
-            />
-          </CardContent>
-        </Card>
-      )}
+      <div className={cn(isManagingPhotos ? "filter blur-sm opacity-60 transition-all" : "")}>
+        {chartData.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                {t('plantDetail.growthTracker.healthTrendTitle')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DynamicHealthTrendChart
+                chartData={chartData}
+                chartConfig={chartConfig}
+                healthScoreLabels={healthScoreLabels}
+                onChartDotClick={handleRechartsDotClick}
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
