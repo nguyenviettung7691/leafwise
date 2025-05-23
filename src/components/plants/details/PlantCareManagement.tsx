@@ -93,6 +93,8 @@ interface PlantCareManagementProps {
   selectedTaskIds: Set<string>;
   onToggleTaskSelection: (taskId: string) => void;
   onDeleteSelectedTasks: () => void;
+  isManagingCarePlan: boolean;
+  onToggleManageCarePlan: () => void;
 }
 
 
@@ -105,9 +107,10 @@ export function PlantCareManagement({
   onOpenAddTaskDialog,
   selectedTaskIds,
   onToggleTaskSelection,
-  onDeleteSelectedTasks
+  onDeleteSelectedTasks,
+  isManagingCarePlan,
+  onToggleManageCarePlan
 }: PlantCareManagementProps) {
-  const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
   const { t, dateFnsLocale } = useLanguage();
 
   const sortedTasks = useMemo(() => {
@@ -127,15 +130,6 @@ export function PlantCareManagement({
     });
   }, [plant.careTasks]);
 
-  const toggleManageMode = () => {
-    setIsManagingCarePlan(prev => {
-      if (prev) { // If exiting manage mode
-        onToggleTaskSelection(''); // Clear selections, pass dummy or handle in parent
-      }
-      return !prev;
-    });
-  };
-
 
   return (
     <div>
@@ -152,7 +146,7 @@ export function PlantCareManagement({
               {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={toggleManageMode}>
+           <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
             {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
             {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
           </Button>
@@ -182,10 +176,6 @@ export function PlantCareManagement({
                 isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
                 isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
               )}
-              onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
-              role={isManagingCarePlan ? "button" : undefined}
-              tabIndex={isManagingCarePlan ? 0 : undefined}
-              aria-pressed={isManagingCarePlan ? isSelected : undefined}
             >
               <CardContent className="p-4 flex justify-between items-center">
                 {isManagingCarePlan && (
@@ -283,3 +273,4 @@ export function PlantCareManagement({
     </div>
   );
 }
+
