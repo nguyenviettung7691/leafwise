@@ -334,30 +334,24 @@ export function CareCalendarView({
   ], []);
 
 
-  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false) => {
-    const getTaskItemStyles = () => {
-      let nameColor = "text-card-foreground";
-      let iconColorClass = 'text-foreground/70 hover:text-foreground';
+  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false, context?: 'daytime' | 'nighttime' | 'allday') => {
+    const isAdvanced = occurrence.originalTask.level === 'advanced';
+    let nameColor = isAdvanced ? "text-primary" : "text-card-foreground";
+    let iconColorClass = isAdvanced ? 'text-primary' : 'text-foreground/70 hover:text-foreground';
+    let baseBg = 'bg-card';
 
-      if (occurrence.originalTask.level === 'advanced') {
-        nameColor = "text-primary-foreground";
-        iconColorClass = 'text-primary-foreground/80 hover:text-primary-foreground';
-      }
-      return { nameColor, iconColorClass };
-    };
-    const { nameColor, iconColorClass } = getTaskItemStyles();
+    const taskItemClasses = cn(
+      "rounded text-[10px] leading-tight shadow-sm flex items-center border border-border border-l-2",
+      compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
+      baseBg,
+      isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
+    );
 
     return (
       <TooltipProvider key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()} delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div
-              className={cn(
-                "rounded text-[10px] leading-tight shadow-sm flex items-center",
-                compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
-                occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border"
-              )}
-            >
+            <div className={taskItemClasses}>
               <Avatar className={cn("flex-shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}>
                 <TaskPlantAvatarDisplay
                   photoId={occurrence.plantPrimaryPhotoUrl}
@@ -479,7 +473,7 @@ export function CareCalendarView({
                             key={`${day.toISOString()}-hour-slot-${hour}`}
                             className={cn("p-1 border-r border-b min-h-[3.5rem] space-y-0.5", isToday(day) ? "bg-primary/5" : "")}
                         >
-                          {tasksForThisHour.map(occurrence => renderTaskItem(occurrence))}
+                          {tasksForThisHour.map(occurrence => renderTaskItem(occurrence, false))}
                         </div>
                       );
                     })}
@@ -495,7 +489,7 @@ export function CareCalendarView({
                         key={`all-day-tasks-slot-${day.toISOString()}`}
                         className={cn("p-1 border-r border-b border-t min-h-[3.5rem] space-y-0.5", isToday(day) ? "bg-primary/5" : "")}
                     >
-                        {allDayTasksForDay.map(occurrence => renderTaskItem(occurrence))}
+                        {allDayTasksForDay.map(occurrence => renderTaskItem(occurrence, false, 'allday'))}
                     </div>
                  );
               })}
@@ -535,7 +529,7 @@ export function CareCalendarView({
                                 <div className="flex-grow flex flex-col space-y-0 pt-6">
                                     {dayTasksAllDay.length > 0 && (
                                         <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5 min-h-[20px]", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
-                                           {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
+                                           {dayTasksAllDay.map(occ => renderTaskItem(occ, true, 'allday'))}
                                         </div>
                                     )}
 
@@ -543,7 +537,7 @@ export function CareCalendarView({
                                         "rounded-sm space-y-px min-h-[30px] p-0.5",
                                         isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-700/10" : "bg-muted/20"
                                     )}>
-                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
+                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
                                     </div>
 
                                     { (dayTasksDaytime.length > 0 && dayTasksNighttime.length > 0 || dayTasksDaytime.length > 0 && dayTasksAllDay.length === 0 || dayTasksNighttime.length > 0 && dayTasksAllDay.length === 0) &&
@@ -554,7 +548,7 @@ export function CareCalendarView({
                                         "rounded-sm space-y-px min-h-[30px] p-0.5",
                                         isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-700/10" : "bg-muted/10"
                                     )}>
-                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
+                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true, 'nighttime'))}
                                     </div>
                                 </div>
                             </div>
@@ -568,3 +562,4 @@ export function CareCalendarView({
     </Card>
   );
 }
+

@@ -289,28 +289,32 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                             isToday(day) ? "bg-primary/5" : ""
                         )}
                     >
-                      {tasksForThisHour.map(occurrence => (
-                        <div
-                          key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
-                          className={cn(
-                            "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px]",
-                            occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border shadow-sm"
-                          )}
-                          onClick={() => onEditTask(occurrence.originalTask)}
-                          title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale })})`}
-                        >
-                           <span className="font-semibold">{occurrence.originalTask.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                              onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
-                              aria-label={t('weeklyCareCalendar.taskDeleteAria')}
-                            >
-                              <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
-                            </Button>
-                        </div>
-                      ))}
+                      {tasksForThisHour.map(occurrence => {
+                        const isAdvanced = occurrence.originalTask.level === 'advanced';
+                        return (
+                          <div
+                            key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
+                            className={cn(
+                              "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px] border border-border border-l-2 shadow-sm",
+                              "bg-card", // Consistent background for all
+                              isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
+                            )}
+                            onClick={() => onEditTask(occurrence.originalTask)}
+                            title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale })})`}
+                          >
+                            <span className={cn("font-semibold", isAdvanced ? "text-primary" : "text-card-foreground")}>{occurrence.originalTask.name}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                                onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
+                                aria-label={t('weeklyCareCalendar.taskDeleteAria')}
+                              >
+                                <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
+                              </Button>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -332,28 +336,32 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                         isToday(day) ? "bg-primary/5" : ""
                     )}
                 >
-                    {allDayTasksForDay.map(occurrence => (
-                         <div
-                            key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
-                            className={cn(
-                              "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px]",
-                              occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border shadow-sm"
-                            )}
-                            onClick={() => onEditTask(occurrence.originalTask)}
-                            title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${t('weeklyCareCalendar.allDayLabel')})`}
-                        >
-                           <span className="font-semibold">{occurrence.originalTask.name}</span>
-                           <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                              onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
-                              aria-label={t('weeklyCareCalendar.taskDeleteAria')}
-                            >
-                              <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
-                            </Button>
-                        </div>
-                    ))}
+                    {allDayTasksForDay.map(occurrence => {
+                      const isAdvanced = occurrence.originalTask.level === 'advanced';
+                      return (
+                           <div
+                              key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
+                              className={cn(
+                                "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px] border border-border border-l-2 shadow-sm",
+                                "bg-card", // Consistent background
+                                isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
+                              )}
+                              onClick={() => onEditTask(occurrence.originalTask)}
+                              title={`${t('weeklyCareCalendar.taskEditTitle')} ${occurrence.originalTask.name} (${t('weeklyCareCalendar.allDayLabel')})`}
+                          >
+                             <span className={cn("font-semibold", isAdvanced ? "text-primary" : "text-card-foreground")}>{occurrence.originalTask.name}</span>
+                             <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-3 w-3 p-0 ml-0.5 float-right opacity-70 hover:opacity-100 hover:bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                                onClick={(e) => { e.stopPropagation(); onDeleteTask(occurrence.originalTask.id);}}
+                                aria-label={t('weeklyCareCalendar.taskDeleteAria')}
+                              >
+                                <Trash2 className={cn("h-2.5 w-2.5 text-destructive")} />
+                              </Button>
+                          </div>
+                      );
+                    })}
                 </div>
              );
           })}
@@ -362,3 +370,4 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
+

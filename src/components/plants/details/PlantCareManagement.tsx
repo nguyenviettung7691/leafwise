@@ -6,7 +6,6 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-// import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView'; // Original import
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
 import { format, parseISO, isToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -37,20 +36,18 @@ const formatDate = (dateString?: string, t?: (key: string, replacements?: Record
   }
 };
 
-const translateFrequencyDisplay = (frequency: string, t: Function): string => {
+const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
   if (!frequency) return '';
-  // Check for direct key match first
   const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
-  if (t(directKey) !== directKey) { // Check if translation exists for the pattern
+  if (t(directKey) !== directKey) {
     if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
       const countMatch = frequency.match(/\d+/);
-      const count = countMatch ? parseInt(countMatch[0]) : 0;
+      const count = countMatch ? parseInt(countMatch[0], 10) : 0;
       return t(directKey + '_formatted', {count});
     }
     return t(directKey);
   }
 
-  // Fallback to original logic if no direct key match
   const lowerFreq = frequency.toLowerCase();
   if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
   if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
@@ -69,7 +66,7 @@ const translateFrequencyDisplay = (frequency: string, t: Function): string => {
   return frequency;
 };
 
-const translateTimeOfDayDisplay = (timeOfDay: string | undefined, t: Function): string => {
+const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined, t: Function): string => {
   if (!timeOfDay) return '';
   if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
   if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
@@ -170,16 +167,18 @@ export function PlantCareManagement({
           {sortedTasks.map(task => {
             const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate!));
             const isSelected = selectedTaskIds.has(task.id);
-            const displayableFrequency = translateFrequencyDisplay(task.frequency, t);
-            const displayableTimeOfDay = translateTimeOfDayDisplay(task.timeOfDay, t);
+            const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
+            const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
+            const isAdvanced = task.level === 'advanced';
 
             return (
             <Card
               key={task.id}
               className={cn(
-                "bg-secondary/30 transition-all",
+                "bg-card border border-border shadow-sm transition-all border-l-4",
+                isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
                 task.isPaused ? "opacity-70" : "",
-                isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : "",
+                isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", // Today's highlight overrides left border color from level
                 isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
               )}
               onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
@@ -199,16 +198,16 @@ export function PlantCareManagement({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium flex items-center flex-wrap gap-x-2 min-w-0">
+                  <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0", isAdvanced ? "text-primary" : "text-card-foreground")}>
                     <span className="truncate">{task.name}</span>
                     <Badge
-                      variant={task.level === 'advanced' ? 'default' : 'outline'}
+                      variant={isAdvanced ? 'default' : 'outline'}
                       className={cn(
                         "text-xs capitalize shrink-0",
-                        task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
+                        isAdvanced ? "bg-primary text-primary-foreground" : ""
                       )}
                     >
-                      {t(task.level === 'advanced' ? 'common.advanced' : 'common.basic')}
+                      {t(isAdvanced ? 'common.advanced' : 'common.basic')}
                     </Badge>
                     {task.isPaused && (
                       <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
