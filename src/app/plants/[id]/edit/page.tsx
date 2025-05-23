@@ -17,7 +17,7 @@ export default function EditPlantPage() {
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t } = useLanguage(); // Import useLanguage
   const { getPlantById, updatePlant } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
@@ -77,7 +77,7 @@ export default function EditPlantPage() {
               url: newPhotoId, // Store IDB key
               dateTaken: new Date().toISOString(),
               healthCondition: data.healthCondition, // Use form's health condition
-              diagnosisNotes: "Primary photo updated via edit form (new upload)."
+              diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') // Use translated note
             });
           }
         } catch (e) {

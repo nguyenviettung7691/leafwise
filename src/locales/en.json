@@ -610,7 +610,8 @@
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
     "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
-    "toastErrorFindingPlant": "Could not find plant to update."
+    "toastErrorFindingPlant": "Could not find plant to update.",
+    "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Login Successful",

@@ -610,7 +610,8 @@
     "submitButtonText": "Cập nhật Cây",
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
     "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
-    "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật."
+    "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật.",
+    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới)."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Đăng nhập Thành công",
