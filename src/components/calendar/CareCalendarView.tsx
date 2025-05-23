@@ -61,10 +61,10 @@ const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
 const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 1): Date => {
   const newDate = new Date(date);
   if (frequency.toLowerCase() === 'ad-hoc') return newDate;
-  if (frequency === 'Daily') return addDays(newDate, 1 * multiplier);
-  if (frequency === 'Weekly') return addWeeks(newDate, 1 * multiplier);
-  if (frequency === 'Monthly') return addMonths(newDate, 1 * multiplier);
-  if (frequency === 'Yearly') return addYears(newDate, 1 * multiplier);
+  if (frequency === 'Daily' || frequency.toLowerCase() === 'daily') return addDays(newDate, 1 * multiplier);
+  if (frequency === 'Weekly' || frequency.toLowerCase() === 'weekly') return addWeeks(newDate, 1 * multiplier);
+  if (frequency === 'Monthly' || frequency.toLowerCase() === 'monthly') return addMonths(newDate, 1 * multiplier);
+  if (frequency === 'Yearly' || frequency.toLowerCase() === 'yearly') return addYears(newDate, 1 * multiplier);
 
   const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
   if (everyXMatch) {
@@ -468,18 +468,19 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative pt-4",
+                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative", // Removed pt-4
                                     today ? "border-2 border-primary" : "",
                                 )}
                             >
                                 <div className={cn(
-                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5",
+                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5 z-10", // Added z-10
                                     !isCurrentMonthDay ? "text-muted-foreground/50" : "text-foreground",
                                     today ? "text-primary font-bold" : ""
                                 )}>
                                   {getDate(day)}
                                 </div>
-                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight">
+                                {/* Increased pt-6 to pt-8 for main content area */}
+                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-8"> 
                                     {dayTasksAllDay.length > 0 && (
                                         <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
@@ -487,14 +488,14 @@ export function CareCalendarView({
                                     )}
 
                                     <div className={cn(
-                                        "p-0.5 rounded-sm space-y-px min-h-[30px]", // Removed flex-1
-                                        isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
+                                        "p-0.5 rounded-sm space-y-px min-h-[30px]",
+                                        isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-900/40" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
-                                        "p-0.5 rounded-sm space-y-px min-h-[30px]", // Removed flex-1
-                                        isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
+                                        "p-0.5 rounded-sm space-y-px min-h-[30px]",
+                                        isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-900/40" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
                                     </div>
