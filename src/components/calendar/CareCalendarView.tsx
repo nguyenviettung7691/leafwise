@@ -245,8 +245,10 @@ export function CareCalendarView({
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
             }
             if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false;
-            if (timeCategory === 'daytime') return hour >= 7 && hour < 19; // 7 AM to 6:59 PM
-            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; // 7 PM to 6:59 AM
+            // Daytime: 7 AM (7) to 6 PM (18)
+            if (timeCategory === 'daytime') return hour >= 7 && hour < 19; 
+            // Nighttime: 7 PM (19) to 6 AM (6)
+            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; 
             return false;
         });
     }
@@ -305,10 +307,13 @@ export function CareCalendarView({
 
   const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false, timeSlotType?: 'daytime' | 'nighttime') => {
     const getTaskItemStyles = () => {
-      const nameColor = occurrence.originalTask.level === 'advanced' ? "text-primary-foreground" : "text-card-foreground";
-      const iconColorClass = occurrence.originalTask.level === 'advanced'
-          ? 'text-primary-foreground/80 hover:text-primary-foreground'
-          : 'text-foreground/70 hover:text-foreground';
+      let nameColor = "text-card-foreground";
+      let iconColorClass = 'text-foreground/70 hover:text-foreground';
+
+      if (occurrence.originalTask.level === 'advanced') {
+        nameColor = "text-primary-foreground";
+        iconColorClass = 'text-primary-foreground/80 hover:text-primary-foreground';
+      }
       return { nameColor, iconColorClass };
     };
     const { nameColor, iconColorClass } = getTaskItemStyles();
@@ -503,14 +508,14 @@ export function CareCalendarView({
                                     )}
 
                                     <div className={cn(
-                                        "p-0.5 rounded-sm space-y-px min-h-[30px]",
-                                        isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-900/40" : "bg-muted/20"
+                                        "rounded-sm space-y-px min-h-[30px] p-0.5", // Added p-0.5
+                                        isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
                                     </div>
                                     <div className={cn(
-                                        "p-0.5 rounded-sm space-y-px min-h-[30px]",
-                                        isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-900/40" : "bg-muted/10"
+                                        "rounded-sm space-y-px min-h-[30px] p-0.5", // Added p-0.5
+                                        isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true, 'nighttime'))}
                                     </div>
@@ -526,3 +531,4 @@ export function CareCalendarView({
     </Card>
   );
 }
+
