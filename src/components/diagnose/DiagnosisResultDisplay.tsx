@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { DiagnosePlantHealthOutput, PlantFormData } from '@/types';
+import type { DiagnosePlantHealthOutput, PlantFormData, PlantHealthCondition } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,11 +22,20 @@ interface DiagnosisResultDisplayProps {
   lastSavedPlantId: string | null;
 }
 
-const confidenceStyles = {
+// Consistent health condition styling
+const healthConditionStyles: Record<PlantHealthCondition, string> = {
+  healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
+  needs_attention: 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-700/30 dark:text-yellow-300 dark:border-yellow-500',
+  sick: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-700/30 dark:text-red-300 dark:border-red-500',
+  unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
+};
+
+const confidenceStyles: Record<'low' | 'medium' | 'high', string> = {
   low: 'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-500',
   medium: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500',
   high: 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500',
 };
+
 
 export function DiagnosisResultDisplay({
   diagnosisResult,
@@ -44,8 +53,8 @@ export function DiagnosisResultDisplay({
     high: <TrendingUp className="h-3.5 w-3.5 mr-1" aria-label={t('diagnosePage.resultDisplay.confidenceHigh')} />,
   };
 
-  const confidenceText = diagnosisResult.healthAssessment.confidence 
-    ? t(`diagnosePage.resultDisplay.confidence${diagnosisResult.healthAssessment.confidence.charAt(0).toUpperCase() + diagnosisResult.healthAssessment.confidence.slice(1)}` as any, diagnosisResult.healthAssessment.confidence)
+  const confidenceText = diagnosisResult.healthAssessment.confidence
+    ? t(`diagnosePage.resultDisplay.confidence${diagnosisResult.healthAssessment.confidence.charAt(0).toUpperCase() + diagnosisResult.healthAssessment.confidence.slice(1)}` as any)
     : '';
 
 
@@ -93,16 +102,23 @@ export function DiagnosisResultDisplay({
               <Card className="bg-secondary/30">
                 <CardHeader><CardTitle className="text-lg">{t('diagnosePage.resultDisplay.healthAssessmentTitle')}</CardTitle></CardHeader>
                 <CardContent className="space-y-1 text-sm">
-                  <p><strong>{t('diagnosePage.resultDisplay.statusLabel')}</strong> {diagnosisResult.healthAssessment.isHealthy ?
-                    <Badge variant="default" className="bg-green-500 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700">{t('common.healthy')}</Badge> :
-                    <Badge variant="destructive">{t('common.needs_attention')}</Badge>}
+                  <p><strong>{t('diagnosePage.resultDisplay.statusLabel')}</strong>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "capitalize ml-1.5",
+                        healthConditionStyles[diagnosisResult.healthAssessment.status]
+                      )}
+                    >
+                      {t(`common.${diagnosisResult.healthAssessment.status}`)}
+                    </Badge>
                   </p>
                   {diagnosisResult.healthAssessment.diagnosis && <p><strong>{t('diagnosePage.resultDisplay.diagnosisLabel')}</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
                   {diagnosisResult.healthAssessment.confidence && (
                     <p>
                       <strong>{t('diagnosePage.resultDisplay.confidenceLabel')}</strong>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={cn(
                           "capitalize ml-1.5 inline-flex items-center",
                           confidenceStyles[diagnosisResult.healthAssessment.confidence]
