@@ -305,7 +305,7 @@ export function CareCalendarView({
   ], []);
 
 
-  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false, timeSlotType?: 'daytime' | 'nighttime') => {
+  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false) => {
     const getTaskItemStyles = () => {
       let nameColor = "text-card-foreground";
       let iconColorClass = 'text-foreground/70 hover:text-foreground';
@@ -508,16 +508,21 @@ export function CareCalendarView({
                                     )}
 
                                     <div className={cn(
-                                        "rounded-sm space-y-px min-h-[30px] p-0.5", // Added p-0.5
+                                        "rounded-sm space-y-px min-h-[30px] p-0.5",
                                         isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-700/10" : "bg-muted/20"
                                     )}>
-                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
+                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
+
+                                    { (dayTasksDaytime.length > 0 || dayTasksNighttime.length > 0) &&
+                                        <div className="h-px bg-border my-0.5 mx-1"></div>
+                                    }
+
                                     <div className={cn(
-                                        "rounded-sm space-y-px min-h-[30px] p-0.5", // Added p-0.5
+                                        "rounded-sm space-y-px min-h-[30px] p-0.5", 
                                         isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-700/10" : "bg-muted/10"
                                     )}>
-                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true, 'nighttime'))}
+                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                 </div>
                             </div>
