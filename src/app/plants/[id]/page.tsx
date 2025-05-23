@@ -46,7 +46,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
-import { compressImage } from '@/lib/image-utils'; // Import compressImage
+import { compressImage } from '@/lib/image-utils';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -143,41 +143,6 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altTex
   );
 };
 
-const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
-  if (!frequency) return '';
-  const lowerFreq = frequency.toLowerCase();
-
-  if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
-  if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
-  if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
-  if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
-  if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
-
-  const everyXDaysMatch = frequency.match(/^Every (\d+) Days$/i);
-  if (everyXDaysMatch) {
-    const count = parseInt(everyXDaysMatch[1], 10);
-    return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
-  }
-  const everyXWeeksMatch = frequency.match(/^Every (\d+) Weeks$/i);
-  if (everyXWeeksMatch) {
-    const count = parseInt(everyXWeeksMatch[1], 10);
-    return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
-  }
-  const everyXMonthsMatch = frequency.match(/^Every (\d+) Months$/i);
-  if (everyXMonthsMatch) {
-    const count = parseInt(everyXMonthsMatch[1], 10);
-    return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
-  }
-  return frequency; 
-};
-
-const translateTimeOfDayDisplayLocal = (timeOfDay: string, t: Function): string => {
-  if (!timeOfDay) return '';
-  if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
-  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
-  return timeOfDay; 
-};
-
 
 export default function PlantDetailPage() {
   const params = useParams();
@@ -235,8 +200,6 @@ export default function PlantDetailPage() {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(JSON.parse(JSON.stringify(foundPlant))); 
-      } else { 
-        // Plant not found in context, could have been deleted or ID is invalid
       }
     }
     if (id || contextPlants.length > 0) { 
@@ -367,7 +330,7 @@ export default function PlantDetailPage() {
 
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
-                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), // Using translated default
+                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
                 newPhotoHealthStatus: newHealthStatusFromDiagnosis,
                 currentCareTasks: (plant.careTasks || []).map(ct => ({
                   id: ct.id,
@@ -437,7 +400,7 @@ export default function PlantDetailPage() {
         url: photoIdbKey, 
         dateTaken: new Date().toISOString(),
         healthCondition: newHealthStatusFromDiagnosis,
-        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), // Using translated default
+        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), 
     };
 
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
@@ -762,12 +725,49 @@ export default function PlantDetailPage() {
     );
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
-    updatePlant(plant.id, updatedPlant);
+    updatePlant(plant.id, updatedPlant); // Persist through context
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
     setPhotoToEdit(null);
     setIsSavingPhotoDetails(false);
+  };
+
+  const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
+    if (!frequency) return '';
+    const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
+    if (t(directKey) !== directKey) {
+      if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
+        const countMatch = frequency.match(/\d+/);
+        const count = countMatch ? parseInt(countMatch[0], 10) : 0;
+        return t(directKey + '_formatted', {count});
+      }
+      return t(directKey);
+    }
+
+    const lowerFreq = frequency.toLowerCase();
+    if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+    if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+    if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+    if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+    if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+
+    const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+    if (everyXMatchResult) {
+      const count = parseInt(everyXMatchResult[1], 10);
+      const unit = everyXMatchResult[2].toLowerCase();
+      if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
+      if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
+      if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
+    }
+    return frequency;
+  };
+
+  const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined, t: Function): string => {
+    if (!timeOfDay) return '';
+    if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
+    if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
+    return timeOfDay;
   };
 
 
@@ -780,10 +780,7 @@ export default function PlantDetailPage() {
       </AppLayout>
     );
   }
-  if (!plant) {
-    notFound();
-  }
-
+  
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.status;
   
   return (
@@ -878,7 +875,7 @@ export default function PlantDetailPage() {
                                       newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status === 'healthy' ? "bg-green-500 hover:bg-green-600" : ""
                                     )}
                                   >
-                                    {newPhotoDiagnosisHealthStatusKey ? t(\`plantDetail.healthConditions.\${newPhotoDiagnosisHealthStatusKey}\`) : t('common.unknown')}
+                                    {newPhotoDiagnosisHealthStatusKey ? t(`plantDetail.healthConditions.${newPhotoDiagnosisHealthStatusKey}`) : t('common.unknown')}
                                   </Badge>
                                 </p>
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>{t('plantDetail.newPhotoDialog.diagnosisLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
@@ -896,7 +893,7 @@ export default function PlantDetailPage() {
                                     <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
                                         <MessageSquareWarning className="h-4 w-4 text-blue-500" />
                                         <AlertTitle>{t('plantDetail.newPhotoDialog.updateHealthAlertTitle')}</AlertTitle>
-                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(\`plantDetail.healthConditions.\${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}\`)} )}</AlertDescription>
+                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(`plantDetail.healthConditions.${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}`)})}</AlertDescription>
                                         <div className="mt-3 flex gap-2">
                                             <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
                                                 <CheckCircle className="mr-1.5 h-4 w-4"/>{t('plantDetail.newPhotoDialog.updateHealthButton')}
@@ -932,11 +929,11 @@ export default function PlantDetailPage() {
 
                                 {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.length > 0 && (
                                     <div>
-                                        <h4 className="font-semibold mb-1">{t('plantDetail.newPhotoDialog.taskModificationSuggestionTitle')}:</h4>
+                                        <h4 className="font-semibold mb-1">{t('plantDetail.newPhotoDialog.taskModificationSuggestionTitle')}</h4>
                                         <ul className="list-disc list-inside space-y-2 pl-2">
                                             {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.map(mod => (
                                                 <li key={mod.taskId}>
-                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: t(\`plantDetail.newPhotoDialog.suggestedAction.\${mod.suggestedAction}\`)} )}
+                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: t(`plantDetail.newPhotoDialog.suggestedAction.${mod.suggestedAction}`)})}
                                                     {mod.reasoning && <p className="text-xs text-muted-foreground pl-4"><em>{t('plantDetail.newPhotoDialog.taskModificationReason', {reasoning: mod.reasoning})}</em></p>}
                                                     {mod.suggestedAction === 'update_details' && mod.updatedDetails && (
                                                         <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
@@ -944,7 +941,7 @@ export default function PlantDetailPage() {
                                                             {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
                                                             {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency, t)})}</p>}
                                                             {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay, t)})}</p>}
-                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(\`common.\${mod.updatedDetails.level}\`)} )}</p>}
+                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)})}</p>}
                                                         </div>
                                                     )}
                                                 </li>
@@ -1191,7 +1188,7 @@ export default function PlantDetailPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
-
+        
         <CardFooter className="mt-6 border-t pt-4">
              <p className="text-xs text-muted-foreground">{t('plantDetail.footer.lastUpdated', {date: formatDateForDialog(new Date().toISOString())})}</p>
         </CardFooter>
@@ -1199,3 +1196,5 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
