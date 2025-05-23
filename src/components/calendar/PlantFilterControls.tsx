@@ -12,13 +12,41 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
-
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
   selectedPlantIds: Set<string>;
   onSelectedPlantIdsChange: (ids: Set<string>) => void;
 }
+
+interface PlantFilterAvatarProps {
+  photoId?: string;
+  plantName: string;
+  className?: string;
+}
+
+const PlantFilterAvatar: React.FC<PlantFilterAvatarProps> = ({ photoId, plantName, className }) => {
+  const { imageUrl, isLoading } = useIndexedDbImage(photoId);
+  const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
+
+  if (isLoading) {
+    return <Skeleton className={cn("h-8 w-8 rounded-full", className)} />;
+  }
+
+  return (
+    <Avatar className={cn("h-8 w-8 flex-shrink-0", className)}>
+      {imageUrl ? (
+        <AvatarImage src={imageUrl} alt={plantName} data-ai-hint="plant avatar" />
+      ) : null}
+      <AvatarFallback className="text-xs bg-muted">
+        {fallbackText}
+      </AvatarFallback>
+    </Avatar>
+  );
+};
+
 
 export function PlantFilterControls({
   allPlants,
@@ -39,9 +67,9 @@ export function PlantFilterControls({
 
   const handleToggleSelectAll = () => {
     if (selectedPlantIds.size === allPlants.length) {
-      onSelectedPlantIdsChange(new Set()); 
+      onSelectedPlantIdsChange(new Set());
     } else {
-      onSelectedPlantIdsChange(new Set(allPlants.map(p => p.id))); 
+      onSelectedPlantIdsChange(new Set(allPlants.map(p => p.id)));
     }
   };
 
@@ -55,6 +83,7 @@ export function PlantFilterControls({
   } else if (selectedCount > 0) {
     tooltipText = t('calendarPage.filterControls.tooltipSelectAllWithCount', { selectedCount: selectedCount, totalCount: totalPlants });
   }
+
 
   return (
     <Card className="shadow-md">
@@ -109,12 +138,7 @@ export function PlantFilterControls({
                         )}
                         aria-pressed={selectedPlantIds.has(plant.id)}
                       >
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={plant.primaryPhotoUrl || 'https://placehold.co/40x40.png'} alt={plant.commonName} data-ai-hint="plant avatar" />
-                          <AvatarFallback className="text-xs bg-muted">
-                            {plant.commonName.split(' ').map(n => n[0]).join('').toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} />
                         <span className={cn(
                           "text-xs font-medium truncate flex-grow",
                           selectedPlantIds.has(plant.id) ? "text-primary" : "text-foreground"
@@ -140,5 +164,3 @@ export function PlantFilterControls({
     </Card>
   );
 }
-
-    

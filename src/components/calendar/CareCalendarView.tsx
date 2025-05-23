@@ -36,6 +36,8 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import hook
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
@@ -84,6 +86,33 @@ interface CareCalendarViewProps {
   onNavigatePeriod: (newDate: Date) => void;
   onTaskAction: (task: CareTask, plantId: string) => void;
 }
+
+interface TaskPlantAvatarDisplayProps {
+  photoId?: string;
+  plantName: string;
+  className?: string;
+}
+
+const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, className }) => {
+  const { imageUrl, isLoading } = useIndexedDbImage(photoId);
+  const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
+
+  if (isLoading) {
+    return <Skeleton className={cn("h-full w-full rounded-full", className)} />;
+  }
+
+  return (
+    <>
+      {imageUrl ? (
+        <AvatarImage src={imageUrl} alt={plantName} data-ai-hint="plant avatar small" />
+      ) : null}
+      <AvatarFallback className={cn("bg-muted text-[8px]", className?.includes('h-3') ? "text-[7px]" : "")}>
+        {fallbackText}
+      </AvatarFallback>
+    </>
+  );
+};
+
 
 export function CareCalendarView({
   plants,
@@ -246,9 +275,9 @@ export function CareCalendarView({
             }
             if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false;
             // Daytime: 7 AM (7) to 6 PM (18)
-            if (timeCategory === 'daytime') return hour >= 7 && hour < 19; 
+            if (timeCategory === 'daytime') return hour >= 7 && hour < 19;
             // Nighttime: 7 PM (19) to 6 AM (6)
-            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7; 
+            if (timeCategory === 'nighttime') return hour >= 19 || hour < 7;
             return false;
         });
     }
@@ -330,8 +359,11 @@ export function CareCalendarView({
               )}
             >
               <Avatar className={cn("flex-shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}>
-                <AvatarImage src={occurrence.plantPrimaryPhotoUrl || 'https://placehold.co/40x40.png'} alt={occurrence.plantName} data-ai-hint="plant avatar small"/>
-                <AvatarFallback className={cn("bg-muted", compact ? "text-[7px]" : "text-[8px]")}>{occurrence.plantName.charAt(0)}</AvatarFallback>
+                <TaskPlantAvatarDisplay
+                  photoId={occurrence.plantPrimaryPhotoUrl}
+                  plantName={occurrence.plantName}
+                  className={compact ? "h-3 w-3 text-[7px]" : "h-4 w-4 text-[8px]"}
+                />
               </Avatar>
               <span className={cn("font-semibold truncate flex-grow", nameColor)}>{occurrence.originalTask.name}</span>
               <Button
@@ -500,7 +532,7 @@ export function CareCalendarView({
                                   {getDate(day)}
                                 </div>
 
-                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-6">
+                                <div className="flex-grow flex flex-col space-y-0 pt-6">
                                     {dayTasksAllDay.length > 0 && (
                                         <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5 min-h-[20px]", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
@@ -514,12 +546,12 @@ export function CareCalendarView({
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
 
-                                    { (dayTasksDaytime.length > 0 || dayTasksNighttime.length > 0) &&
+                                    { (dayTasksDaytime.length > 0 && dayTasksNighttime.length > 0 || dayTasksDaytime.length > 0 && dayTasksAllDay.length === 0 || dayTasksNighttime.length > 0 && dayTasksAllDay.length === 0) &&
                                         <div className="h-px bg-border my-0.5 mx-1"></div>
                                     }
 
                                     <div className={cn(
-                                        "rounded-sm space-y-px min-h-[30px] p-0.5", 
+                                        "rounded-sm space-y-px min-h-[30px] p-0.5",
                                         isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
@@ -536,4 +568,3 @@ export function CareCalendarView({
     </Card>
   );
 }
-
