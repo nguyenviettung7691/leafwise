@@ -316,6 +316,7 @@
       "keepCurrentButton": "Giữ nguyên",
       "carePlanReviewTitle": "Đề xuất cập nhật kế hoạch chăm sóc",
       "loadingCarePlanReview": "Đang xem xét kế hoạch chăm sóc...",
+      "taskModificationSuggestionTitle": "Đề xuất Chỉnh sửa Công việc",
       "taskModificationSuggestion": "Đối với công việc '{{taskName}}': AI đề xuất {{action}}.",
       "taskModificationReason": "Lý do: {{reasoning}}",
       "taskModificationNewName": "Tên mới: {{name}}",

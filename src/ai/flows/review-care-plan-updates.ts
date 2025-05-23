@@ -11,8 +11,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-// AIGeneratedTask and AITaskSuggestionDetails are part of the output schema defined here,
-// not directly from '@/types' for the AI flow definition.
+import type { PlantHealthCondition } from '@/types';
+
+const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 
 const CareTaskSchemaForAI = z.object({
     id: z.string(),
@@ -27,7 +28,7 @@ const CareTaskSchemaForAI = z.object({
 const ReviewCarePlanInputSchema = z.object({
   plantCommonName: z.string().describe("The common name of the plant."),
   newPhotoDiagnosisNotes: z.string().describe("The textual diagnosis from the new photo analysis."),
-  newPhotoHealthIsHealthy: z.boolean().describe("Whether the new photo diagnosis indicates the plant is healthy."),
+  newPhotoHealthStatus: PlantHealthConditionSchema.describe("The health status determined from the new photo analysis. Must be one of 'healthy', 'needs_attention', 'sick', 'unknown'."),
   currentCareTasks: z.array(CareTaskSchemaForAI).describe("The plant's current list of care tasks."),
   languageCode: z.string().optional().describe("The language for the response (e.g., 'en', 'vi'). Default 'en'.")
 });
@@ -53,7 +54,7 @@ const ExistingTaskModificationSuggestionSchema = z.object({
 const AIGeneratedTaskSchemaForOutput = z.object({
     taskName: z.string().describe("The specific name of the care task. MUST be in the specified languageCode."),
     taskDescription: z.string().describe("A brief description or specific instructions for the task. MUST be in the specified languageCode."),
-    suggestedFrequency: z.string().describe("How often the task should be performed. Use formats like 'Daily', 'Weekly', 'Every X Days'. See main prompt for exact formats."),
+    suggestedFrequency: z.string().describe("How often the task should be performed. Use formats like 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', 'Every X Months'. See main prompt for exact formats."),
     suggestedTimeOfDay: z.string().describe("When the task should be performed. Use 'All day' or HH:MM format (e.g., '09:00')."),
     taskLevel: z.enum(['basic', 'advanced']).describe("The level of this task, either 'basic' or 'advanced'.")
 });
@@ -80,7 +81,7 @@ Plant Name: {{plantCommonName}}
 
 A new photo diagnosis has been performed:
 - Diagnosis Notes: "{{newPhotoDiagnosisNotes}}"
-- Plant is Healthy (based on new photo): {{newPhotoHealthIsHealthy}}
+- Plant Health Status from new photo: {{newPhotoHealthStatus}}
 
 The plant's current care plan tasks are:
 {{#if currentCareTasks.length}}
@@ -142,4 +143,3 @@ const reviewCarePlanFlow = ai.defineFlow(
     };
   }
 );
-

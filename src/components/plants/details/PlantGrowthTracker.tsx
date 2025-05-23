@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Sparkles, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, Edit3, ImageOff } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,10 +77,10 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
         "group relative aspect-square block w-full overflow-hidden rounded-lg focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
         isManagingPhotos ? "cursor-pointer" : ""
       )}
-      onClick={() => onPhotoClick(photo)}
+      onClick={() => isManagingPhotos ? onToggleSelection(photo.id) : onPhotoClick(photo)}
       role={isManagingPhotos ? "button" : undefined}
       tabIndex={isManagingPhotos ? 0 : -1}
-      onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') onPhotoClick(photo); } : undefined}
+      onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') onToggleSelection(photo.id); } : undefined}
     >
       {isManagingPhotos && (
         <div className="absolute top-1.5 right-1.5 z-10 p-0.5 flex items-center gap-1">
@@ -96,7 +96,6 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           <Checkbox
             checked={isSelected}
             onCheckedChange={(e) => {
-                // e.stopPropagation(); This might not be needed if using Radix Checkbox directly
                 onToggleSelection(photo.id);
             }}
             onClick={(e) => e.stopPropagation()} 
@@ -229,11 +228,9 @@ export function PlantGrowthTracker({
   } satisfies ChartConfig;
 
 
-  const handlePhotoContainerClick = (photo: PlantPhoto) => {
-    if (isManagingPhotos) {
-      onTogglePhotoSelection(photo.id);
-    } else {
-      onOpenGridPhotoDialog(photo);
+  const handleRechartsDotClick = (dotPayload: any) => {
+    if (dotPayload) {
+      onChartDotClick(dotPayload);
     }
   };
 
@@ -281,7 +278,7 @@ export function PlantGrowthTracker({
 
       <div className="mt-4 pt-4 border-t">
         <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-          <Camera className="h-5 w-5 text-primary" />
+          <Sparkles className="h-5 w-5 text-primary" />
           {t('plantDetail.growthTracker.photoGalleryTitle')}
         </h4>
         {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
@@ -294,7 +291,7 @@ export function PlantGrowthTracker({
                 isSelected={selectedPhotoIds.has(photo.id)}
                 isManagingPhotos={isManagingPhotos}
                 plantCommonName={plant.commonName}
-                onPhotoClick={handlePhotoContainerClick}
+                onPhotoClick={onOpenGridPhotoDialog}
                 onToggleSelection={onTogglePhotoSelection}
                 onOpenEditDialog={onOpenEditPhotoDialog}
               />
@@ -315,7 +312,7 @@ export function PlantGrowthTracker({
             chartData={chartData}
             chartConfig={chartConfig}
             healthScoreLabels={healthScoreLabels}
-            onChartDotClick={onChartDotClick}
+            onChartDotClick={handleRechartsDotClick}
           />
         </div>
       )}

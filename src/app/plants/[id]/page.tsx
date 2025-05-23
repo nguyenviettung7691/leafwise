@@ -143,6 +143,41 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altTex
   );
 };
 
+const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
+  if (!frequency) return '';
+  const lowerFreq = frequency.toLowerCase();
+
+  if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+  if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+  if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+  if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+  if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+
+  const everyXDaysMatch = frequency.match(/^Every (\d+) Days$/i);
+  if (everyXDaysMatch) {
+    const count = parseInt(everyXDaysMatch[1], 10);
+    return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
+  }
+  const everyXWeeksMatch = frequency.match(/^Every (\d+) Weeks$/i);
+  if (everyXWeeksMatch) {
+    const count = parseInt(everyXWeeksMatch[1], 10);
+    return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
+  }
+  const everyXMonthsMatch = frequency.match(/^Every (\d+) Months$/i);
+  if (everyXMonthsMatch) {
+    const count = parseInt(everyXMonthsMatch[1], 10);
+    return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
+  }
+  return frequency; 
+};
+
+const translateTimeOfDayDisplayLocal = (timeOfDay: string, t: Function): string => {
+  if (!timeOfDay) return '';
+  if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
+  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
+  return timeOfDay; 
+};
+
 
 export default function PlantDetailPage() {
   const params = useParams();
@@ -201,10 +236,10 @@ export default function PlantDetailPage() {
       if (foundPlant) {
         setPlant(JSON.parse(JSON.stringify(foundPlant))); 
       } else { 
-        notFound();
+        // Plant not found in context, could have been deleted or ID is invalid
       }
     }
-    if (id || contextPlants.length > 0) {
+    if (id || contextPlants.length > 0) { 
       setIsLoadingPage(false);
     }
   }, [id, getPlantById, contextPlants]); 
@@ -227,7 +262,7 @@ export default function PlantDetailPage() {
     );
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
-    updatePlant(plant.id, updatedPlant);
+    updatePlant(plant.id, updatedPlant); 
     
     setLoadingTaskId(null);
 
@@ -247,10 +282,12 @@ export default function PlantDetailPage() {
     setIsDeleting(true);
     
     for (const photo of plant.photos) {
-      try {
-        await deleteImage(photo.url); 
-      } catch (e) {
-        console.error(`Failed to delete image ${photo.url} from IDB:`, e);
+      if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
+        try {
+          await deleteImage(photo.url); 
+        } catch (e) {
+          console.error(`Failed to delete image ${photo.url} from IDB:`, e);
+        }
       }
     }
     const plantNameForToast = plant.commonName || t('common.thePlant');
@@ -309,9 +346,8 @@ export default function PlantDetailPage() {
                 });
                 return;
             }
-            const newHealthStatusFromDiagnosis = newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' :
-                                   (newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
-                                    newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
+            const newHealthStatusFromDiagnosis = newPhotoDiagnosisResult.healthAssessment.status;
+
 
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
@@ -331,8 +367,8 @@ export default function PlantDetailPage() {
 
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
-                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
-                newPhotoHealthIsHealthy: newPhotoDiagnosisResult.healthAssessment.isHealthy,
+                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), // Using translated default
+                newPhotoHealthStatus: newHealthStatusFromDiagnosis,
                 currentCareTasks: (plant.careTasks || []).map(ct => ({
                   id: ct.id,
                   name: ct.name,
@@ -374,9 +410,7 @@ export default function PlantDetailPage() {
   const addPhotoToJournal = async () => {
     if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoPreviewUrl) return;
 
-    const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' :
-                                   (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
-                                    newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
+    const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status;
 
     let photoIdbKey: string | undefined = undefined;
     const blob = dataURLtoBlob(newPhotoDiagnosisDialogState.newPhotoPreviewUrl); 
@@ -403,7 +437,7 @@ export default function PlantDetailPage() {
         url: photoIdbKey, 
         dateTaken: new Date().toISOString(),
         healthCondition: newHealthStatusFromDiagnosis,
-        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
+        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), // Using translated default
     };
 
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
@@ -655,7 +689,9 @@ export default function PlantDetailPage() {
   
     const photoIdsToDelete = Array.from(selectedPhotoIds);
     for (const photoId of photoIdsToDelete) {
-      await deleteImage(photoId); 
+      if (photoId && !photoId.startsWith('http') && !photoId.startsWith('data:')) {
+        await deleteImage(photoId); 
+      }
     }
   
     let updatedPhotos = (plant.photos || []).filter(p => !selectedPhotoIds.has(p.id));
@@ -744,10 +780,11 @@ export default function PlantDetailPage() {
       </AppLayout>
     );
   }
+  if (!plant) {
+    notFound();
+  }
 
-  const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.isHealthy ? 'healthy' :
-                                   (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
-                                    newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
+  const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.status;
   
   return (
     <AppLayout>
@@ -835,13 +872,13 @@ export default function PlantDetailPage() {
                                 <p><strong>{t('plantDetail.newPhotoDialog.plantLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.identification.commonName || plant.commonName}</p>
                                 <p><strong>{t('plantDetail.newPhotoDialog.statusLabel')}</strong>
                                   <Badge
-                                    variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "default" : "destructive"}
+                                    variant={newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status === 'healthy' ? "default" : "destructive"}
                                     className={cn(
-                                      "capitalize",
-                                      newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? "bg-green-500 hover:bg-green-600" : ""
+                                      "capitalize ml-1.5", 
+                                      newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status === 'healthy' ? "bg-green-500 hover:bg-green-600" : ""
                                     )}
                                   >
-                                    {t(`plantDetail.healthConditions.${newPhotoDiagnosisHealthStatusKey}`)}
+                                    {newPhotoDiagnosisHealthStatusKey ? t(\`plantDetail.healthConditions.\${newPhotoDiagnosisHealthStatusKey}\`) : t('common.unknown')}
                                   </Badge>
                                 </p>
                                 {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis && <p><strong>{t('plantDetail.newPhotoDialog.diagnosisLabel')}</strong> {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis}</p>}
@@ -859,7 +896,7 @@ export default function PlantDetailPage() {
                                     <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300">
                                         <MessageSquareWarning className="h-4 w-4 text-blue-500" />
                                         <AlertTitle>{t('plantDetail.newPhotoDialog.updateHealthAlertTitle')}</AlertTitle>
-                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(`plantDetail.healthConditions.${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}`)} )}</AlertDescription>
+                                        <AlertDescription>{t('plantDetail.newPhotoDialog.updateHealthAlertDescription', {suggestedHealth: t(\`plantDetail.healthConditions.\${newPhotoDiagnosisDialogState.healthComparisonResult.suggestedOverallHealth}\`)} )}</AlertDescription>
                                         <div className="mt-3 flex gap-2">
                                             <Button size="sm" onClick={() => handleAcceptHealthUpdate(newPhotoDiagnosisDialogState.healthComparisonResult!.suggestedOverallHealth!)}>
                                                 <CheckCircle className="mr-1.5 h-4 w-4"/>{t('plantDetail.newPhotoDialog.updateHealthButton')}
@@ -899,15 +936,15 @@ export default function PlantDetailPage() {
                                         <ul className="list-disc list-inside space-y-2 pl-2">
                                             {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.map(mod => (
                                                 <li key={mod.taskId}>
-                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: t(`plantDetail.newPhotoDialog.suggestedAction.${mod.suggestedAction}`)} )}
+                                                    {t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: mod.currentTaskName, action: t(\`plantDetail.newPhotoDialog.suggestedAction.\${mod.suggestedAction}\`)} )}
                                                     {mod.reasoning && <p className="text-xs text-muted-foreground pl-4"><em>{t('plantDetail.newPhotoDialog.taskModificationReason', {reasoning: mod.reasoning})}</em></p>}
                                                     {mod.suggestedAction === 'update_details' && mod.updatedDetails && (
                                                         <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
                                                             {mod.updatedDetails.name && <p>{t('plantDetail.newPhotoDialog.taskModificationNewName', {name: mod.updatedDetails.name})}</p>}
                                                             {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
-                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: mod.updatedDetails.frequency})}</p>}
-                                                            {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: mod.updatedDetails.timeOfDay})}</p>}
-                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)} )}</p>}
+                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency, t)})}</p>}
+                                                            {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay, t)})}</p>}
+                                                            {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(\`common.\${mod.updatedDetails.level}\`)} )}</p>}
                                                         </div>
                                                     )}
                                                 </li>
@@ -924,7 +961,7 @@ export default function PlantDetailPage() {
                                                 <li key={`new-${index}`}>
                                                     <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{t(`common.${task.taskLevel}`)}</Badge>)
                                                     <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
-                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {task.suggestedFrequency}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {task.suggestedTimeOfDay}</p>
+                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(task.suggestedFrequency, t)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay, t)}</p>
                                                 </li>
                                             ))}
                                         </ul>
@@ -1162,5 +1199,3 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
-
-    

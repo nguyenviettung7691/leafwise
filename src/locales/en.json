@@ -316,6 +316,7 @@
       "keepCurrentButton": "Keep Current",
       "carePlanReviewTitle": "Care Plan Update Suggestions",
       "loadingCarePlanReview": "Reviewing care plan...",
+      "taskModificationSuggestionTitle": "Suggested Task Modifications",
       "taskModificationSuggestion": "For task '{{taskName}}': AI suggests to {{action}}.",
       "taskModificationReason": "Reason: {{reasoning}}",
       "taskModificationNewName": "New Name: {{name}}",

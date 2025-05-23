@@ -12,15 +12,14 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import type { PlantHealthCondition } from '@/types';
-// DiagnosePlantHealthOutput is not directly used for its HealthAssessment part here,
-// as the relevant parts are passed directly in ComparePlantHealthInputSchema.
+
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 
 const ComparePlantHealthInputSchema = z.object({
   currentPlantHealth: PlantHealthConditionSchema.describe("The plant's current overall recorded health status."),
   newPhotoDiagnosisNotes: z.string().optional().describe("The textual diagnosis from the new photo analysis."),
-  newPhotoHealthStatus: PlantHealthConditionSchema.describe("The health status determined from the new photo analysis."),
+  newPhotoHealthStatus: PlantHealthConditionSchema.describe("The health status determined from the new photo analysis. Must be one of 'healthy', 'needs_attention', 'sick', 'unknown'."),
   languageCode: z.string().optional().describe("The language for the response (e.g., 'en', 'vi'). Default 'en'.")
 });
 export type ComparePlantHealthInput = z.infer<typeof ComparePlantHealthInputSchema>;
@@ -83,4 +82,3 @@ const comparePlantHealthFlow = ai.defineFlow(
     return output;
   }
 );
-
