@@ -62,9 +62,14 @@ Your entire response MUST be in the language specified by '{{languageCode}}'.
 - This language rule applies strictly, even if the optional 'description' field from the user is empty or not provided.
 - Scientific names (e.g., 'scientificName') can remain in Latin as they are generally language-independent.
 - The 'status' field in 'healthAssessment' MUST be one of the exact enum values: 'healthy', 'needs_attention', 'sick', or 'unknown', and should NOT be translated.
+- **CRITICAL**: The textual 'diagnosis' field in 'healthAssessment' MUST directly reflect and be consistent with the chosen 'status' field. For example:
+    - If 'status' is 'healthy', the 'diagnosis' text MUST clearly state the plant is healthy and may describe positive attributes. It should NOT mention any problems or issues.
+    - If 'status' is 'needs_attention', the 'diagnosis' text MUST describe the specific minor issues observed that warrant this status.
+    - If 'status' is 'sick', the 'diagnosis' text MUST describe the symptoms or causes of the sickness.
+    - If 'status' is 'unknown', the 'diagnosis' text should indicate uncertainty.
 
 Task:
-You are an expert botanist and plant pathologist. Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the language instructions above.
+You are an expert botanist and plant pathologist. Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the language and consistency instructions above.
 
 1.  **Identification**:
     *   Determine if the image contains a plant ('isPlant': boolean).
@@ -76,7 +81,7 @@ You are an expert botanist and plant pathologist. Analyze the provided plant ima
 
 2.  **Health Assessment**:
     *   Assess the plant's health 'status' (must be one of 'healthy', 'needs_attention', 'sick', 'unknown').
-    *   Provide a 'diagnosis' (in the specified language) detailing any issues. The textual 'diagnosis' MUST be consistent with and justify the chosen 'status'. For example, if 'status' is 'healthy', the 'diagnosis' should clearly state that and can mention positive attributes. If 'status' is 'sick', the 'diagnosis' should describe the sickness symptoms or causes.
+    *   Provide a 'diagnosis' (in the specified language) detailing any issues. **The textual 'diagnosis' MUST be consistent with and justify the chosen 'status' as per the CRITICAL instruction above.**
     *   State your 'confidence' level for the assessment ('low', 'medium', 'high').
 
 3.  **Care Recommendations**:
@@ -93,7 +98,7 @@ Plant Photo: {{media url=photoDataUri}}
 Output Format:
 Provide your response ONLY in the structured JSON format defined by the output schema.
 If the image does not appear to be a plant, set 'isPlant' to false and 'healthAssessment.status' to 'unknown'. Leave other text fields blank or provide non-applicable messages in the specified language (e.g., if 'vi', 'Không phải là thực vật.').
-If the plant is healthy, set 'healthAssessment.status' to 'healthy', provide a 'diagnosis' stating it's healthy (in the specified language), and give general care tips if appropriate for 'careRecommendations' (in the specified language).
+If the plant is healthy, set 'healthAssessment.status' to 'healthy', provide a 'diagnosis' stating it's healthy (in the specified language and consistent with the 'status'), and give general care tips if appropriate for 'careRecommendations' (in the specified language).
 `,
 });
 
@@ -105,8 +110,8 @@ const diagnosePlantHealthFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
-    if (!output) {
-        console.warn('Diagnose plant health prompt returned null output. Returning default structure.');
+    if (!output || !output.healthAssessment) { // Added check for healthAssessment
+        console.warn('Diagnose plant health prompt returned null or malformed output. Returning default structure.');
         const lang = input.languageCode === 'vi' ? 'vi' : 'en';
         const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
         const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
