@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Settings",
@@ -114,7 +113,6 @@
       "descending": "Descending",
       "resetAllButton": "Reset All Filters",
       "noPlantsFoundTitle": "Your LeafWise garden is sprouting!",
-      "noPlantsHint": "Let's add your first green friend, or try adjusting your search/filters if you have plants.",
       "noPlantsHintAI": "Add your first plant manually, or let AI help you identify it on the {{diagnoseLink}} page!"
     }
   },
@@ -131,17 +129,17 @@
     "formTitle": "Save to My Plants",
     "formDescription": "Confirm or update the details for this plant.",
     "submitButtonText": "Save Plant",
-    "primaryPhotoLabel": "Primary Photo",
+    "primaryPhotoLabel": "Primary Photo (Optional)",
     "uploadAreaText": "Click to upload or drag and drop",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 4MB)",
     "gallerySelectLabel": "Or Select from Gallery",
     "commonNameLabel": "Common Name",
     "commonNamePlaceholder": "e.g., Swiss Cheese Plant",
-    "scientificNameLabel": "Scientific Name",
+    "scientificNameLabel": "Scientific Name (Optional)",
     "scientificNamePlaceholder": "e.g., Monstera deliciosa",
     "familyCategoryLabel": "Family Category",
     "familyCategoryPlaceholder": "e.g., Araceae",
-    "ageEstimateYearsLabel": "Age (Years, Est.)",
+    "ageEstimateYearsLabel": "Age (Years, Est.) (Optional)",
     "ageEstimateYearsPlaceholder": "e.g., 2",
     "healthConditionLabel": "Health Condition",
     "healthConditionPlaceholder": "Select health status",
@@ -151,9 +149,9 @@
       "sick": "Sick",
       "unknown": "Unknown"
     },
-    "locationLabel": "Location",
+    "locationLabel": "Location (Optional)",
     "locationPlaceholder": "e.g., Living Room Window",
-    "customNotesLabel": "Custom Notes",
+    "customNotesLabel": "Custom Notes (Optional)",
     "customNotesPlaceholder": "e.g., Water when top inch is dry.",
     "savingButton": "Saving..."
   },
@@ -190,7 +188,10 @@
       "plantSavedAlertTitle": "Plant Saved!",
       "plantSavedAlertDescription": "{{plantName}} has been saved to My Plants.",
       "viewPlantLink": "View {{plantName}} in My Plants",
-      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure."
+      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
+      "saveFormTitle": "Save Plant to Collection",
+      "saveFormDescription": "Confirm or update the details for {plantName} before saving.",
+      "saveFormSubmitButton": "Save Plant"
     },
     "carePlanGenerator": {
       "title": "Generate Detailed Care Plan",
@@ -281,19 +282,19 @@
       "taskFrequencyLabel": "Frequency",
       "taskTimeOfDayLabel": "Time",
       "nextDueDateLabel": "Next",
-      "noTasksManage": "No care tasks defined yet. Click 'Add Task' to create one.",
+      "noTasksManage": "No care tasks defined yet. Click 'Manage' then 'Add Task' to create one.",
       "noTasksNormal": "No care tasks defined yet.",
       "atTimePrefix": "at ",
       "selectTaskAria": "Select task {{taskName}}"
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
+      "photoGalleryTitle": "Photo Gallery",
       "addPhotoDiagnoseButton": "Add Photo & Diagnose",
       "diagnosingButton": "Diagnosing...",
       "manageButton": "Manage Photos",
       "doneButton": "Done",
       "deleteSelectedButton": "Delete ({{count}})",
-      "photoGalleryTitle": "Photo Gallery",
       "primaryPhotoTooltip": "Primary Photo",
       "healthTrendTitle": "Health Trend",
       "viewDetails": "View Details",
@@ -317,7 +318,7 @@
       "keepCurrentButton": "Keep Current",
       "carePlanReviewTitle": "Care Plan Update Suggestions",
       "loadingCarePlanReview": "Reviewing care plan...",
-      "taskModificationSuggestionTitle": "Suggested Task Modifications",
+      "taskModificationSuggestionTitle": "Suggested Task Modifications:",
       "taskModificationSuggestion": "For task '{{taskName}}': AI suggests to {{action}}.",
       "taskModificationReason": "Reason: {{reasoning}}",
       "taskModificationNewName": "New Name: {{name}}",
@@ -610,9 +611,9 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
-    "primaryPhotoUpdatedNote": "Primary photo updated via edit form."
+    "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Login Successful!",

@@ -55,7 +55,8 @@ const prompt = ai.definePrompt({
   name: 'diagnosePlantHealthPrompt',
   input: {schema: DiagnosePlantHealthInputSchema},
   output: {schema: DiagnosePlantHealthOutputSchema},
-  prompt: `Your entire response MUST be in the language specified by '{{languageCode}}'.
+  prompt: `Output Language Instructions:
+Your entire response MUST be in the language specified by '{{languageCode}}'.
 - If '{{languageCode}}' is 'vi', all textual fields (commonName, familyCategory, diagnosis, care recommendation actions and details) MUST be in Vietnamese.
 - Otherwise (e.g., 'en' or if '{{languageCode}}' is not provided), all these fields MUST be in English.
 - This language rule applies strictly, even if the optional 'description' field from the user is empty or not provided.
@@ -75,7 +76,7 @@ You are an expert botanist and plant pathologist. Analyze the provided plant ima
 
 2.  **Health Assessment**:
     *   Assess the plant's health 'status' (must be one of 'healthy', 'needs_attention', 'sick', 'unknown').
-    *   Provide a 'diagnosis' (in the specified language) detailing any issues.
+    *   Provide a 'diagnosis' (in the specified language) detailing any issues. The textual 'diagnosis' MUST be consistent with and justify the chosen 'status'. For example, if 'status' is 'healthy', the 'diagnosis' should clearly state that and can mention positive attributes. If 'status' is 'sick', the 'diagnosis' should describe the sickness symptoms or causes.
     *   State your 'confidence' level for the assessment ('low', 'medium', 'high').
 
 3.  **Care Recommendations**:
@@ -133,4 +134,3 @@ const diagnosePlantHealthFlow = ai.defineFlow(
   }
 );
     
-

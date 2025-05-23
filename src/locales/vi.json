@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Cài đặt",
@@ -114,7 +113,6 @@
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc",
       "noPlantsFoundTitle": "Vườn LeafWise của bạn đang nảy mầm!",
-      "noPlantsHint": "Hãy thêm người bạn xanh đầu tiên, hoặc thử điều chỉnh tìm kiếm/bộ lọc nếu bạn đã có cây.",
       "noPlantsHintAI": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng cây tại trang {{diagnoseLink}}!"
     }
   },
@@ -131,17 +129,17 @@
     "formTitle": "Lưu vào Cây của tôi",
     "formDescription": "Xác nhận hoặc cập nhật chi tiết cho cây này.",
     "submitButtonText": "Lưu cây",
-    "primaryPhotoLabel": "Ảnh chính",
+    "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
     "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 4MB)",
     "gallerySelectLabel": "Hoặc chọn từ Thư viện",
     "commonNameLabel": "Tên thường gọi",
     "commonNamePlaceholder": "VD: Trầu Bà Lá Xẻ",
-    "scientificNameLabel": "Tên khoa học",
+    "scientificNameLabel": "Tên khoa học (Tùy chọn)",
     "scientificNamePlaceholder": "VD: Monstera deliciosa",
     "familyCategoryLabel": "Họ thực vật",
     "familyCategoryPlaceholder": "VD: Araceae",
-    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính)",
+    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính) (Tùy chọn)",
     "ageEstimateYearsPlaceholder": "VD: 2",
     "healthConditionLabel": "Tình trạng sức khỏe",
     "healthConditionPlaceholder": "Chọn tình trạng sức khỏe",
@@ -151,9 +149,9 @@
       "sick": "Bị bệnh",
       "unknown": "Không rõ"
     },
-    "locationLabel": "Vị trí",
+    "locationLabel": "Vị trí (Tùy chọn)",
     "locationPlaceholder": "VD: Cửa sổ phòng khách",
-    "customNotesLabel": "Ghi chú tùy chỉnh",
+    "customNotesLabel": "Ghi chú tùy chỉnh (Tùy chọn)",
     "customNotesPlaceholder": "VD: Tưới khi lớp đất mặt khô.",
     "savingButton": "Đang lưu..."
   },
@@ -190,7 +188,10 @@
       "plantSavedAlertTitle": "Đã lưu cây!",
       "plantSavedAlertDescription": "{{plantName}} đã được lưu vào Cây của tôi.",
       "viewPlantLink": "Xem {{plantName}} trong Cây của tôi",
-      "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn."
+      "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
+      "saveFormTitle": "Lưu cây vào Bộ sưu tập",
+      "saveFormDescription": "Xác nhận hoặc cập nhật chi tiết cho {plantName} trước khi lưu.",
+      "saveFormSubmitButton": "Lưu Cây"
     },
     "carePlanGenerator": {
       "title": "Tạo kế hoạch chăm sóc chi tiết",
@@ -281,19 +282,19 @@
       "taskFrequencyLabel": "Tần suất",
       "taskTimeOfDayLabel": "Thời gian",
       "nextDueDateLabel": "Tiếp theo",
-      "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Thêm công việc' để tạo.",
+      "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Quản lý' rồi 'Thêm công việc' để tạo.",
       "noTasksNormal": "Chưa có công việc chăm sóc nào.",
       "atTimePrefix": "lúc ",
       "selectTaskAria": "Chọn công việc {{taskName}}"
     },
     "growthTracker": {
       "sectionTitle": "Theo dõi tăng trưởng",
+      "photoGalleryTitle": "Thư viện ảnh",
       "addPhotoDiagnoseButton": "Thêm ảnh & Chẩn đoán",
       "diagnosingButton": "Đang chẩn đoán...",
       "manageButton": "Quản lý ảnh",
       "doneButton": "Xong",
       "deleteSelectedButton": "Xóa ({{count}})",
-      "photoGalleryTitle": "Thư viện ảnh",
       "primaryPhotoTooltip": "Ảnh chính",
       "healthTrendTitle": "Xu hướng sức khỏe",
       "viewDetails": "Xem chi tiết",
@@ -317,7 +318,7 @@
       "keepCurrentButton": "Giữ nguyên",
       "carePlanReviewTitle": "Đề xuất cập nhật kế hoạch chăm sóc",
       "loadingCarePlanReview": "Đang xem xét kế hoạch chăm sóc...",
-      "taskModificationSuggestionTitle": "Đề xuất Chỉnh sửa Công việc",
+      "taskModificationSuggestionTitle": "Đề xuất Chỉnh sửa Công việc:",
       "taskModificationSuggestion": "Đối với công việc '{{taskName}}': AI đề xuất {{action}}.",
       "taskModificationReason": "Lý do: {{reasoning}}",
       "taskModificationNewName": "Tên mới: {{name}}",
@@ -415,7 +416,7 @@
     }
   },
   "plantCard": {
-    "nextPrefix": "Tiếp theo:",
+    "nextPrefix": "Kế tiếp:",
     "lastCaredPrefix": "Chăm sóc cuối:",
     "noUpcomingTasks": "Không có việc sắp tới",
     "dueToday": "Hôm nay",
@@ -610,9 +611,9 @@
     "formDescription": "Cập nhật chi tiết cho {{plantName}}.",
     "submitButtonText": "Cập nhật Cây",
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
-    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
+    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật (mô phỏng).",
     "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật.",
-    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa."
+    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới)."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Đăng nhập Thành công!",

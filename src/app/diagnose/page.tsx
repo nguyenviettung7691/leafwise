@@ -7,7 +7,6 @@ import { diagnosePlantHealth, type DiagnosePlantHealthOutput, type DiagnosePlant
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
 import type { GenerateDetailedCarePlanOutput, AIGeneratedTask, PlantHealthCondition } from '@/types';
 import { Button } from '@/components/ui/button';
-import { CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { PlantFormData, Plant, CareTask } from '@/types';
@@ -18,12 +17,14 @@ import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { addImage, dataURLtoBlob } from '@/lib/idb-helper';
-import { compressImage } from '@/lib/image-utils'; // Import compressImage
+import { compressImage } from '@/lib/image-utils'; 
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // Added Alert imports
+import { CheckCircle } from 'lucide-react'; // For Alert icon
 
 export default function DiagnosePlantPage() {
   const { addPlant, updatePlant, getPlantById } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null); // This will store the compressed Data URL
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null); 
   const [description, setDescription] = useState('');
   const [isLoadingDiagnosis, setIsLoadingDiagnosis] = useState(false);
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosePlantHealthOutput | null>(null);
@@ -103,7 +104,7 @@ export default function DiagnosePlantPage() {
     const selectedFile = event.target.files?.[0];
 
     if (selectedFile) {
-      if (selectedFile.size > 5 * 1024 * 1024) { // Increased slightly for pre-compression
+      if (selectedFile.size > 5 * 1024 * 1024) { 
         toast({
           variant: 'destructive',
           title: t('diagnosePage.toasts.imageTooLargeTitle'),
@@ -116,9 +117,9 @@ export default function DiagnosePlantPage() {
         }
         return;
       }
-      setFile(selectedFile); // Store original file for potential future use, though we send data URL
+      setFile(selectedFile); 
       
-      setIsLoadingDiagnosis(true); // Show loader while compressing
+      setIsLoadingDiagnosis(true); 
       const reader = new FileReader();
       reader.onloadend = async () => {
         try {
@@ -127,11 +128,11 @@ export default function DiagnosePlantPage() {
           setPreviewUrl(compressedDataUrl);
         } catch (err) {
           console.error("Error compressing image:", err);
-          toast({ title: t('common.error'), description: "Failed to process image.", variant: "destructive" });
-          setPreviewUrl(null); // Fallback if compression fails
+          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageTooLargeDesc'), variant: "destructive" });
+          setPreviewUrl(null); 
           if (fileInputRef.current) fileInputRef.current.value = "";
         } finally {
-          setIsLoadingDiagnosis(false); // Hide loader after compression attempt
+          setIsLoadingDiagnosis(false); 
         }
       };
       reader.readAsDataURL(selectedFile);
@@ -143,7 +144,7 @@ export default function DiagnosePlantPage() {
 
   const handleDiagnosisSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!previewUrl) { // Check for previewUrl (compressed data URL) instead of file
+    if (!previewUrl) { 
       setDiagnosisError(t('diagnosePage.toasts.noImageDesc'));
       toast({ title: t('diagnosePage.toasts.noImageTitle'), description: t('diagnosePage.toasts.noImageDesc'), variant: "destructive" });
       return;
@@ -163,7 +164,7 @@ export default function DiagnosePlantPage() {
         throw new Error(t('diagnosePage.toasts.invalidFileType'));
       }
       const diagnosisInput: DiagnoseInput = {
-        photoDataUri: previewUrl, // Use the compressed data URL
+        photoDataUri: previewUrl, 
         description,
         languageCode: language
       };
@@ -185,7 +186,6 @@ export default function DiagnosePlantPage() {
 
   const handleSavePlant = async (data: PlantFormData) => {
     setIsSavingPlant(true);
-    // data.diagnosedPhotoDataUrl here is the compressed data URL from previewUrl or SavePlantForm
     
     const newPlantId = `plant-${Date.now()}`;
     let finalPhotoIdForStorage: string | undefined = undefined;
@@ -199,7 +199,7 @@ export default function DiagnosePlantPage() {
         } catch (e) {
           console.error("Error saving initial diagnosis image to IDB:", e);
           toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
-          finalPhotoIdForStorage = undefined; // Fallback: no image saved to IDB
+          finalPhotoIdForStorage = undefined; 
         }
       } else {
         toast({ title: t('common.error'), description: "Failed to process initial plant image.", variant: "destructive" });
@@ -217,11 +217,11 @@ export default function DiagnosePlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPhotoIdForStorage, // Store IDB key or undefined
+      primaryPhotoUrl: finalPhotoIdForStorage, 
       photos: finalPhotoIdForStorage
         ? [{
-            id: finalPhotoIdForStorage, // IDB key
-            url: finalPhotoIdForStorage, // IDB key
+            id: finalPhotoIdForStorage, 
+            url: finalPhotoIdForStorage, 
             dateTaken: new Date().toISOString(),
             healthCondition: data.healthCondition,
             diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
@@ -255,7 +255,6 @@ export default function DiagnosePlantPage() {
     setIsLoadingCarePlan(true);
     setCarePlanError(null);
     setCarePlanResult(null);
-    // setGeneratedPlanMode(null); // Keep previous generatedPlanMode until new one is set
 
     try {
       const input: GenerateDetailedCarePlanInput = {
@@ -271,7 +270,7 @@ export default function DiagnosePlantPage() {
         console.log('AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
       setCarePlanResult(result);
-      setGeneratedPlanMode(carePlanMode); // Set the mode for which this plan was generated
+      setGeneratedPlanMode(carePlanMode); 
       toast({ title: t('diagnosePage.toasts.carePlanGeneratedTitle'), description: t('diagnosePage.toasts.carePlanGeneratedDesc', { mode: t(`common.${carePlanMode}`), plantName: input.plantCommonName }) });
     } catch (e: any) {
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.carePlanGenerator.errorAlertTitle'));
@@ -301,8 +300,8 @@ export default function DiagnosePlantPage() {
       plantId: lastSavedPlantId,
       name: aiTask.taskName,
       description: aiTask.taskDescription,
-      frequency: aiTask.suggestedFrequency, // Stored as AI provides (e.g., "Daily", "Every 3 Days")
-      timeOfDay: aiTask.suggestedTimeOfDay, // Stored as AI provides (e.g., "09:00", "All day")
+      frequency: aiTask.suggestedFrequency, 
+      timeOfDay: aiTask.suggestedTimeOfDay, 
       isPaused: false,
       nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency, new Date().toISOString()),
       level: aiTask.taskLevel,
@@ -326,8 +325,8 @@ export default function DiagnosePlantPage() {
     scientificName: diagnosisResult.identification.scientificName || '',
     familyCategory: diagnosisResult.identification.familyCategory || '',
     ageEstimateYears: diagnosisResult.identification.ageEstimateYears,
-    healthCondition: diagnosisResult.healthAssessment.isHealthy ? 'healthy' : (diagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') || diagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention') as PlantHealthCondition,
-    diagnosedPhotoDataUrl: previewUrl, // This is the compressed data URL
+    healthCondition: diagnosisResult.healthAssessment.status, 
+    diagnosedPhotoDataUrl: previewUrl, 
   } : undefined;
 
   const shouldShowCarePlanGenerator = diagnosisResult?.identification.isPlant && plantSaved;
@@ -343,13 +342,13 @@ export default function DiagnosePlantPage() {
           onFileChange={handleFileChange}
           onSubmitDiagnosis={handleDiagnosisSubmit}
           fileInputRef={fileInputRef}
-          isFileSelected={file !== null || previewUrl !== null} // Adjusted for compressed preview
+          isFileSelected={file !== null || previewUrl !== null} 
         />
 
         {diagnosisError && (
-          <div className="mt-6"> {/* Wrap Alert for margin */}
+          <div className="mt-6"> 
             <Alert variant="destructive">
-              <CheckCircle className="h-4 w-4" /> {/* This seems to be a checkmark, might be AlertTriangle */}
+              <CheckCircle className="h-4 w-4" /> 
               <AlertTitle>{t('common.error')}</AlertTitle>
               <AlertDescription>{diagnosisError}</AlertDescription>
             </Alert>
@@ -359,7 +358,7 @@ export default function DiagnosePlantPage() {
         {diagnosisResult && (
           <DiagnosisResultDisplay
             diagnosisResult={diagnosisResult}
-            previewUrl={previewUrl} // Pass compressed preview URL
+            previewUrl={previewUrl} 
             onShowSaveForm={() => setShowSavePlantForm(true)}
             plantSaved={plantSaved}
             showSavePlantForm={showSavePlantForm}
@@ -369,7 +368,7 @@ export default function DiagnosePlantPage() {
 
         {showSavePlantForm && diagnosisResult && diagnosisResult.identification.isPlant && initialPlantFormData && (
           <SavePlantForm
-            initialData={initialPlantFormData} // initialData.diagnosedPhotoDataUrl is the compressed URL
+            initialData={initialPlantFormData} 
             onSave={handleSavePlant}
             onCancel={() => {
               setShowSavePlantForm(false);
