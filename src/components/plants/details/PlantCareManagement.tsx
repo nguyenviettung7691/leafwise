@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import dynamic from 'next/dynamic';
+import type { Locale } from 'date-fns';
 
 const DynamicWeeklyCareCalendarView = dynamic(
   () => import('@/components/plants/WeeklyCareCalendarView').then(mod => mod.WeeklyCareCalendarView),
@@ -25,11 +26,11 @@ const DynamicWeeklyCareCalendarView = dynamic(
   }
 );
 
-const formatDate = (dateString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string) => {
+const formatDate = (dateString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string, locale?: Locale) => {
   if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'MMM d, yyyy');
+    return format(date, 'MMM d, yyyy', { locale });
   } catch (error) {
     console.error("Error parsing date:", dateString, error);
     return t ? t('common.error') : 'Invalid Date';
@@ -73,9 +74,9 @@ const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined, t: Functi
   return timeOfDay;
 };
 
-const formatDateTime = (dateString?: string, timeString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string) => {
+const formatDateTime = (dateString?: string, timeString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string, locale?: Locale) => {
   if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
-  let formattedString = formatDate(dateString, t);
+  let formattedString = formatDate(dateString, t, locale);
   if (timeString && timeString.toLowerCase() !== 'all day' && /^\d{2}:\d{2}$/.test(timeString)) {
     formattedString += ` ${t('plantDetail.careManagement.atTimePrefix', {time:timeString})}`;
   }
@@ -107,7 +108,7 @@ export function PlantCareManagement({
   onDeleteSelectedTasks
 }: PlantCareManagementProps) {
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
-  const { t } = useLanguage();
+  const { t, dateFnsLocale } = useLanguage();
 
   const sortedTasks = useMemo(() => {
     if (!plant.careTasks) return [];
@@ -127,12 +128,7 @@ export function PlantCareManagement({
   }, [plant.careTasks]);
 
   const toggleManageMode = () => {
-    setIsManagingCarePlan(prev => {
-      if (prev) {
-        // selectedTaskIds are managed by parent, no need to clear here
-      }
-      return !prev;
-    });
+    setIsManagingCarePlan(prev => !prev);
   };
 
 
@@ -178,7 +174,7 @@ export function PlantCareManagement({
                 "bg-card border border-border shadow-sm transition-all border-l-4",
                 isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
                 task.isPaused ? "opacity-70" : "",
-                isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", // Today's highlight overrides left border color from level
+                isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
                 isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
               )}
               onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
@@ -198,8 +194,8 @@ export function PlantCareManagement({
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0", isAdvanced ? "text-primary" : "text-card-foreground")}>
-                    <span className="truncate">{task.name}</span>
+                  <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
+                    <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
                     <Badge
                       variant={isAdvanced ? 'default' : 'outline'}
                       className={cn(
@@ -222,9 +218,9 @@ export function PlantCareManagement({
                     {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
                     {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
                     {task.isPaused ? (
-                      task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
+                      task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                     ) : (
-                      task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t)}` : ''
+                      task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
                     )}
                   </p>
                 </div>
