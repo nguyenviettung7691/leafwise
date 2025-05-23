@@ -534,18 +534,18 @@ export function CareCalendarView({
                                     )}
 
                                     <div className={cn(
-                                        "rounded-sm space-y-px min-h-[30px] p-0.5",
+                                        "rounded-sm space-y-px min-h-[30px] p-1",
                                         isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
                                     </div>
 
                                     { (dayTasksDaytime.length > 0 && dayTasksNighttime.length > 0 || dayTasksDaytime.length > 0 && dayTasksAllDay.length === 0 || dayTasksNighttime.length > 0 && dayTasksAllDay.length === 0) &&
-                                        <div className="h-px bg-border my-0.5 mx-1"></div>
+                                        <div className="h-px bg-muted-foreground/20 my-1 mx-1"></div>
                                     }
 
                                     <div className={cn(
-                                        "rounded-sm space-y-px min-h-[30px] p-0.5",
+                                        "rounded-sm space-y-px min-h-[30px] p-1",
                                         isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true, 'nighttime'))}
@@ -562,4 +562,5 @@ export function CareCalendarView({
     </Card>
   );
 }
+
 
