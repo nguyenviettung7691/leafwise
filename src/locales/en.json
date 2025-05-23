@@ -297,6 +297,8 @@
       "healthTrendTitle": "Health Trend",
       "viewDetails": "View Details",
       "noPhotos": "No photos recorded for growth monitoring yet.",
+      "noPhotosForTrend": "Add at least one photo with diagnosis to see a health trend.",
+      "needMorePhotosForTrend": "Add at least one more photo with diagnosis to see a health trend.",
       "editPhotoDetailsAriaLabel": "Edit photo details",
       "selectPhotoAriaLabel": "Select photo from {{date}}"
     },
@@ -340,7 +342,8 @@
       "healthAtDiagnosisLabel": "Health at Diagnosis:",
       "diagnosisNotesLabel": "Diagnosis Notes:",
       "generalNotesLabel": "General Notes:",
-      "setAsPrimaryButton": "Set as Primary Photo"
+      "setAsPrimaryButton": "Set as Primary Photo",
+      "titleAlt": "{{plantName}} - Photo from {{date}}"
     },
     "taskFormDialog": {
       "addTitle": "Add New Care Plan Task",
@@ -369,7 +372,8 @@
       "generalNotesLabel": "General Notes (Optional)",
       "generalNotesPlaceholder": "Your personal observations...",
       "saveChangesButton": "Save Changes",
-      "pickDate": "Pick a date"
+      "pickDate": "Pick a date",
+      "photoAlt": "Photo taken on {{date}}"
     },
     "toasts": {
       "plantHealthUpdated": "Plant Health Updated",
@@ -560,6 +564,7 @@
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
+      "exportErrorNoData": "No user data found to export.",
       "exportSuccessTitle": "Export Successful",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "importFailedGeneral": "Could not parse or apply the imported data.",
@@ -602,7 +607,7 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
     "toastErrorFindingPlant": "Could not find plant to update."
   },
   "authContextToasts": {

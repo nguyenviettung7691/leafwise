@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
@@ -9,10 +10,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Sparkles, Loader2, TrendingUp, Camera, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, Edit3 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
+// import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'; // Moved to dynamic component
+// import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts'; // Moved to dynamic component
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import dynamic from 'next/dynamic';
+
+const DynamicHealthTrendChart = dynamic(
+  () => import('./HealthTrendChartComponent'), // Assuming HealthTrendChartComponent is in the same directory
+  {
+    loading: () => (
+      <div className="flex justify-center items-center h-[250px] w-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -21,43 +36,12 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
   unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
 };
 
-const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))',
-  needs_attention: 'hsl(var(--chart-4))', // Assuming chart-4 is a yellow/orange
-  sick: 'hsl(var(--destructive))',
-  unknown: 'hsl(var(--muted-foreground))',
-};
-
-
 const healthScoreMapping: Record<PlantHealthCondition, number> = {
   unknown: 0,
   sick: 1,
   needs_attention: 2,
   healthy: 3,
 };
-
-
-const CustomChartDot = (props: any) => {
-  const { cx, cy, payload, onDotClick } = props;
-  if (!payload || payload.healthCondition === undefined) {
-    return null;
-  }
-  const dotColor = healthConditionDotColors[payload.healthCondition as PlantHealthCondition] || healthConditionDotColors.unknown;
-
-  return (
-    <Dot
-      cx={cx}
-      cy={cy}
-      r={5}
-      fill={dotColor}
-      stroke={dotColor}
-      strokeWidth={1}
-      onClick={() => onDotClick(payload)}
-      style={{ cursor: 'pointer' }}
-    />
-  );
-};
-
 
 interface PlantGrowthTrackerProps {
   plant: Plant;
@@ -124,11 +108,6 @@ export function PlantGrowthTracker({
     },
   } satisfies ChartConfig;
 
-  const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload && dotPayload.id) {
-        onChartDotClick(dotPayload);
-    }
-  };
 
   const handlePhotoContainerClick = (photo: PlantPhoto) => {
     if (isManagingPhotos) {
@@ -195,12 +174,12 @@ export function PlantGrowthTracker({
         </div>
       </div>
 
-      {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 && (
-        <div className="mt-4 pt-4 border-t">
-          <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
-            {t('plantDetail.growthTracker.photoGalleryTitle')}
-          </h4>
+      <div className="mt-4 pt-4 border-t">
+        <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
+          <Camera className="h-5 w-5 text-primary" />
+          {t('plantDetail.growthTracker.photoGalleryTitle')}
+        </h4>
+        {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {sortedPhotosForGallery.map(photo => {
               const isPrimary = plant.primaryPhotoUrl === photo.url;
@@ -243,7 +222,7 @@ export function PlantGrowthTracker({
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
+                           <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
                             <BookmarkCheck className="h-3.5 w-3.5" />
                           </div>
                         </TooltipTrigger>
@@ -283,8 +262,10 @@ export function PlantGrowthTracker({
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
+        )}
+      </div>
 
       {!isManagingPhotos && chartData.length > 0 && (
         <div className="mt-4 mb-6 pt-4 border-t">
@@ -292,77 +273,13 @@ export function PlantGrowthTracker({
             <TrendingUp className="h-5 w-5 text-primary" />
             {t('plantDetail.growthTracker.healthTrendTitle')}
           </h4>
-          <ChartContainer config={chartConfig} className="h-[250px] w-full">
-            <LineChart
-              accessibilityLayer
-              data={chartData}
-              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              onClick={(data) => {
-                if (data && data.activePayload && data.activePayload.length > 0) {
-                  handleRechartsDotClick(data.activePayload[0].payload);
-                }
-              }}
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => value.slice(0, 6)}
-              />
-              <YAxis
-                dataKey="health"
-                domain={[0, 3]}
-                ticks={[0, 1, 2, 3]}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                width={100}
-                tickFormatter={(value) => healthScoreLabels[value as number] || ''}
-              />
-              <ChartTooltip
-                  cursor={false}
-                  content={
-                    <ChartTooltipContent
-                        indicator="dot"
-                        labelKey="date"
-                        formatter={(value, name, props: any) => {
-                            return (
-                                <div className="text-sm">
-                                    {props.payload?.photoUrl && (
-                                        <Image
-                                            src={props.payload.photoUrl}
-                                            alt={t('plantDetail.growthTracker.photoGalleryTitle')}
-                                            width={64}
-                                            height={64}
-                                            className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
-                                            data-ai-hint="plant chart thumbnail"
-                                        />
-                                    )}
-                                    <p className="font-medium text-foreground">{props.payload?.date}</p>
-                                    <p className="text-muted-foreground">{t('common.health')}: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
-                                </div>
-                            )
-                        }}
-                    />
-                  }
-              />
-              <Line
-                dataKey="health"
-                type="monotone"
-                stroke="var(--color-health)"
-                strokeWidth={2}
-                dot={<CustomChartDot onDotClick={handleRechartsDotClick} />}
-                activeDot={{r: 7, style: { cursor: 'pointer' }}}
-              />
-            </LineChart>
-          </ChartContainer>
+          <DynamicHealthTrendChart
+            chartData={chartData}
+            chartConfig={chartConfig}
+            healthScoreLabels={healthScoreLabels}
+            onChartDotClick={onChartDotClick}
+          />
         </div>
-      )}
-
-      {(!sortedPhotosForGallery || sortedPhotosForGallery.length === 0) && chartData.length === 0 && (
-         <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
       )}
     </div>
   );

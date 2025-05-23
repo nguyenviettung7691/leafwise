@@ -6,15 +6,28 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView';
+// import { WeeklyCareCalendarView } from '@/components/plants/WeeklyCareCalendarView'; // Original import
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
 import { format, parseISO, isToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
+import dynamic from 'next/dynamic';
 
-const formatDate = (dateString?: string, t?: Function) => {
-  if (!dateString) return t ? t('common.notApplicable') : 'N/A';
+const DynamicWeeklyCareCalendarView = dynamic(
+  () => import('@/components/plants/WeeklyCareCalendarView').then(mod => mod.WeeklyCareCalendarView),
+  {
+    loading: () => (
+      <div className="flex justify-center items-center h-40 mt-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ),
+    ssr: false,
+  }
+);
+
+const formatDate = (dateString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string) => {
+  if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
   try {
     const date = parseISO(dateString);
     return format(date, 'MMM d, yyyy');
@@ -26,6 +39,18 @@ const formatDate = (dateString?: string, t?: Function) => {
 
 const translateFrequencyDisplay = (frequency: string, t: Function): string => {
   if (!frequency) return '';
+  // Check for direct key match first
+  const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
+  if (t(directKey) !== directKey) { // Check if translation exists for the pattern
+    if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
+      const countMatch = frequency.match(/\d+/);
+      const count = countMatch ? parseInt(countMatch[0]) : 0;
+      return t(directKey + '_formatted', {count});
+    }
+    return t(directKey);
+  }
+
+  // Fallback to original logic if no direct key match
   const lowerFreq = frequency.toLowerCase();
   if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
   if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
@@ -41,24 +66,21 @@ const translateFrequencyDisplay = (frequency: string, t: Function): string => {
     if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
     if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
   }
-  return frequency; // Fallback to original if no match
+  return frequency;
 };
 
 const translateTimeOfDayDisplay = (timeOfDay: string | undefined, t: Function): string => {
   if (!timeOfDay) return '';
   if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
-  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay; // HH:MM format is usually universal
-  return timeOfDay; // Fallback
+  if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
+  return timeOfDay;
 };
 
-const formatDateTime = (dateString?: string, timeString?: string, t?: Function) => {
+const formatDateTime = (dateString?: string, timeString?: string, t?: (key: string, replacements?: Record<string, string | number>) => string) => {
   if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
   let formattedString = formatDate(dateString, t);
   if (timeString && timeString.toLowerCase() !== 'all day' && /^\d{2}:\d{2}$/.test(timeString)) {
     formattedString += ` ${t('plantDetail.careManagement.atTimePrefix', {time:timeString})}`;
-  } else if (timeString && timeString.toLowerCase() === 'all day') {
-     // Optionally, append nothing or a generic "All Day" translated string if needed
-     // For now, if it's "All day", just the date will show from formatDate.
   }
   return formattedString;
 };
@@ -110,8 +132,7 @@ export function PlantCareManagement({
   const toggleManageMode = () => {
     setIsManagingCarePlan(prev => {
       if (prev) {
-        // Logic if needed when exiting manage mode, e.g., clear selections
-        // setSelectedTaskIds(new Set()); // This would be done in parent if parent owns selectedTaskIds
+        // selectedTaskIds are managed by parent, no need to clear here
       }
       return !prev;
     });
@@ -160,9 +181,11 @@ export function PlantCareManagement({
                 task.isPaused ? "opacity-70" : "",
                 isTaskToday ? "border-2 border-primary bg-primary/10 shadow-lg" : "",
                 isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
-                isManagingCarePlan ? "cursor-pointer" : ""
               )}
               onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
+              role={isManagingCarePlan ? "button" : undefined}
+              tabIndex={isManagingCarePlan ? 0 : undefined}
+              aria-pressed={isManagingCarePlan ? isSelected : undefined}
             >
               <CardContent className="p-4 flex justify-between items-center">
                 {isManagingCarePlan && (
@@ -249,7 +272,7 @@ export function PlantCareManagement({
         </p>
       )}
       {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
-        <WeeklyCareCalendarView
+        <DynamicWeeklyCareCalendarView
           tasks={plant.careTasks}
           onEditTask={onOpenEditTaskDialog}
           onDeleteTask={onOpenDeleteTaskDialog}

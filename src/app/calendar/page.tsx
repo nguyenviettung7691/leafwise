@@ -7,12 +7,25 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useMemo } from 'react';
 import type { Plant, CareTask } from '@/types';
 import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
-import { CareCalendarView } from '@/components/calendar/CareCalendarView';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
+// import { CareCalendarView } from '@/components/calendar/CareCalendarView'; // Original import
+import { usePlantData } from '@/contexts/PlantDataContext';
+import dynamic from 'next/dynamic';
+
+const DynamicCareCalendarView = dynamic(
+  () => import('@/components/calendar/CareCalendarView').then(mod => mod.CareCalendarView),
+  {
+    loading: () => (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    ),
+    ssr: false, // Disable SSR for this complex client-side component
+  }
+);
 
 export default function CalendarPage() {
   const { t } = useLanguage();
-  const { plants: contextPlants, isLoading: isLoadingContextPlants } = usePlantData(); // Use PlantDataContext
+  const { plants: contextPlants, isLoading: isLoadingContextPlants } = usePlantData();
 
   const [allPlants, setAllPlants] = useState<Plant[]>([]);
   const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
@@ -22,13 +35,14 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!isLoadingContextPlants) {
       setAllPlants(contextPlants);
+      // Initialize selectedPlantIds to all plants by default
       setSelectedPlantIds(new Set(contextPlants.map(p => p.id)));
       setPageIsLoading(false);
     }
   }, [contextPlants, isLoadingContextPlants]);
 
   const filteredPlants = useMemo(() => {
-    if (selectedPlantIds.size === allPlants.length) {
+    if (selectedPlantIds.size === allPlants.length && allPlants.length > 0) { // Ensure allPlants is not empty
       return allPlants;
     }
     return allPlants.filter(plant => selectedPlantIds.has(plant.id));
@@ -38,7 +52,7 @@ export default function CalendarPage() {
     setSelectedPlantIds(newSelectedIds);
   };
 
-  const handleNavigatePeriod = (newDate: Date) => { 
+  const handleNavigatePeriod = (newDate: Date) => {
     setCurrentCalendarDate(newDate);
   };
 
@@ -73,10 +87,10 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex-grow">
-          <CareCalendarView
+          <DynamicCareCalendarView
             plants={filteredPlants}
             currentDate={currentCalendarDate}
-            onNavigatePeriod={handleNavigatePeriod} 
+            onNavigatePeriod={handleNavigatePeriod}
             onTaskAction={handleTaskAction}
           />
         </div>

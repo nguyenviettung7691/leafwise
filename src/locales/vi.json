@@ -129,7 +129,7 @@
   },
   "savePlantForm": {
     "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
-    "uploadAreaText": "Nhấp để tải lên hoặc kéo thả",
+    "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 4MB)",
     "gallerySelectLabel": "Hoặc chọn từ Thư viện (Tùy chọn)",
     "commonNameLabel": "Tên thường gọi",
@@ -297,6 +297,8 @@
       "healthTrendTitle": "Xu hướng sức khỏe",
       "viewDetails": "Xem chi tiết",
       "noPhotos": "Chưa có ảnh nào được ghi lại để theo dõi tăng trưởng.",
+      "noPhotosForTrend": "Thêm ít nhất một ảnh kèm chẩn đoán để xem xu hướng sức khỏe.",
+      "needMorePhotosForTrend": "Thêm ít nhất một ảnh nữa kèm chẩn đoán để xem xu hướng sức khỏe.",
       "editPhotoDetailsAriaLabel": "Chỉnh sửa chi tiết ảnh",
       "selectPhotoAriaLabel": "Chọn ảnh từ {{date}}"
     },
@@ -340,7 +342,8 @@
       "healthAtDiagnosisLabel": "Sức khỏe lúc chẩn đoán:",
       "diagnosisNotesLabel": "Ghi chú chẩn đoán:",
       "generalNotesLabel": "Ghi chú chung:",
-      "setAsPrimaryButton": "Đặt làm ảnh chính"
+      "setAsPrimaryButton": "Đặt làm ảnh chính",
+      "titleAlt": "{{plantName}} - Ảnh từ {{date}}"
     },
     "taskFormDialog": {
       "addTitle": "Thêm công việc chăm sóc mới",
@@ -369,7 +372,8 @@
       "generalNotesLabel": "Ghi chú chung (Tùy chọn)",
       "generalNotesPlaceholder": "Quan sát cá nhân của bạn...",
       "saveChangesButton": "Lưu thay đổi",
-      "pickDate": "Chọn ngày"
+      "pickDate": "Chọn ngày",
+      "photoAlt": "Ảnh chụp ngày {{date}}"
     },
     "toasts": {
       "plantHealthUpdated": "Đã cập nhật sức khỏe cây",
@@ -560,6 +564,7 @@
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
+      "exportErrorNoData": "Không tìm thấy dữ liệu người dùng để xuất.",
       "exportSuccessTitle": "Xuất thành công",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
