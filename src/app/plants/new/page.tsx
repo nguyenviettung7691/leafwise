@@ -16,42 +16,35 @@ export default function NewPlantPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { addPlant: addPlantToContext } = usePlantData(); // Renamed to avoid conflict
+  const { addPlant: addPlantToContext } = usePlantData();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: PlantFormData) => {
     setIsSaving(true);
-    // await new Promise(resolve => setTimeout(resolve, 1000)); // Keep for simulated delay if desired
 
     const newPlantId = `plant-${Date.now()}`;
     let finalPhotoIdForStorage: string | undefined = undefined;
-    let generatedPrimaryPhotoUrl: string | undefined = undefined; // This will store the IDB key
+    let generatedPrimaryPhotoUrl: string | undefined = undefined;
 
     if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
       const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
       if (blob) {
         finalPhotoIdForStorage = `photo-${newPlantId}-${Date.now()}`;
         try {
-          const idbResult = await addImage(finalPhotoIdForStorage, blob);
-          if (idbResult.error) {
-            console.error("Failed to save image to IndexedDB:", idbResult.error);
-            toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
-            // Potentially don't save the plant or save without image
-            generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`; // Fallback
-          } else {
-            generatedPrimaryPhotoUrl = finalPhotoIdForStorage; // Store IDB key
-          }
+          await addImage(finalPhotoIdForStorage, blob);
+          generatedPrimaryPhotoUrl = finalPhotoIdForStorage; // Store IDB key
         } catch (e) {
-            console.error("Error during IndexedDB image save:", e);
-            generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`; // Fallback
+          console.error("Error during IndexedDB image save:", e);
+          toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
+          generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`; // Fallback
         }
       } else {
-         // Blob conversion failed
+         toast({ title: t('common.error'), description: "Failed to process image for local storage.", variant: "destructive" });
          generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
       }
     } else if (data.diagnosedPhotoDataUrl) {
-      // This case is unlikely for "new plant" if SavePlantForm works as intended (only data URLs for new uploads)
-      // But if it's somehow an existing URL (e.g., a placeholder was manually entered or re-selected)
+      // This case implies an existing URL (e.g. placeholder, or already an IDB key if editing was done this way)
+      // For a new plant, this shouldn't typically happen if SavePlantForm provides a data URL for new uploads.
       generatedPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
     } else {
       generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
@@ -67,16 +60,16 @@ export default function NewPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: generatedPrimaryPhotoUrl, // This is now an IDB key or placeholder
-      photos: generatedPrimaryPhotoUrl && finalPhotoIdForStorage // Only add to photos array if it was actually stored in IDB
+      primaryPhotoUrl: generatedPrimaryPhotoUrl,
+      photos: generatedPrimaryPhotoUrl && finalPhotoIdForStorage
         ? [{
-            id: finalPhotoIdForStorage, // Use the same ID as the primary photo for this initial entry
+            id: finalPhotoIdForStorage,
             url: finalPhotoIdForStorage, // Store IDB key
             dateTaken: new Date().toISOString(),
             healthCondition: data.healthCondition,
             diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),
           }]
-        : [], // Empty array if no photo was successfully processed for IDB
+        : [],
       careTasks: [],
       plantingDate: new Date().toISOString(),
       lastCaredDate: undefined,

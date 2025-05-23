@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
+import { addImage, dataURLtoBlob } from '@/lib/idb-helper';
 
 export default function EditPlantPage() {
   const router = useRouter();
@@ -57,45 +58,59 @@ export default function EditPlantPage() {
     setIsSaving(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    let finalPrimaryPhotoUrl: string;
+    let finalPrimaryPhotoId: string | undefined = plant.primaryPhotoUrl;
     let updatedPhotos = [...plant.photos];
 
     if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      // New image uploaded via form, replace data URL with placeholder
-      finalPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
-      // Add this new placeholder to gallery if it's truly a new image (not just a re-selection causing a data URL)
-      // This logic assumes diagnosedPhotoDataUrl becomes a data URL ONLY IF a new file was selected via the "primaryPhoto" FileList input
-      if (data.primaryPhoto && data.primaryPhoto[0]) { // Check if a new file was actually selected
-         const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === finalPrimaryPhotoUrl); // Unlikely to match placeholder
-          if (existingPhotoIndex === -1) { 
+      // New image uploaded via form
+      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
+      if (blob) {
+        const newPhotoId = `photo-${plant.id}-edited-${Date.now()}`;
+        try {
+          await addImage(newPhotoId, blob);
+          finalPrimaryPhotoId = newPhotoId;
+          // Add new photo to gallery if it's truly new (not just re-selection of same image data)
+          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPhotoId);
+          if (existingPhotoIndex === -1) {
             updatedPhotos.unshift({ 
-              id: `p-${plant.id}-new-${Date.now()}`,
-              url: finalPrimaryPhotoUrl, // Save placeholder URL
+              id: newPhotoId,
+              url: newPhotoId, // Store IDB key
               dateTaken: new Date().toISOString(),
-              healthCondition: data.healthCondition,
+              healthCondition: data.healthCondition, // Use form's health condition
               diagnosisNotes: "Primary photo updated via edit form (new upload)."
             });
           }
+        } catch (e) {
+          console.error("Error saving edited primary photo to IDB:", e);
+          toast({ title: t('common.error'), description: "Failed to save updated image.", variant: "destructive" });
+          // Keep existing finalPrimaryPhotoId
+        }
+      } else {
+        toast({ title: t('common.error'), description: "Failed to process updated image.", variant: "destructive" });
       }
-    } else if (data.diagnosedPhotoDataUrl) {
-      // Existing placeholder or gallery selection
-      finalPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
-    } else {
-      // No photo selected, or old one removed and no new one. Use a generic placeholder.
-      finalPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+    } else if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl !== plant.primaryPhotoUrl) {
+      // Existing gallery photo selected or placeholder selected
+      finalPrimaryPhotoId = data.diagnosedPhotoDataUrl;
     }
+    // If data.diagnosedPhotoDataUrl is same as plant.primaryPhotoUrl, no change to finalPrimaryPhotoId needed
+    // If data.diagnosedPhotoDataUrl is null/empty (meaning photo was removed without replacement),
+    // finalPrimaryPhotoId will keep its current value (the old primary photo id).
+    // If you want to allow removing the primary photo to set it to a generic placeholder:
+    // if (!data.diagnosedPhotoDataUrl) {
+    //   finalPrimaryPhotoId = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+    // }
     
     const updatedPlantData: Plant = {
       ...plant,
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
-      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
+      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPrimaryPhotoUrl, 
+      primaryPhotoUrl: finalPrimaryPhotoId, 
       photos: updatedPhotos,
     };
   

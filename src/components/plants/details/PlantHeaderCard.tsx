@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid, format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -44,7 +46,6 @@ const getCaredForDuration = (plantingDate?: string, t?: (key: string, replacemen
   if (months > 0) return t('plantDetail.headerCard.durationMonths', { count: months });
 
   const days = differenceInDays(now, startDate);
-  // Ensure days is not negative if plantingDate is in the future, although unlikely for "cared for"
   if (days >= 0) return t('plantDetail.headerCard.durationDays', { count: days }); 
 
   return null;
@@ -55,7 +56,6 @@ const formatDateSimple = (dateString?: string, t?: (key: string) => string) => {
     try {
       return format(parseISO(dateString), 'MMM d, yyyy');
     } catch (error) {
-      console.error("Error parsing date for formatDateSimple:", dateString, error);
       return t ? t('common.error') : 'Invalid Date';
     }
 };
@@ -69,8 +69,11 @@ export function PlantHeaderCard({
   const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const caredForDuration = getCaredForDuration(plant.plantingDate, t);
+  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useIndexedDbImage(plant.primaryPhotoUrl);
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
+  const displayPrimaryImageUrl = primaryImageUrl || `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName)}`;
+  const displayDialogImageUrl = primaryImageUrl || `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName)}`;
 
 
   return (
@@ -79,15 +82,22 @@ export function PlantHeaderCard({
         <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
           <DialogTrigger asChild>
             <div className="aspect-video w-full overflow-hidden bg-muted cursor-pointer group relative">
-              <Image
-                src={plant.primaryPhotoUrl || 'https://placehold.co/800x450.png'}
-                alt={plant.commonName}
-                width={800}
-                height={450}
-                className="object-cover w-full h-full"
-                data-ai-hint="plant detail"
-                priority
-              />
+              {isLoadingPrimaryImage ? (
+                <Skeleton className="w-full h-full" />
+              ) : primaryImageError ? (
+                <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">Image Error</div>
+              ) : (
+                <Image
+                  src={displayPrimaryImageUrl}
+                  alt={plant.commonName}
+                  width={800}
+                  height={450}
+                  className="object-cover w-full h-full"
+                  data-ai-hint="plant detail"
+                  priority
+                  onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
+                />
+              )}
               <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none">
                 <div className="flex items-center gap-2 mb-1">
                     <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
@@ -105,23 +115,30 @@ export function PlantHeaderCard({
                   <p className="text-lg text-gray-200 italic drop-shadow-md">{plant.scientificName}</p>
                 )}
               </div>
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Expand className="h-12 w-12 text-white" />
-              </div>
+              {!isLoadingPrimaryImage && primaryImageUrl && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Expand className="h-12 w-12 text-white" />
+                </div>
+              )}
             </div>
           </DialogTrigger>
           <DialogContent className="max-w-3xl p-2 sm:p-4">
             <DialogHeader className="sr-only">
               <DialogTitle>{t('plantDetail.headerCard.fullSizePhotoTitle', { plantName: plant.commonName })}</DialogTitle>
             </DialogHeader>
-            <Image
-              src={plant.primaryPhotoUrl || 'https://placehold.co/1200x675.png'}
-              alt={t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix', { plantName: plant.commonName })}
-              width={1200}
-              height={675}
-              className="rounded-md object-contain max-h-[80vh] w-full"
-              data-ai-hint="plant detail"
-            />
+            {isLoadingPrimaryImage ? (
+               <Skeleton className="w-full h-[80vh] rounded-md" />
+            ) : (
+              <Image
+                src={displayDialogImageUrl}
+                alt={t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix', { plantName: plant.commonName })}
+                width={1200}
+                height={675}
+                className="rounded-md object-contain max-h-[80vh] w-full"
+                data-ai-hint="plant detail"
+                onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
+              />
+            )}
             <DialogClose asChild>
               <Button variant="outline" className="absolute top-4 right-4 sm:hidden">{t('common.close')}</Button>
             </DialogClose>

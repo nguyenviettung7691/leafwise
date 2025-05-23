@@ -4,15 +4,15 @@ import type { Plant, CareTask } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3, ImageOff } from 'lucide-react'; // Added ImageOff
+import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3, ImageOff } from 'lucide-react';
 import { format, parseISO, differenceInDays, Locale, isToday as fnsIsToday } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlantCardProps {
   plant: Plant;
@@ -42,7 +42,11 @@ const getNextUpcomingTask = (tasks: CareTask[]): CareTask | null => {
   const upcomingTasks = tasks
     .filter(task => !task.isPaused && task.nextDueDate)
     .map(task => ({ ...task, nextDueDateObj: parseISO(task.nextDueDate!) }))
-    .filter(task => task.nextDueDateObj >= new Date(new Date().setHours(0,0,0,0)) )
+    .filter(task => {
+      try {
+        return task.nextDueDateObj >= new Date(new Date().setHours(0,0,0,0));
+      } catch (e) { return false; }
+    })
     .sort((a, b) => a.nextDueDateObj.getTime() - b.nextDueDateObj.getTime());
 
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
@@ -69,7 +73,6 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
     try {
       return format(parseISO(dateString), 'MMM d, yyyy', { locale });
     } catch (error) {
-      // console.error("Error parsing date for formatDateSimple:", dateString, error); // Optional: log error
       return t ? t('common.error') : 'Invalid Date';
     }
 };
@@ -98,8 +101,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
   };
 
   const healthConditionText = t(`common.${plant.healthCondition}`);
-
-  const imageToDisplay = imageUrl || 'https://placehold.co/400x300.png';
+  const imageToDisplay = imageUrl || `https://placehold.co/400x300.png?text=${encodeURIComponent(plant.commonName)}`;
 
 
   return (
@@ -139,10 +141,10 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
             <div className="aspect-[4/3] w-full overflow-hidden bg-muted flex items-center justify-center">
               {isLoadingImage ? (
                 <Skeleton className="h-full w-full" />
-              ) : imageError || !imageUrl || imageUrl.includes('placehold.co') ? (
+              ) : imageError || !imageUrl ? (
                  <div className="flex flex-col items-center justify-center text-muted-foreground h-full w-full">
                     <ImageOff size={48} className="mb-2"/>
-                    <span className="text-xs">{plant.primaryPhotoUrl ? t('plantCard.imageError') : t('plantCard.noImage')}</span>
+                    <span className="text-xs">{plant.primaryPhotoUrl && imageError ? t('plantCard.imageError') : t('plantCard.noImage')}</span>
                  </div>
               ) : (
                 <Image
@@ -153,8 +155,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
                   className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint="plant nature"
                   onError={(e) => {
-                    // Fallback if image from object URL fails
-                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x300.png?text=Error';
+                    (e.target as HTMLImageElement).src = `https://placehold.co/400x300.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;
                   }}
                 />
               )}
@@ -203,4 +204,3 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
     </div>
   );
 }
-

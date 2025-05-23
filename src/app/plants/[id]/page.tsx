@@ -41,6 +41,7 @@ import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-upd
 import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
+import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -57,45 +58,44 @@ const transformCareTaskToFormData = (task: CareTask, t: Function): CarePlanTaskF
     startDate: task.nextDueDate || new Date().toISOString(),
   };
 
-  const freqLower = task.frequency.toLowerCase(); // Use original English frequency string
+  const freqLower = task.frequency.toLowerCase();
   
-  // Match English structured frequency strings
-  if (freqLower === 'ad-hoc' || freqLower === 'as needed') formData.frequencyMode = 'adhoc';
-  else if (freqLower === 'daily') formData.frequencyMode = 'daily';
-  else if (freqLower === 'weekly') formData.frequencyMode = 'weekly';
-  else if (freqLower === 'monthly') formData.frequencyMode = 'monthly';
-  else if (freqLower === 'yearly') formData.frequencyMode = 'yearly';
+  if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) formData.frequencyMode = 'adhoc';
+  else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) formData.frequencyMode = 'daily';
+  else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) formData.frequencyMode = 'weekly';
+  else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
+  else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
   else {
-    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/);
+    const everyXDaysMatch = freqLower.match(/every (\d+) days|mỗi (\d+) ngày/i);
     if (everyXDaysMatch) {
-      formData.frequencyValue = parseInt(everyXDaysMatch[1], 10);
+      formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
       formData.frequencyMode = 'every_x_days';
     } else {
-      const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/);
+      const everyXWeeksMatch = freqLower.match(/every (\d+) weeks|mỗi (\d+) tuần/i);
       if (everyXWeeksMatch) {
-        formData.frequencyValue = parseInt(everyXWeeksMatch[1], 10);
+        formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
         formData.frequencyMode = 'every_x_weeks';
       } else {
-        const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/);
+        const everyXMonthsMatch = freqLower.match(/every (\d+) months|mỗi (\d+) tháng/i);
         if (everyXMonthsMatch) {
-          formData.frequencyValue = parseInt(everyXMonthsMatch[1], 10);
+          formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
           formData.frequencyMode = 'every_x_months';
         } else {
-          formData.frequencyMode = 'adhoc'; // Fallback
+          formData.frequencyMode = 'adhoc'; 
           console.warn(`Could not parse frequency for edit form: "${task.frequency}"`);
         }
       }
     }
   }
 
-  if (task.timeOfDay && task.timeOfDay.toLowerCase() === 'all day') {
+  if (task.timeOfDay && (task.timeOfDay.toLowerCase() === 'all day' || task.timeOfDay.toLowerCase() === t('carePlanTaskForm.timeOfDayOptionAllDay').toLowerCase())) {
     formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
     formData.timeOfDayOption = 'specific_time';
     formData.specificTime = task.timeOfDay;
   } else {
-    formData.timeOfDayOption = 'all_day'; // Default if unparseable
+    formData.timeOfDayOption = 'all_day';
     formData.specificTime = '';
   }
 
@@ -109,7 +109,7 @@ export default function PlantDetailPage() {
   const { toast } = useToast();
   const { t, language, dateFnsLocale } = useLanguage();
   const id = params.id as string;
-  const { plants: contextPlants, getPlantById, updatePlant, deletePlant } = usePlantData();
+  const { plants: contextPlants, getPlantById, updatePlant, deletePlant: deletePlantFromContext } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -159,14 +159,13 @@ export default function PlantDetailPage() {
     if (id) {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
-        const plantCopy = JSON.parse(JSON.stringify(foundPlant));
-        setPlant(plantCopy);
-      } else if (!isLoadingPage) { 
+        setPlant(JSON.parse(JSON.stringify(foundPlant))); // Deep copy
+      } else if (!isLoadingPage && !foundPlant) { 
         notFound();
       }
     }
     setIsLoadingPage(false);
-  }, [id, getPlantById, contextPlants, isLoadingPage]);
+  }, [id, getPlantById, contextPlants, isLoadingPage]); // Ensure contextPlants re-triggers this
 
 
  const handleToggleTaskPause = async (taskId: string) => {
@@ -187,7 +186,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Local state update will be triggered by context change
+    // setPlant(updatedPlant); // UI updates via context now
 
     setLoadingTaskId(null);
 
@@ -205,9 +204,19 @@ export default function PlantDetailPage() {
   const handleDeletePlant = async () => {
     if (!plant) return;
     setIsDeleting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Delete associated images from IndexedDB
+    for (const photo of plant.photos) {
+      try {
+        await deleteImage(photo.url); // Assuming photo.url is the IDB key
+      } catch (e) {
+        console.error(`Failed to delete image ${photo.url} from IDB:`, e);
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
     const plantNameForToast = plant.commonName || t('common.thePlant');
-    deletePlant(id);
+    deletePlantFromContext(id); // Use context function
     toast({
       title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
       description: t('plantDetail.toasts.plantDeletedDesc', {plantName: plantNameForToast}),
@@ -285,8 +294,8 @@ export default function PlantDetailPage() {
                   id: ct.id,
                   name: ct.name,
                   description: ct.description,
-                  frequency: ct.frequency, // This is the English structured string
-                  timeOfDay: ct.timeOfDay, // This is the English structured string
+                  frequency: ct.frequency,
+                  timeOfDay: ct.timeOfDay,
                   isPaused: ct.isPaused,
                   level: ct.level,
                 })),
@@ -315,23 +324,36 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Context update will trigger re-render
     toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
     setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}));
   };
 
-  const addPhotoToJournal = () => {
+  const addPhotoToJournal = async () => {
     if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoPreviewUrl) return;
 
     const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.isHealthy ? 'healthy' :
                                    (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
                                     newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
 
-    const finalPhotoUrl = `https://placehold.co/400x400.png?text=${encodeURIComponent(plant.commonName + ' journal ' + Date.now().toString().slice(-4))}`;
+    let photoIdbKey: string | undefined = undefined;
+    const blob = dataURLtoBlob(newPhotoDiagnosisDialogState.newPhotoPreviewUrl);
+    if (blob) {
+        photoIdbKey = `photo-${plant.id}-journal-${Date.now()}`;
+        try {
+            await addImage(photoIdbKey, blob);
+        } catch (e) {
+            console.error("Error saving journal photo to IDB:", e);
+            toast({ title: t('common.error'), description: "Failed to save journal image.", variant: "destructive" });
+            photoIdbKey = `https://placehold.co/400x400.png?text=${encodeURIComponent(plant.commonName + ' journal ' + Date.now().toString().slice(-4))}`; // Fallback
+        }
+    } else {
+        toast({ title: t('common.error'), description: "Failed to process journal image.", variant: "destructive" });
+        photoIdbKey = `https://placehold.co/400x400.png?text=${encodeURIComponent(plant.commonName + ' journal ' + Date.now().toString().slice(-4))}`;
+    }
 
     const newPhoto: PlantPhoto = {
-        id: `p-${plant.id}-photo-${Date.now()}`,
-        url: finalPhotoUrl, // Use placeholder URL
+        id: photoIdbKey, // Use the IDB key as the photo's ID as well for consistency
+        url: photoIdbKey, // Store IDB key
         dateTaken: new Date().toISOString(),
         healthCondition: newHealthStatusFromDiagnosis,
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
@@ -340,7 +362,6 @@ export default function PlantDetailPage() {
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Context update
 
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
     setNewPhotoJournaled(true);
@@ -353,6 +374,7 @@ export default function PlantDetailPage() {
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
   
+    // Handle English structured strings (from AI or direct input)
     if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
     if (freqLower === 'daily') return addDays(now, 1).toISOString();
     if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
@@ -397,9 +419,10 @@ export default function PlantDetailPage() {
                 break;
             case 'remove':
                 updatedCareTasks = updatedCareTasks.filter(t => t.id !== mod.taskId);
-                return; // Skip to next modification
+                return; 
             case 'update_details':
                 if (mod.updatedDetails) {
+                    const oldFrequency = taskToUpdate.frequency;
                     taskToUpdate = {
                         ...taskToUpdate,
                         name: mod.updatedDetails.name || taskToUpdate.name,
@@ -408,8 +431,7 @@ export default function PlantDetailPage() {
                         timeOfDay: mod.updatedDetails.timeOfDay || taskToUpdate.timeOfDay,
                         level: mod.updatedDetails.level || taskToUpdate.level,
                     };
-                    // Recalculate nextDueDate if frequency changed, using the task's current nextDueDate as a base if it exists, or today
-                    if (mod.updatedDetails.frequency) {
+                    if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
                          taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, taskToUpdate.nextDueDate || new Date().toISOString());
                     }
                 }
@@ -417,7 +439,9 @@ export default function PlantDetailPage() {
             default:
                 break;
         }
-        updatedCareTasks[taskIndex] = taskToUpdate;
+        if (updatedCareTasks.some(t => t.id === mod.taskId)) { // Check if task wasn't removed
+            updatedCareTasks[taskIndex] = taskToUpdate;
+        }
     });
 
     newTasks.forEach(aiTask => {
@@ -426,8 +450,8 @@ export default function PlantDetailPage() {
             plantId: plant.id,
             name: aiTask.taskName,
             description: aiTask.taskDescription,
-            frequency: aiTask.suggestedFrequency, // English structured string
-            timeOfDay: aiTask.suggestedTimeOfDay, // English structured string
+            frequency: aiTask.suggestedFrequency,
+            timeOfDay: aiTask.suggestedTimeOfDay,
             level: aiTask.taskLevel,
             isPaused: false,
             nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
@@ -436,7 +460,6 @@ export default function PlantDetailPage() {
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Context update
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
@@ -454,14 +477,13 @@ export default function PlantDetailPage() {
   };
   const closeGridPhotoDialog = () => {
     setIsGridPhotoDialogVisible(false);
-    setTimeout(() => setSelectedGridPhoto(null), 300); // Delay to allow fade out
+    setTimeout(() => setSelectedGridPhoto(null), 300);
   };
 
   const handleSetAsPrimaryPhoto = (photoUrl: string) => {
     if (!plant) return;
     const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Context update
     toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
     closeGridPhotoDialog();
   };
@@ -479,11 +501,11 @@ export default function PlantDetailPage() {
             t.id === taskToEdit.id ? {
                 ...t,
                 name: taskData.name,
-                description: taskData.description, // Save description
-                frequency: taskData.frequency, // English structured string
-                timeOfDay: taskData.timeOfDay, // English structured string
+                description: taskData.description,
+                frequency: taskData.frequency,
+                timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
-                nextDueDate: taskData.startDate, // This is the new base due date
+                nextDueDate: taskData.startDate,
             } : t
         );
         toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
@@ -492,12 +514,12 @@ export default function PlantDetailPage() {
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             plantId: plant.id,
             name: taskData.name,
-            description: taskData.description, // Save description
-            frequency: taskData.frequency, // English structured string
-            timeOfDay: taskData.timeOfDay, // English structured string
+            description: taskData.description,
+            frequency: taskData.frequency,
+            timeOfDay: taskData.timeOfDay,
             level: taskData.level,
             isPaused: false,
-            nextDueDate: taskData.startDate, // This is the first due date
+            nextDueDate: taskData.startDate,
         };
         updatedTasks = [...currentTasks, newTask];
         toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
@@ -505,7 +527,6 @@ export default function PlantDetailPage() {
 
     const newPlantState = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, newPlantState);
-    // setPlant(newPlantState); // Context update
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -541,7 +562,6 @@ export default function PlantDetailPage() {
     const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
     const newPlantState = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, newPlantState);
-    // setPlant(newPlantState); // Context update
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
@@ -581,25 +601,31 @@ export default function PlantDetailPage() {
     });
   }, []);
 
-  const handleDeleteSelectedPhotosConfirm = () => {
+  const handleDeleteSelectedPhotosConfirm = async () => {
     if (!plant || selectedPhotoIds.size === 0) return;
-
+  
+    const photoIdsToDelete = Array.from(selectedPhotoIds);
+    for (const photoId of photoIdsToDelete) {
+      // Assuming photo.url (which is an IDB key) is the same as photo.id for IDB stored images
+      await deleteImage(photoId);
+    }
+  
     let updatedPhotos = (plant.photos || []).filter(p => !selectedPhotoIds.has(p.id));
     let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
-
-    if (plant.primaryPhotoUrl && selectedPhotoIds.has((plant.photos.find(p => p.url === plant.primaryPhotoUrl)?.id || ''))) {
+  
+    if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.primaryPhotoUrl)) { // Check if primary photo ID is in selectedPhotoIds
       if (updatedPhotos.length > 0) {
         const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url;
+        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url; // url is the IDB key
       } else {
+        // If all photos are deleted, generate a placeholder or set to undefined
         newPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(plant.commonName || 'Plant')}`;
       }
     }
-
+  
     const newPlantState = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
     updatePlant(plant.id, newPlantState);
-    // setPlant(newPlantState); // Context update
-
+  
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
     setIsManagingPhotos(false);
@@ -654,7 +680,6 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // Context update
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
@@ -726,7 +751,8 @@ export default function PlantDetailPage() {
           selectedPhotoIds={selectedPhotoIds}
           onTogglePhotoSelection={handleTogglePhotoSelection}
           onDeleteSelectedPhotos={() => {
-            setIsPrimaryPhotoSelectedForDeletion(plant.primaryPhotoUrl ? selectedPhotoIds.has((plant.photos || []).find(p => p.url === plant.primaryPhotoUrl)?.id || '') : false);
+            const primaryPhotoIsSelected = plant.primaryPhotoUrl ? selectedPhotoIds.has(plant.primaryPhotoUrl) : false;
+            setIsPrimaryPhotoSelectedForDeletion(primaryPhotoIsSelected);
             setShowDeletePhotosDialog(true);
           }}
           onOpenEditPhotoDialog={handleOpenEditPhotoDialog}

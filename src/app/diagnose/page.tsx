@@ -18,6 +18,7 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
+import { addImage, dataURLtoBlob } from '@/lib/idb-helper';
 
 export default function DiagnosePlantPage() {
   const { addPlant, updatePlant, getPlantById } = usePlantData();
@@ -47,7 +48,7 @@ export default function DiagnosePlantPage() {
 
   const calculateNextDueDate = (frequency: string, startDate?: string): string | undefined => {
     const baseDate = startDate ? parseISO(startDate) : new Date();
-    const now = new Date(baseDate); // Use provided startDate or today as base
+    const now = new Date(baseDate);
   
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
@@ -89,7 +90,6 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear previous results but not the file itself yet
     setDiagnosisResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
@@ -98,7 +98,6 @@ export default function DiagnosePlantPage() {
     setCarePlanResult(null);
     setCarePlanError(null);
     setGeneratedPlanMode(null);
-    // Do not reset description here, user might want to keep it for a new image
 
     const selectedFile = event.target.files?.[0];
 
@@ -109,21 +108,20 @@ export default function DiagnosePlantPage() {
           title: t('diagnosePage.toasts.imageTooLargeTitle'),
           description: t('diagnosePage.toasts.imageTooLargeDesc'),
         });
-        setFile(null); // Clear the invalid file
-        setPreviewUrl(null); // Clear preview for invalid file
+        setFile(null);
+        setPreviewUrl(null);
         if (fileInputRef.current) {
-          fileInputRef.current.value = ''; // Reset the file input field
+          fileInputRef.current.value = '';
         }
         return;
       }
-      setFile(selectedFile); // Set the new valid file
+      setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewUrl(reader.result as string); // Set preview for the new valid file
+        setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(selectedFile);
     } else {
-      // If no file is selected (e.g., user cancelled dialog), clear file and preview
       setFile(null);
       setPreviewUrl(null);
     }
@@ -185,16 +183,30 @@ export default function DiagnosePlantPage() {
     setIsSavingPlant(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const newPlantId = `mock-plant-${Date.now()}`;
-    let finalPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
-    let initialPhotoDataUrl = data.diagnosedPhotoDataUrl;
+    const newPlantId = `plant-${Date.now()}`;
+    let finalPhotoIdForStorage: string | undefined = undefined;
+    let generatedPrimaryPhotoUrl: string | undefined = undefined;
 
-    if (data.primaryPhoto && data.primaryPhoto[0]) {
-      // If new file uploaded, it's already a data URL in diagnosedPhotoDataUrl via SavePlantForm
-      initialPhotoDataUrl = data.diagnosedPhotoDataUrl; 
-    } else if (data.diagnosedPhotoDataUrl && !data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      // If it's an existing placeholder or gallery URL, keep it for placeholder generation
-      // No, this logic is flawed, placeholder is always new from commonName for saving
+    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
+      if (blob) {
+        finalPhotoIdForStorage = `photo-${newPlantId}-initial-${Date.now()}`;
+        try {
+          await addImage(finalPhotoIdForStorage, blob);
+          generatedPrimaryPhotoUrl = finalPhotoIdForStorage;
+        } catch (e) {
+          console.error("Error saving initial diagnosis image to IDB:", e);
+          toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
+          generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+        }
+      } else {
+        toast({ title: t('common.error'), description: "Failed to process initial plant image.", variant: "destructive" });
+        generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+      }
+    } else if (data.diagnosedPhotoDataUrl) { // Assumed to be an existing IDB key or placeholder
+      generatedPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
+    } else {
+      generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
     }
     
     const newPlant: Plant = {
@@ -207,14 +219,16 @@ export default function DiagnosePlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPhotoUrl, // Always use placeholder for storage
-      photos: [{
-        id: `p-${newPlantId}-initial-${Date.now()}`,
-        url: finalPhotoUrl, // Store placeholder URL
-        dateTaken: new Date().toISOString(),
-        healthCondition: data.healthCondition,
-        diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
-      }],
+      primaryPhotoUrl: generatedPrimaryPhotoUrl, 
+      photos: generatedPrimaryPhotoUrl && finalPhotoIdForStorage
+        ? [{
+            id: finalPhotoIdForStorage,
+            url: finalPhotoIdForStorage, // Store IDB key
+            dateTaken: new Date().toISOString(),
+            healthCondition: data.healthCondition,
+            diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
+          }]
+        : [],
       careTasks: [],
       plantingDate: new Date().toISOString(),
       lastCaredDate: undefined,
@@ -287,12 +301,12 @@ export default function DiagnosePlantPage() {
     const newCareTasks: CareTask[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
       id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       plantId: lastSavedPlantId,
-      name: aiTask.taskName, // This will be in the AI's language (e.g., Vietnamese if languageCode='vi')
-      description: aiTask.taskDescription, // Also in AI's language
-      frequency: aiTask.suggestedFrequency, // English structured string, e.g., "Daily", "Every 3 Days"
-      timeOfDay: aiTask.suggestedTimeOfDay, // English structured string, e.g., "09:00", "All day"
+      name: aiTask.taskName,
+      description: aiTask.taskDescription,
+      frequency: aiTask.suggestedFrequency,
+      timeOfDay: aiTask.suggestedTimeOfDay,
       isPaused: false,
-      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency, new Date().toISOString()), // Use current date as base for first due date
+      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency, new Date().toISOString()),
       level: aiTask.taskLevel,
     }));
 
@@ -364,6 +378,7 @@ export default function DiagnosePlantPage() {
             formTitle={t('diagnosePage.resultDisplay.saveFormTitle')}
             formDescription={t('diagnosePage.resultDisplay.saveFormDescription', { plantName: diagnosisResult.identification.commonName || t('common.unknown')})}
             submitButtonText={t('diagnosePage.resultDisplay.saveFormSubmitButton')}
+            hideInternalHeader={false}
           />
         )}
 
