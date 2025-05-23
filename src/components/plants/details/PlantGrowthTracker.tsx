@@ -3,12 +3,12 @@
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
 import React, { useMemo } from 'react';
-import NextImage from 'next/image'; 
+import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
@@ -67,7 +67,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
       return t('common.error');
     }
   };
-  
+
   const imageSrc = imageUrl || `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName)}`;
 
   return (
@@ -85,21 +85,21 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
       {isManagingPhotos && (
         <div className="absolute top-1.5 right-1.5 z-10 p-0.5 flex items-center gap-1">
           <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-1 bg-card/70 hover:bg-card/90 rounded-full"
-              onClick={(e) => { e.stopPropagation(); onOpenEditDialog(photo); }}
-              aria-label={t('plantDetail.growthTracker.editPhotoDetailsAriaLabel')}
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-1 bg-card/70 hover:bg-card/90 rounded-full"
+            onClick={(e) => { e.stopPropagation(); onOpenEditDialog(photo); }}
+            aria-label={t('plantDetail.growthTracker.editPhotoDetailsAriaLabel')}
           >
-              <Edit3 className="h-3.5 w-3.5 text-foreground/80" />
+            <Edit3 className="h-3.5 w-3.5 text-foreground/80" />
           </Button>
           <Checkbox
             checked={isSelected}
             onCheckedChange={(e) => {
-                onToggleSelection(photo.id);
+              onToggleSelection(photo.id);
             }}
-            onClick={(e) => e.stopPropagation()} 
-            aria-label={t('plantDetail.growthTracker.selectPhotoAriaLabel', {date: formatDateForGallery(photo.dateTaken)})}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={t('plantDetail.growthTracker.selectPhotoAriaLabel', { date: formatDateForGallery(photo.dateTaken) })}
             className="h-5 w-5 bg-card/70 rounded-sm"
           />
         </div>
@@ -108,7 +108,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-               <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
+              <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
                 <BookmarkCheck className="h-3.5 w-3.5" />
               </div>
             </TooltipTrigger>
@@ -135,24 +135,24 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
             isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
           )}
           data-ai-hint="plant growth"
-          onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`;}}
+          onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`; }}
         />
       )}
-       {!isManagingPhotos && !isLoadingImage && imageUrl && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-               onClick={(e) => {
-                  if (!isManagingPhotos) {
-                    e.stopPropagation(); 
-                    onPhotoClick(photo);
-                  }
-               }}
-          >
-              <span className="text-white text-xs font-semibold">{t('plantDetail.growthTracker.viewDetails')}</span>
-          </div>
+      {!isManagingPhotos && !isLoadingImage && imageUrl && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          onClick={(e) => {
+            if (!isManagingPhotos) {
+              e.stopPropagation();
+              onPhotoClick(photo);
+            }
+          }}
+        >
+          <span className="text-white text-xs font-semibold">{t('plantDetail.growthTracker.viewDetails')}</span>
+        </div>
       )}
-       <div className={cn(
-          "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
-           isManagingPhotos && isSelected ? 'opacity-75' : ''
+      <div className={cn(
+        "absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-2 pointer-events-none flex flex-col items-center text-center",
+        isManagingPhotos && isSelected ? 'opacity-75' : ''
       )}>
         <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p>
         <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
@@ -205,7 +205,7 @@ export function PlantGrowthTracker({
     return [...plant.photos]
       .map(photo => ({
         id: photo.id,
-        photoUrl: photo.url, 
+        photoUrl: photo.url,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy', { locale: dateFnsLocale }),
         originalDate: parseISO(photo.dateTaken),
         health: healthScoreMapping[photo.healthCondition],
@@ -251,7 +251,7 @@ export function PlantGrowthTracker({
                 onClick={onDeleteSelectedPhotos}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                {t('plantDetail.growthTracker.deleteSelectedButton', {count: selectedPhotoIds.size})}
+                {t('plantDetail.growthTracker.deleteSelectedButton', { count: selectedPhotoIds.size })}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
@@ -282,19 +282,19 @@ export function PlantGrowthTracker({
         <CardContent>
           <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4")}>
             {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
-                sortedPhotosForGallery.map(photo => (
-                  <GalleryPhotoItem
-                    key={photo.id}
-                    photo={photo}
-                    isPrimary={plant.primaryPhotoUrl === photo.url}
-                    isSelected={selectedPhotoIds.has(photo.id)}
-                    isManagingPhotos={isManagingPhotos}
-                    plantCommonName={plant.commonName}
-                    onPhotoClick={onOpenGridPhotoDialog}
-                    onToggleSelection={onTogglePhotoSelection}
-                    onOpenEditDialog={onOpenEditPhotoDialog}
-                  />
-                ))
+              sortedPhotosForGallery.map(photo => (
+                <GalleryPhotoItem
+                  key={photo.id}
+                  photo={photo}
+                  isPrimary={plant.primaryPhotoUrl === photo.url}
+                  isSelected={selectedPhotoIds.has(photo.id)}
+                  isManagingPhotos={isManagingPhotos}
+                  plantCommonName={plant.commonName}
+                  onPhotoClick={onOpenGridPhotoDialog}
+                  onToggleSelection={onTogglePhotoSelection}
+                  onOpenEditDialog={onOpenEditPhotoDialog}
+                />
+              ))
             ) : (
               <p className="text-muted-foreground text-center py-4 col-span-full">{t('plantDetail.growthTracker.noPhotos')}</p>
             )}
@@ -302,9 +302,12 @@ export function PlantGrowthTracker({
         </CardContent>
       </Card>
 
-      <div className={cn(isManagingPhotos ? "filter blur-sm opacity-60 transition-all" : "")}>
-        {chartData.length > 0 && (
-          <Card className="mt-6">
+      {/* Health Trend Chart Section */}
+      {(chartData.length > 0) && (
+          <Card className={cn(
+            "mt-6 transition-all",
+            isManagingPhotos ? "filter blur-sm opacity-60 pointer-events-none" : ""
+          )}>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
@@ -320,8 +323,7 @@ export function PlantGrowthTracker({
               />
             </CardContent>
           </Card>
-        )}
-      </div>
+      )}
     </div>
   );
 }
