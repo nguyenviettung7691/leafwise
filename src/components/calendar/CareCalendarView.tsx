@@ -479,19 +479,19 @@ export function CareCalendarView({
                                 </div>
                                 <div className="flex-grow flex flex-col space-y-0.5 overflow-hidden text-[9px] leading-tight pt-4">
                                     {dayTasksAllDay.length > 0 && (
-                                        <div className={cn("p-0.5 rounded-sm mb-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
+                                        <div className={cn("p-0.5 rounded-sm mb-0.5 calendar-day-cell-tasks overflow-y-auto", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
                                         </div>
                                     )}
 
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto",
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px calendar-day-cell-tasks overflow-y-auto",
                                         isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px overflow-y-auto",
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px calendar-day-cell-tasks overflow-y-auto",
                                         isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
@@ -508,3 +508,4 @@ export function CareCalendarView({
     </Card>
   );
 }
+
