@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle } from 'lucide-react';
-import { useState, useEffect, FormEvent, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, type FormEvent, useRef, type ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,11 +28,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useRouter } from 'next/navigation';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Import PlantDataContext
+import { usePlantData } from '@/contexts/PlantDataContext';
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
-  const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData(); // Use PlantDataContext
+  const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
 
@@ -57,23 +57,22 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      // For avatar preview, if there's an existing URL and no edit is in progress
       if (!editedAvatarPreviewUrl && authUser.avatarUrl) {
         setEditedAvatarPreviewUrl(authUser.avatarUrl);
       }
     }
-  }, [authUser, editedAvatarPreviewUrl]); // Add editedAvatarPreviewUrl to dependencies
+  }, [authUser, editedAvatarPreviewUrl]);
 
   const handleEditToggle = () => {
-    if (isEditing) { // When cancelling edit
+    if (isEditing) {
       if (authUser) {
         setEditedName(authUser.name);
-        setEditedAvatarPreviewUrl(authUser.avatarUrl || null); // Reset preview to original avatar
+        setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
       }
-      setEditedAvatarFile(null); // Clear any staged file
-    } else { // When starting edit
+      setEditedAvatarFile(null);
+    } else {
         if (authUser) {
-            setEditedAvatarPreviewUrl(authUser.avatarUrl || null); // Set preview to current avatar
+            setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
         }
     }
     setIsEditing(!isEditing);
@@ -89,7 +88,6 @@ export default function ProfilePage() {
           description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
         setEditedAvatarFile(null);
-        // Do not reset preview URL here, keep the current one if upload fails
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         return;
       }
@@ -99,8 +97,6 @@ export default function ProfilePage() {
         setEditedAvatarPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
-    } else {
-      // If no file selected, don't clear file or preview, let it be the existing state or previous selection
     }
   };
 
@@ -112,19 +108,15 @@ export default function ProfilePage() {
       name: editedName,
     };
 
-    // Only update avatarUrl if a new preview URL is set (meaning a new file was selected or an existing one confirmed)
     if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== user.avatarUrl) {
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
-    } else if (!editedAvatarPreviewUrl && user.avatarUrl) { // If preview was cleared, it implies removing avatar
+    } else if (!editedAvatarPreviewUrl && user.avatarUrl) {
       updatedUserData.avatarUrl = undefined; 
     }
-    // If editedAvatarPreviewUrl is same as user.avatarUrl, no change to avatarUrl needed.
 
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
-      // setEditedAvatarFile(null); // Keep this reset if needed, or rely on useEffect to update preview from authUser
-      // The preview will update via useEffect reacting to authUser change
     } catch (error) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
@@ -159,7 +151,7 @@ export default function ProfilePage() {
     }
     const dataToExport = {
       userProfile: authUser,
-      plants: contextPlants, // Use plants from context
+      plants: contextPlants,
     };
     const jsonString = JSON.stringify(dataToExport, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
@@ -191,11 +183,10 @@ export default function ProfilePage() {
           throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
-        // Destructure to avoid passing id and email directly if updateUser restricts it
         const { id, email, ...profileToUpdate } = importedData.userProfile;
         await updateUser(profileToUpdate);
 
-        setContextPlants(importedData.plants as Plant[]); // Use context function to update plants
+        setContextPlants(importedData.plants as Plant[]);
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
         router.push('/'); 
@@ -224,8 +215,8 @@ export default function ProfilePage() {
     }
     setIsDestroyingData(true);
     
-    clearAllPlantData(); // Use context function to clear plant data
-    await logout(); // This also clears user profile from localStorage
+    await clearAllPlantData(); 
+    await logout(); 
     
     toast({ title: t('profilePage.toasts.destroySuccessTitle'), description: t('profilePage.toasts.destroySuccessDesc'), variant: "destructive" });
     setIsDestroyConfirmOpen(false);
@@ -482,9 +473,11 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-             <AlertDialogDescription className="space-y-3">
-              <div>{t('profilePage.destroyConfirmDescription1')}</div>
-              <div>{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</div>
+            <AlertDialogDescription>
+              {t('profilePage.destroyConfirmDescription1')}
+            </AlertDialogDescription>
+            <AlertDialogDescription>
+              {t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -515,3 +508,4 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
