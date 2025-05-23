@@ -106,7 +106,11 @@ export function CareCalendarView({
     return viewMode === 'week' ? endOfWeek(currentDate, { weekStartsOn }) : endOfMonth(currentDate);
   }, [currentDate, viewMode, weekStartsOn]);
 
-  const daysInWeek = useMemo(() => eachDayOfInterval({ start: currentPeriodStart, end: currentPeriodEnd }), [currentPeriodStart, currentPeriodEnd]);
+  const daysInWeekHeaders = useMemo(() => { // For weekly view header
+    const start = startOfWeek(currentDate, { weekStartsOn });
+    return eachDayOfInterval({ start, end: endOfWeek(start, { weekStartsOn }) });
+  }, [currentDate, weekStartsOn]);
+
 
   const currentMonth = useMemo(() => startOfMonth(currentDate), [currentDate]);
   const daysForMonthGrid = useMemo(() => {
@@ -183,7 +187,7 @@ export function CareCalendarView({
 
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      const maxIterations = viewMode === 'week' ? 100 : 400; // Adjust if needed for very frequent tasks over longer ranges
+      const maxIterations = viewMode === 'week' ? 100 : 400; 
       
       while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < maxIterations ) {
         if (currentOccurrenceForward >= calcRangeStartDate && isActive(task, currentOccurrenceForward)) {
@@ -288,52 +292,73 @@ export function CareCalendarView({
     }
   };
 
-  const dayHeaders = useMemo(() => [
-    { key: "mon", name: t('calendarPage.calendarView.dayHeaders.mon'), isWeekend: false },
-    { key: "tue", name: t('calendarPage.calendarView.dayHeaders.tue'), isWeekend: false },
-    { key: "wed", name: t('calendarPage.calendarView.dayHeaders.wed'), isWeekend: false },
-    { key: "thu", name: t('calendarPage.calendarView.dayHeaders.thu'), isWeekend: false },
-    { key: "fri", name: t('calendarPage.calendarView.dayHeaders.fri'), isWeekend: false },
-    { key: "sat", name: t('calendarPage.calendarView.dayHeaders.sat'), isWeekend: true },
-    { key: "sun", name: t('calendarPage.calendarView.dayHeaders.sun'), isWeekend: true }
-  ], [t]);
+  const dayHeadersStatic = useMemo(() => [
+    { key: "mon", labelKey: 'calendarPage.calendarView.dayHeaders.mon', isWeekend: false },
+    { key: "tue", labelKey: 'calendarPage.calendarView.dayHeaders.tue', isWeekend: false },
+    { key: "wed", labelKey: 'calendarPage.calendarView.dayHeaders.wed', isWeekend: false },
+    { key: "thu", labelKey: 'calendarPage.calendarView.dayHeaders.thu', isWeekend: false },
+    { key: "fri", labelKey: 'calendarPage.calendarView.dayHeaders.fri', isWeekend: false },
+    { key: "sat", labelKey: 'calendarPage.calendarView.dayHeaders.sat', isWeekend: true },
+    { key: "sun", labelKey: 'calendarPage.calendarView.dayHeaders.sun', isWeekend: true }
+  ], []);
 
 
-  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false) => (
-    <TooltipProvider key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()} delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            className={cn(
-              "rounded text-[10px] leading-tight shadow-sm flex items-center",
-              compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
-              occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border"
-            )}
-          >
-            <Avatar className={cn("flex-shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}>
-              <AvatarImage src={occurrence.plantPrimaryPhotoUrl || 'https://placehold.co/40x40.png'} alt={occurrence.plantName} data-ai-hint="plant avatar small"/>
-              <AvatarFallback className={cn("bg-muted", compact ? "text-[7px]" : "text-[8px]")}>{occurrence.plantName.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <span className="font-semibold truncate flex-grow">{occurrence.originalTask.name}</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("p-0 opacity-70 hover:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0 shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}
-              onClick={(e) => { e.stopPropagation(); onTaskAction(occurrence.originalTask, occurrence.plantId);}}
-              aria-label={t('calendarPage.calendarView.taskMarkCompleteAria')}
+  const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false, timeSlotType?: 'daytime' | 'nighttime') => {
+    const getTaskItemStyles = () => {
+      let nameColor = occurrence.originalTask.level === 'advanced' ? "text-primary-foreground" : "text-card-foreground";
+      let iconColorClass = occurrence.originalTask.level === 'advanced' 
+          ? 'text-primary-foreground/80 hover:text-primary-foreground' 
+          : 'text-foreground/70 hover:text-foreground';
+  
+      if (occurrence.originalTask.level === 'basic' && compact && timeSlotType) { // Apply only for compact monthly view basic tasks
+          if (timeSlotType === 'daytime') {
+              nameColor = "text-amber-700 dark:text-amber-400";
+              iconColorClass = "text-amber-700/70 hover:text-amber-700 dark:text-amber-400/70 dark:hover:text-amber-400";
+          } else if (timeSlotType === 'nighttime') {
+              nameColor = "text-sky-700 dark:text-sky-400";
+              iconColorClass = "text-sky-700/70 hover:text-sky-700 dark:text-sky-400/70 dark:hover:text-sky-400";
+          }
+      }
+      return { nameColor, iconColorClass };
+    };
+    const { nameColor, iconColorClass } = getTaskItemStyles();
+
+    return (
+      <TooltipProvider key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()} delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className={cn(
+                "rounded text-[10px] leading-tight shadow-sm flex items-center",
+                compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
+                occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border"
+              )}
             >
-              <Check className={cn(occurrence.originalTask.level === 'advanced' ? 'text-primary-foreground/80 hover:text-primary-foreground' : 'text-foreground/70 hover:text-foreground', compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
-            </Button>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="text-xs">
-          <p className="font-semibold">{t('calendarPage.calendarView.taskTooltipTitle', { plantName: occurrence.plantName, taskName: occurrence.originalTask.name})}</p>
-          <p>{t('calendarPage.calendarView.taskTooltipTime', { time: format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale }) })}</p>
-          {occurrence.originalTask.description && <p className="text-muted-foreground max-w-xs">{t('calendarPage.calendarView.taskTooltipDesc', { description: occurrence.originalTask.description })}</p>}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+              <Avatar className={cn("flex-shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}>
+                <AvatarImage src={occurrence.plantPrimaryPhotoUrl || 'https://placehold.co/40x40.png'} alt={occurrence.plantName} data-ai-hint="plant avatar small"/>
+                <AvatarFallback className={cn("bg-muted", compact ? "text-[7px]" : "text-[8px]")}>{occurrence.plantName.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <span className={cn("font-semibold truncate flex-grow", nameColor)}>{occurrence.originalTask.name}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn("p-0 opacity-70 hover:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0 shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}
+                onClick={(e) => { e.stopPropagation(); onTaskAction(occurrence.originalTask, occurrence.plantId);}}
+                aria-label={t('calendarPage.calendarView.taskMarkCompleteAria')}
+              >
+                <Check className={cn(iconColorClass, compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
+              </Button>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">
+            <p className="font-semibold">{t('calendarPage.calendarView.taskTooltipTitle', { plantName: occurrence.plantName, taskName: occurrence.originalTask.name})}</p>
+            <p>{t('calendarPage.calendarView.taskTooltipTime', { time: format(occurrence.occurrenceDate, 'HH:mm', { locale: dateFnsLocale }) })}</p>
+            {occurrence.originalTask.description && <p className="text-muted-foreground max-w-xs">{t('calendarPage.calendarView.taskTooltipDesc', { description: occurrence.originalTask.description })}</p>}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 
 
   return (
@@ -385,7 +410,7 @@ export function CareCalendarView({
             </div>
             <div className="grid grid-cols-[auto_repeat(7,minmax(120px,1fr))] border-t">
               <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('calendarPage.calendarView.timeColumnHeader')}</div>
-              {daysInWeek.map(day => {
+              {daysInWeekHeaders.map(day => {
                 const dayOfWeek = getDay(day);
                 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
                 const today = isToday(day);
@@ -413,7 +438,7 @@ export function CareCalendarView({
                         {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
                       </div>
                     </div>
-                    {daysInWeek.map(day => {
+                    {daysInWeekHeaders.map(day => {
                       const tasksForThisHour = getTasksForDay(day).filter(occurrence => {
                           const taskTimeOfDay = occurrence.originalTask.timeOfDay;
                           if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false;
@@ -436,7 +461,7 @@ export function CareCalendarView({
               })}
 
               <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] min-h-[3.5rem]">{t('calendarPage.calendarView.allDayLabel')}</div>
-              {daysInWeek.map(day => {
+              {daysInWeekHeaders.map(day => {
                  const allDayTasksForDay = getTasksForDay(day, 'allday');
                  return (
                     <div
@@ -452,8 +477,8 @@ export function CareCalendarView({
         )}
         {viewMode === 'month' && (
           <div className="grid grid-cols-7 border-t">
-            {dayHeaders.map(header => (
-                <div key={header.key} className={cn("p-2 border-r border-b text-center text-xs font-semibold h-10 flex items-center justify-center", header.isWeekend ? "text-primary" : "text-muted-foreground")}>{header.name}</div>
+            {dayHeadersStatic.map(header => (
+                <div key={header.key} className={cn("p-2 border-r border-b text-center text-xs font-semibold h-10 flex items-center justify-center", header.isWeekend ? "text-primary" : "text-muted-foreground")}>{t(header.labelKey)}</div>
             ))}
             {weeksInMonthGrid.map((week, weekIndex) => (
                 <React.Fragment key={`month-week-${weekIndex}`}>
@@ -468,21 +493,21 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative", // Removed pt-4
+                                    "p-1.5 border-r border-b min-h-[100px] flex flex-col relative", 
                                     today ? "border-2 border-primary" : "",
                                 )}
                             >
                                 <div className={cn(
-                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5 z-10", // Added z-10
+                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5 z-10", 
                                     !isCurrentMonthDay ? "text-muted-foreground/50" : "text-foreground",
                                     today ? "text-primary font-bold" : ""
                                 )}>
                                   {getDate(day)}
                                 </div>
-                                {/* Increased pt-6 to pt-8 for main content area */}
+                                
                                 <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-8"> 
                                     {dayTasksAllDay.length > 0 && (
-                                        <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
+                                        <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5 min-h-[20px]", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
                                         </div>
                                     )}
@@ -491,13 +516,13 @@ export function CareCalendarView({
                                         "p-0.5 rounded-sm space-y-px min-h-[30px]",
                                         isCurrentMonthDay ? "bg-amber-50 dark:bg-amber-900/40" : "bg-muted/20"
                                     )}>
-                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
+                                        {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
                                     </div>
                                     <div className={cn(
                                         "p-0.5 rounded-sm space-y-px min-h-[30px]",
                                         isCurrentMonthDay ? "bg-sky-50 dark:bg-sky-900/40" : "bg-muted/10"
                                     )}>
-                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
+                                        {dayTasksNighttime.map(occ => renderTaskItem(occ, true, 'nighttime'))}
                                     </div>
                                 </div>
                             </div>
@@ -511,4 +536,3 @@ export function CareCalendarView({
     </Card>
   );
 }
-
