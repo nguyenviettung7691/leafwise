@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ChevronLeft, ChevronRight, Sun, Moon, Check, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sun, Moon, Check, CalendarDays, Filter } from 'lucide-react';
 import {
   format,
   startOfWeek,
@@ -174,7 +174,7 @@ export function CareCalendarView({
         plantPrimaryPhotoUrl: plant.primaryPhotoUrl,
       };
 
-      if (task.frequency.toLowerCase() === 'ad-hoc') {
+      if ((task.frequency || '').toLowerCase() === 'ad-hoc') {
         if (isWithinInterval(seedDate, { start: calcRangeStartDate, end: calcRangeEndDate }) && isActive(task, seedDate)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: seedDate });
         }
@@ -183,7 +183,9 @@ export function CareCalendarView({
 
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < (viewMode === 'week' ? 100 : 400) ) {
+      const maxIterations = viewMode === 'week' ? 100 : 400; // Adjust if needed for very frequent tasks over longer ranges
+      
+      while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < maxIterations ) {
         if (currentOccurrenceForward >= calcRangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(currentOccurrenceForward) });
         }
@@ -194,7 +196,7 @@ export function CareCalendarView({
 
       let currentOccurrenceBackward = addFrequencyHelper(new Date(seedDate), task.frequency, -1);
       let safetyBackward = 0;
-      while (currentOccurrenceBackward >= calcRangeStartDate && safetyBackward < (viewMode === 'week' ? 100 : 400)) {
+      while (currentOccurrenceBackward >= calcRangeStartDate && safetyBackward < maxIterations) {
         if (currentOccurrenceBackward <= calcRangeEndDate && isActive(task, currentOccurrenceBackward)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(currentOccurrenceBackward) });
         }
@@ -217,7 +219,7 @@ export function CareCalendarView({
 
     const allOccurrences: DisplayableTaskOccurrence[] = [];
     plants.forEach(plant => {
-      plant.careTasks.forEach(task => {
+      (plant.careTasks || []).forEach(task => {
         if (!task.isPaused || (task.isPaused && task.resumeDate && parseISO(task.resumeDate) <= rangeEnd)) {
           allOccurrences.push(...getTaskOccurrencesInRange(task, plant, rangeStart, rangeEnd));
         }
@@ -303,8 +305,8 @@ export function CareCalendarView({
         <TooltipTrigger asChild>
           <div
             className={cn(
-              "p-1 rounded hover:opacity-80 text-[10px] leading-tight shadow-sm flex items-center gap-1",
-              compact ? "p-0.5 text-[9px] gap-0.5" : "p-1.5 gap-1.5",
+              "rounded text-[10px] leading-tight shadow-sm flex items-center",
+              compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
               occurrence.originalTask.level === 'advanced' ? "bg-primary text-primary-foreground" : "bg-card text-card-foreground border border-border"
             )}
           >
@@ -466,7 +468,7 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative", // min-h for base height, cell can grow
+                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative pt-4",
                                     today ? "border-2 border-primary" : "",
                                 )}
                             >
@@ -477,7 +479,7 @@ export function CareCalendarView({
                                 )}>
                                   {getDate(day)}
                                 </div>
-                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-4">
+                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight">
                                     {dayTasksAllDay.length > 0 && (
                                         <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
@@ -485,13 +487,13 @@ export function CareCalendarView({
                                     )}
 
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px",
+                                        "p-0.5 rounded-sm space-y-px min-h-[30px]", // Removed flex-1
                                         isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px",
+                                        "p-0.5 rounded-sm space-y-px min-h-[30px]", // Removed flex-1
                                         isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
