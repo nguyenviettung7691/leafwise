@@ -419,7 +419,9 @@
     "dueToday": "Hôm nay",
     "dueTomorrow": "Ngày mai",
     "dueInDays": "Trong {{count}} ngày",
-    "dueInDay": "Trong {{count}} ngày"
+    "dueInDay": "Trong {{count}} ngày",
+    "imageError": "Lỗi ảnh",
+    "noImage": "Không có ảnh"
   },
   "carePlanTaskForm": {
     "taskNameLabel": "Tên công việc",

@@ -419,7 +419,9 @@
     "dueToday": "Today",
     "dueTomorrow": "Tomorrow",
     "dueInDays": "In {{count}} days",
-    "dueInDay": "In {{count}} day"
+    "dueInDay": "In {{count}} day",
+    "imageError": "Error",
+    "noImage": "No Image"
   },
   "carePlanTaskForm": {
     "taskNameLabel": "Task Name",

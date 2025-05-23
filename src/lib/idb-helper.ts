@@ -47,9 +47,9 @@ export async function addImage(photoId: string, imageBlob: Blob): Promise<IDBTra
 
     return new Promise((resolve) => {
       request.onsuccess = () => resolve({ result: request.result });
-      request.onerror = () => {
-        console.error('Error adding image to IndexedDB:', request.error);
-        resolve({ error: request.error });
+      request.onerror = (dbEvent) => {
+        console.error('Error adding image to IndexedDB:', (dbEvent.target as IDBRequest).error);
+        resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
       transaction.onerror = () => {
@@ -75,9 +75,9 @@ export async function getImage(photoId: string): Promise<Blob | undefined> {
       request.onsuccess = () => {
         resolve(request.result as Blob | undefined);
       };
-      request.onerror = () => {
-        console.error('Error fetching image from IndexedDB:', request.error);
-        reject(request.error);
+      request.onerror = (dbEvent) => {
+        console.error('Error fetching image from IndexedDB:', (dbEvent.target as IDBRequest).error);
+        reject((dbEvent.target as IDBRequest).error);
       };
       transaction.oncomplete = () => db.close();
       transaction.onerror = () => {
@@ -101,9 +101,9 @@ export async function deleteImage(photoId: string): Promise<IDBTransactionResult
 
     return new Promise((resolve) => {
       request.onsuccess = () => resolve({});
-      request.onerror = () => {
-        console.error('Error deleting image from IndexedDB:', request.error);
-        resolve({ error: request.error });
+      request.onerror = (dbEvent) => {
+        console.error('Error deleting image from IndexedDB:', (dbEvent.target as IDBRequest).error);
+        resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
       transaction.onerror = () => {
@@ -128,9 +128,9 @@ export async function clearPlantImages(): Promise<IDBTransactionResult<void>> {
 
     return new Promise((resolve) => {
       request.onsuccess = () => resolve({});
-      request.onerror = () => {
-        console.error('Error clearing plant images from IndexedDB:', request.error);
-        resolve({ error: request.error });
+      request.onerror = (dbEvent) => {
+        console.error('Error clearing plant images from IndexedDB:', (dbEvent.target as IDBRequest).error);
+        resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
       transaction.onerror = () => {
@@ -142,5 +142,32 @@ export async function clearPlantImages(): Promise<IDBTransactionResult<void>> {
   } catch (error: any) {
     console.error('Failed to open DB for clearing images:', error);
     return { error };
+  }
+}
+
+// Utility to convert data URL to Blob
+export function dataURLtoBlob(dataurl: string): Blob | null {
+  if (!dataurl || !dataurl.includes(',')) {
+    console.error('Invalid data URL for blob conversion');
+    return null;
+  }
+  try {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch || mimeMatch.length < 2) return null;
+    const mime = mimeMatch[1];
+    
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], {type:mime});
+  } catch (e) {
+    console.error("Error converting data URL to Blob:", e);
+    return null;
   }
 }

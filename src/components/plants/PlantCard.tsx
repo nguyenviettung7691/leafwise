@@ -4,14 +4,15 @@ import type { Plant, CareTask } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3 } from 'lucide-react';
+import { Leaf, AlertTriangle, CheckCircle2, CalendarClock, History, Edit3, ImageOff } from 'lucide-react'; // Added ImageOff
 import { format, parseISO, differenceInDays, Locale, isToday as fnsIsToday } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
 
 interface PlantCardProps {
   plant: Plant;
@@ -54,7 +55,7 @@ const formatDueDate = (dueDate: string, locale: Locale, t: Function): string => 
   const tomorrow = new Date(new Date(today).setDate(today.getDate() + 1));
 
   if (fnsIsToday(date)) return t('plantCard.dueToday');
-  if (date.getTime() === tomorrow.getTime()) return t('plantCard.dueTomorrow'); // Using getTime for exact match
+  if (date.getTime() === tomorrow.getTime()) return t('plantCard.dueTomorrow');
 
   const diff = differenceInDays(date, today);
   if (diff > 0 && diff <= 7) {
@@ -68,7 +69,7 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
     try {
       return format(parseISO(dateString), 'MMM d, yyyy', { locale });
     } catch (error) {
-      console.error("Error parsing date for formatDateSimple:", dateString, error);
+      // console.error("Error parsing date for formatDateSimple:", dateString, error); // Optional: log error
       return t ? t('common.error') : 'Invalid Date';
     }
 };
@@ -76,6 +77,7 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
 export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
   const { t, dateFnsLocale } = useLanguage();
   const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(plant.primaryPhotoUrl);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {
@@ -96,6 +98,8 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
   };
 
   const healthConditionText = t(`common.${plant.healthCondition}`);
+
+  const imageToDisplay = imageUrl || 'https://placehold.co/400x300.png';
 
 
   return (
@@ -132,15 +136,28 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
           onClick={isManaging ? handleCardClick : undefined}
         >
           <CardHeader className="p-0 relative">
-            <div className="aspect-[4/3] w-full overflow-hidden">
-              <Image
-                src={plant.primaryPhotoUrl || 'https://placehold.co/400x300.png'}
-                alt={plant.commonName}
-                width={400}
-                height={300}
-                className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
-                data-ai-hint="plant nature"
-              />
+            <div className="aspect-[4/3] w-full overflow-hidden bg-muted flex items-center justify-center">
+              {isLoadingImage ? (
+                <Skeleton className="h-full w-full" />
+              ) : imageError || !imageUrl || imageUrl.includes('placehold.co') ? (
+                 <div className="flex flex-col items-center justify-center text-muted-foreground h-full w-full">
+                    <ImageOff size={48} className="mb-2"/>
+                    <span className="text-xs">{plant.primaryPhotoUrl ? t('plantCard.imageError') : t('plantCard.noImage')}</span>
+                 </div>
+              ) : (
+                <Image
+                  src={imageToDisplay}
+                  alt={plant.commonName}
+                  width={400}
+                  height={300}
+                  className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
+                  data-ai-hint="plant nature"
+                  onError={(e) => {
+                    // Fallback if image from object URL fails
+                    (e.target as HTMLImageElement).src = 'https://placehold.co/400x300.png?text=Error';
+                  }}
+                />
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-4 flex-grow">
@@ -186,3 +203,4 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
     </div>
   );
 }
+
