@@ -55,16 +55,15 @@ const prompt = ai.definePrompt({
   name: 'diagnosePlantHealthPrompt',
   input: {schema: DiagnosePlantHealthInputSchema},
   output: {schema: DiagnosePlantHealthOutputSchema},
-  prompt: `
-Output Language Instructions:
-Your entire JSON response, specifically the string values for 'commonName', 'familyCategory', 'diagnosis', and all 'action' and 'details' fields within 'careRecommendations', MUST be in the language specified by the '{{languageCode}}' input parameter.
-- If '{{languageCode}}' is 'vi', all these fields must be in Vietnamese.
-- If '{{languageCode}}' is 'en' or if '{{languageCode}}' is not provided, all these fields must be in English.
+  prompt: `Your entire response MUST be in the language specified by '{{languageCode}}'.
+- If '{{languageCode}}' is 'vi', all textual fields (commonName, familyCategory, diagnosis, care recommendation actions and details) MUST be in Vietnamese.
+- Otherwise (e.g., 'en' or if '{{languageCode}}' is not provided), all these fields MUST be in English.
+- This language rule applies strictly, even if the optional 'description' field from the user is empty or not provided.
 - Scientific names (e.g., 'scientificName') can remain in Latin as they are generally language-independent.
-- The 'status' field in 'healthAssessment' must be one of the exact enum values: 'healthy', 'needs_attention', 'sick', or 'unknown', and should not be translated.
+- The 'status' field in 'healthAssessment' MUST be one of the exact enum values: 'healthy', 'needs_attention', 'sick', or 'unknown', and should NOT be translated.
 
 Task:
-You are an expert botanist and plant pathologist. Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the Output Language Instructions above.
+You are an expert botanist and plant pathologist. Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the language instructions above.
 
 1.  **Identification**:
     *   Determine if the image contains a plant ('isPlant': boolean).
@@ -87,12 +86,12 @@ You are an expert botanist and plant pathologist. Analyze the provided plant ima
     *   Example for languageCode='en': { "action": "Pest Control", "details": "Identify pest and treat with organic insecticide." }
 
 User Input:
-User Description (if provided): {{{description}}}
+{{#if description}}User Description: {{{description}}}{{else}}User Description: Not provided.{{/if}}
 Plant Photo: {{media url=photoDataUri}}
 
 Output Format:
 Provide your response ONLY in the structured JSON format defined by the output schema.
-If the image does not appear to be a plant, set 'isPlant' to false and 'healthAssessment.status' to 'unknown'. Leave other text fields blank or provide non-applicable messages in the specified language.
+If the image does not appear to be a plant, set 'isPlant' to false and 'healthAssessment.status' to 'unknown'. Leave other text fields blank or provide non-applicable messages in the specified language (e.g., if 'vi', 'Không phải là thực vật.').
 If the plant is healthy, set 'healthAssessment.status' to 'healthy', provide a 'diagnosis' stating it's healthy (in the specified language), and give general care tips if appropriate for 'careRecommendations' (in the specified language).
 `,
 });
@@ -111,11 +110,11 @@ const diagnosePlantHealthFlow = ai.defineFlow(
         const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
         const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
         return {
-            identification: { 
+            identification: {
               isPlant: false,
               commonName: isPlantMsg,
             },
-            healthAssessment: { status: 'unknown', diagnosis: errorMsg },
+            healthAssessment: { status: 'unknown', diagnosis: errorMsg, confidence: 'low' },
             careRecommendations: [],
         };
     }
@@ -133,6 +132,5 @@ const diagnosePlantHealthFlow = ai.defineFlow(
     };
   }
 );
-
-
     
+
