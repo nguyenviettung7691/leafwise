@@ -1,8 +1,9 @@
+
 'use client';
 
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
-import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ReviewCarePlanInput } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ReviewCarePlanInput, AIGeneratedTask } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
 import NextImage from 'next/image'; // Renamed for clarity with lucide-react Image icon
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, ListChecks } from 'lucide-react'; // EditPlantIcon was unused
+import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, ListChecks, MessageSquareWarning, Edit3 } from 'lucide-react';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
@@ -31,7 +32,7 @@ import { PlantInformationGrid } from '@/components/plants/details/PlantInformati
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, MessageSquareWarning } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -114,7 +115,7 @@ interface DialogPhotoDisplayProps {
 
 const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altText, width = 400, height = 300, className = "rounded-md object-contain max-h-[300px] mx-auto" }) => {
   const { imageUrl, isLoading, error } = useIndexedDbImage(photoId);
-  const {t} = useLanguage();
+  const { t } = useLanguage();
 
   if (isLoading) {
     return <Skeleton className={cn("w-full rounded-md", `h-[${height}px]`)} style={{height: `${height}px`}} />;
@@ -190,21 +191,19 @@ export default function PlantDetailPage() {
   const [editedPhotoNotes, setEditedPhotoNotes] = useState('');
   const [isSavingPhotoDetails, setIsSavingPhotoDetails] = useState(false);
 
-
   useEffect(() => {
-    if (id && contextPlants.length > 0) { 
+    if (id && contextPlants.length > 0) {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(JSON.parse(JSON.stringify(foundPlant))); 
       } else {
-         // Plant not found from context, likely means it was deleted or ID is invalid
+        // Plant not found from context, likely means it was deleted or ID is invalid
       }
     }
     if (id || contextPlants.length > 0) { 
       setIsLoadingPage(false);
     }
-  }, [id, getPlantById, contextPlants]); 
-
+  }, [id, getPlantById, contextPlants]);
 
   const handleToggleTaskPause = async (taskId: string) => {
     if (!plant) return;
@@ -224,7 +223,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant); 
-    setPlant(updatedPlant); // Keep local UI in sync immediately
+    setPlant(updatedPlant); 
     
     setLoadingTaskId(null);
 
@@ -419,7 +418,6 @@ export default function PlantDetailPage() {
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
   
-    
     if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
     if (freqLower === 'daily') return addDays(now, 1).toISOString();
     if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
@@ -488,7 +486,7 @@ export default function PlantDetailPage() {
         }
     });
 
-    newTasks.forEach(aiTask => {
+    newTasks.forEach((aiTask: AIGeneratedTask) => {
         updatedCareTasks.push({
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             plantId: plant.id,
@@ -534,49 +532,45 @@ export default function PlantDetailPage() {
     closeGridPhotoDialog();
   };
 
-
   const handleSaveTask = (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
-
-    let currentTasks = plant.careTasks ? [...plant.careTasks] : [];
+  
     let updatedTasks: CareTask[];
-    let updatedPlant: Plant;
-
+  
     if (taskToEdit) { 
-        updatedTasks = currentTasks.map(t =>
-            t.id === taskToEdit.id ? {
-                ...t,
-                name: taskData.name,
-                description: taskData.description,
-                frequency: taskData.frequency,
-                timeOfDay: taskData.timeOfDay,
-                level: taskData.level,
-                nextDueDate: taskData.startDate, 
-            } : t
-        );
-        updatedPlant = { ...plant, careTasks: updatedTasks };
-        toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
+      updatedTasks = (plant.careTasks || []).map(t =>
+        t.id === taskToEdit.id ? {
+          ...t,
+          name: taskData.name,
+          description: taskData.description,
+          frequency: taskData.frequency,
+          timeOfDay: taskData.timeOfDay,
+          level: taskData.level,
+          nextDueDate: taskData.startDate, 
+        } : t
+      );
+      toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
     } else { 
-        const newTask: CareTask = {
-            id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            plantId: plant.id,
-            name: taskData.name,
-            description: taskData.description,
-            frequency: taskData.frequency,
-            timeOfDay: taskData.timeOfDay,
-            level: taskData.level,
-            isPaused: false,
-            nextDueDate: taskData.startDate, 
-        };
-        updatedTasks = [...currentTasks, newTask];
-        updatedPlant = { ...plant, careTasks: updatedTasks };
-        toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
+      const newTask: CareTask = {
+        id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        plantId: plant.id,
+        name: taskData.name,
+        description: taskData.description,
+        frequency: taskData.frequency,
+        timeOfDay: taskData.timeOfDay,
+        level: taskData.level,
+        isPaused: false,
+        nextDueDate: taskData.startDate, 
+      };
+      updatedTasks = [...(plant.careTasks || []), newTask];
+      toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
     }
     
+    const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
     setPlant(updatedPlant);
-
+  
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
     setTaskToEdit(null);
@@ -739,7 +733,7 @@ export default function PlantDetailPage() {
     setIsSavingPhotoDetails(false);
   };
 
-  const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
+  const translateFrequencyDisplayLocal = (frequency: string): string => {
     if (!frequency) return '';
     const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
     if (t(directKey) !== directKey) {
@@ -750,14 +744,14 @@ export default function PlantDetailPage() {
       }
       return t(directKey);
     }
-
+  
     const lowerFreq = frequency.toLowerCase();
     if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
     if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
     if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
     if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
     if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
-
+  
     const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
     if (everyXMatchResult) {
       const count = parseInt(everyXMatchResult[1], 10);
@@ -768,15 +762,15 @@ export default function PlantDetailPage() {
     }
     return frequency;
   };
-
-  const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined, t: Function): string => {
+  
+  const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined): string => {
     if (!timeOfDay) return '';
     if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
     if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
     return timeOfDay;
   };
 
-  if (isLoadingPage) {
+  if (isLoadingPage || !plant) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-full">
@@ -784,10 +778,6 @@ export default function PlantDetailPage() {
         </div>
       </AppLayout>
     );
-  }
-
-  if (!plant) {
-    return notFound();
   }
   
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.status;
@@ -944,8 +934,8 @@ export default function PlantDetailPage() {
                                                         <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
                                                             {mod.updatedDetails.name && <p>{t('plantDetail.newPhotoDialog.taskModificationNewName', {name: mod.updatedDetails.name})}</p>}
                                                             {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
-                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency, t)})}</p>}
-                                                            {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay, t)})}</p>}
+                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency)})}</p>}
+                                                            {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay)})}</p>}
                                                             {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)})}</p>}
                                                         </div>
                                                     )}
@@ -963,7 +953,7 @@ export default function PlantDetailPage() {
                                                 <li key={`new-${index}`}>
                                                     <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{t(`common.${task.taskLevel}`)}</Badge>)
                                                     <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
-                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(task.suggestedFrequency, t)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay, t)}</p>
+                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(task.suggestedFrequency)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay)}</p>
                                                 </li>
                                             ))}
                                         </ul>

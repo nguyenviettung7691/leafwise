@@ -2,9 +2,9 @@
 {
   "settings": {
     "title": "Settings",
-    "description": "Application Settings",
+    "description": "Manage your application preferences.",
     "language": "Language",
-    "featureInProgress": "Settings page is under construction. <br /> Customize your app preferences here soon!",
+    "featureInProgress": "More settings coming soon!",
     "darkMode": "Dark Mode"
   },
   "nav": {
@@ -26,7 +26,7 @@
     "submit": "Submit",
     "confirm": "Confirm",
     "error": "Error",
-    "success": "Success",
+    "success": "Success!",
     "loading": "Loading...",
     "unknown": "Unknown",
     "notApplicable": "N/A",
@@ -53,10 +53,10 @@
   "myPlantsPage": {
     "addNewPlant": "Add New Plant",
     "navigating": "Navigating...",
-    "managePlants": "Manage",
-    "doneManaging": "Done",
+    "managePlants": "Manage Plants",
+    "doneManaging": "Done Managing",
     "deleteSelected": "Delete ({{count}})",
-    "confirmDeleteTitle": "Are you sure?",
+    "confirmDeleteTitle": "Delete Selected Plants?",
     "confirmDeleteDescription": "This action cannot be undone. This will permanently delete the selected {{count}} plant(s).",
     "plantsDeletedToastTitle": "Plants Deleted",
     "plantsDeletedToastDescription": "{{count}} plant(s) have been deleted.",
@@ -113,9 +113,9 @@
       "ascending": "Ascending",
       "descending": "Descending",
       "resetAllButton": "Reset All Filters",
-      "noPlantsFoundTitle": "Your LeafWise garden is empty!",
+      "noPlantsFoundTitle": "Your LeafWise garden is sprouting!",
       "noPlantsHint": "Let's add your first green friend, or try adjusting your search/filters if you have plants.",
-      "noPlantsHintAI": "Let's add your first green friend! You can add one manually, or let our AI help you identify and add it from a photo on the {{diagnoseLink}} page."
+      "noPlantsHintAI": "Add your first plant manually, or let AI help you identify it on the {{diagnoseLink}} page!"
     }
   },
   "addNewPlantPage": {
@@ -128,17 +128,20 @@
     "initialDiagnosisNotes": "Manually added to collection."
   },
   "savePlantForm": {
-    "primaryPhotoLabel": "Primary Photo (Optional)",
+    "formTitle": "Save to My Plants",
+    "formDescription": "Confirm or update the details for this plant.",
+    "submitButtonText": "Save Plant",
+    "primaryPhotoLabel": "Primary Photo",
     "uploadAreaText": "Click to upload or drag and drop",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 4MB)",
-    "gallerySelectLabel": "Or Select from Gallery (Optional)",
+    "gallerySelectLabel": "Or Select from Gallery",
     "commonNameLabel": "Common Name",
     "commonNamePlaceholder": "e.g., Swiss Cheese Plant",
-    "scientificNameLabel": "Scientific Name (Optional)",
+    "scientificNameLabel": "Scientific Name",
     "scientificNamePlaceholder": "e.g., Monstera deliciosa",
     "familyCategoryLabel": "Family Category",
     "familyCategoryPlaceholder": "e.g., Araceae",
-    "ageEstimateYearsLabel": "Age (Years, Est.) (Optional)",
+    "ageEstimateYearsLabel": "Age (Years, Est.)",
     "ageEstimateYearsPlaceholder": "e.g., 2",
     "healthConditionLabel": "Health Condition",
     "healthConditionPlaceholder": "Select health status",
@@ -148,9 +151,9 @@
       "sick": "Sick",
       "unknown": "Unknown"
     },
-    "locationLabel": "Location (Optional)",
+    "locationLabel": "Location",
     "locationPlaceholder": "e.g., Living Room Window",
-    "customNotesLabel": "Custom Notes (Optional)",
+    "customNotesLabel": "Custom Notes",
     "customNotesPlaceholder": "e.g., Water when top inch is dry.",
     "savingButton": "Saving..."
   },
@@ -187,11 +190,7 @@
       "plantSavedAlertTitle": "Plant Saved!",
       "plantSavedAlertDescription": "{{plantName}} has been saved to My Plants.",
       "viewPlantLink": "View {{plantName}} in My Plants",
-      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
-      "saveFormTitle": "Save to My Plants",
-      "saveFormDescription": "Confirm or update the details for {{plantName}} before saving.",
-      "saveFormSubmitButton": "Save Plant",
-      "initialDiagnosisNotes": "Identified via AI diagnosis"
+      "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure."
     },
     "carePlanGenerator": {
       "title": "Generate Detailed Care Plan",
@@ -241,7 +240,7 @@
     "backToMyPlants": "Back to My Plants",
     "headerCard": {
       "close": "Close",
-      "deleteConfirmTitle": "Are you sure?",
+      "deleteConfirmTitle": "Delete Plant?",
       "deleteConfirmDescription": "This action cannot be undone. This will permanently delete your plant \"{{plantName}}\".",
       "cancel": "Cancel",
       "delete": "Delete",
@@ -256,6 +255,7 @@
       "fullSizePhotoTitleAltSuffix": "Full Size"
     },
     "infoGrid": {
+      "detailsTitle": "Plant Details",
       "ageEstimate": "Age Estimate",
       "createdDate": "Created Date",
       "location": "Location",
@@ -272,7 +272,7 @@
     },
     "careManagement": {
       "sectionTitle": "Care Plan",
-      "manageButton": "Manage",
+      "manageButton": "Manage Tasks",
       "doneButton": "Done",
       "addTaskButton": "Add Task",
       "deleteSelectedButton": "Delete ({{count}})",
@@ -281,15 +281,16 @@
       "taskFrequencyLabel": "Frequency",
       "taskTimeOfDayLabel": "Time",
       "nextDueDateLabel": "Next",
-      "noTasksManage": "No care tasks defined yet. Click 'Manage' to add tasks.",
+      "noTasksManage": "No care tasks defined yet. Click 'Add Task' to create one.",
       "noTasksNormal": "No care tasks defined yet.",
-      "atTimePrefix": "at "
+      "atTimePrefix": "at ",
+      "selectTaskAria": "Select task {{taskName}}"
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
       "addPhotoDiagnoseButton": "Add Photo & Diagnose",
       "diagnosingButton": "Diagnosing...",
-      "manageButton": "Manage",
+      "manageButton": "Manage Photos",
       "doneButton": "Done",
       "deleteSelectedButton": "Delete ({{count}})",
       "photoGalleryTitle": "Photo Gallery",
@@ -353,12 +354,12 @@
       "editDescription": "Update the details for this care task for {{plantName}}."
     },
     "deleteTaskDialog": {
-      "title": "Are you sure?",
+      "title": "Delete Task(s)?",
       "description": "This action cannot be undone. This will permanently delete the selected {{count}} task(s).",
       "deleteButton": "Delete Task(s)"
     },
     "deletePhotosDialog": {
-      "title": "Are you sure?",
+      "title": "Delete Photo(s)?",
       "description": "This action cannot be undone. This will permanently delete the selected {{count}} photo(s). Associated diagnosis data will also be removed.",
       "warningPrimaryDeleted": "Warning: One of the selected photos is the current primary photo. Deleting it will remove it as the primary photo. The latest remaining photo will be used as the new primary photo.",
       "deleteButton": "Delete Photo(s)"
@@ -475,7 +476,7 @@
   },
   "weeklyCareCalendar": {
     "title": "Weekly Care Schedule",
-    "checkboxLabel": "Show only time of day with tasks",
+    "checkboxLabel": "Show only time slots with tasks",
     "previousWeekAria": "Previous week",
     "nextWeekAria": "Next week",
     "timeColumnHeader": "Time",
@@ -537,7 +538,6 @@
     "preferencesCardDescription": "Manage your application settings.",
     "emailNotificationsLabel": "Email Notifications",
     "pushNotificationsLabel": "Push Notifications",
-    "darkModeLabel": "Dark Mode",
     "preferencesDisclaimer": "Profile changes and preferences are mock-saved to local storage.",
     "dataManagementCardTitle": "Data Management",
     "dataManagementCardDescription": "Export your plant data or import data from a backup file.",
@@ -562,20 +562,20 @@
     "destroyConfirmAction": "DESTROY",
     "toasts": {
       "avatarImageTooLargeTitle": "Image Too Large",
-      "avatarImageTooLargeDesc": "Please select an image file smaller than 2MB for your avatar.",
+      "avatarImageTooLargeDesc": "Please select an image file smaller than 4MB for your avatar.",
       "profileUpdateError": "Failed to update profile.",
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
       "exportErrorNoData": "No user data found to export.",
-      "exportSuccessTitle": "Export Successful",
+      "exportSuccessTitle": "Export Successful!",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "importFailedGeneral": "Could not parse or apply the imported data.",
       "importFailedReadFile": "Failed to read the selected file.",
       "importFailedInvalidFormat": "Invalid file format. Missing 'userProfile' or 'plants' data.",
       "importSuccess": "Your data has been imported. Refresh or navigate to see changes.",
       "destroyEmailMismatch": "Email confirmation failed.",
-      "destroySuccessTitle": "Data Destroyed",
+      "destroySuccessTitle": "Data Destroyed!",
       "destroySuccessDesc": "All your personal data has been removed."
     }
   },
@@ -610,19 +610,19 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
-    "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
+    "primaryPhotoUpdatedNote": "Primary photo updated via edit form."
   },
   "authContextToasts": {
-    "loginSuccessTitle": "Login Successful",
+    "loginSuccessTitle": "Login Successful!",
     "loginSuccessDescription": "Welcome back, {{name}}!",
-    "registrationSuccessTitle": "Registration Successful",
+    "registrationSuccessTitle": "Registration Successful!",
     "registrationSuccessDescription": "Welcome, {{name}}!",
     "loggedOutTitle": "Logged Out",
     "loggedOutDescription": "You have been successfully logged out.",
-    "profileUpdatedTitle": "Profile Updated",
+    "profileUpdatedTitle": "Profile Updated!",
     "profileUpdatedDescription": "Your profile has been successfully updated.",
-    "errorNoUserSession": "No user session found."
+    "errorNoUserSession": "No user session found. Please log in again."
   }
 }

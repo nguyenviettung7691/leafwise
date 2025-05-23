@@ -1,13 +1,14 @@
+
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
 import React, { useMemo, useRef } from 'react';
-import NextImage from 'next/image'; // Renamed to avoid conflict with lucide-react Image icon
+import NextImage from 'next/image'; 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
@@ -131,7 +132,8 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           width={200} height={200}
           className={cn(
             "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
-            isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : ''
+            isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
+            isManagingPhotos && !isSelected ? 'filter grayscale-[50%] opacity-70' : '' // Example additional style for unselected in manage mode
           )}
           data-ai-hint="plant growth"
           onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`;}}
@@ -279,30 +281,30 @@ export function PlantGrowthTracker({
           </div>
         </CardHeader>
         <CardContent>
-          {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {sortedPhotosForGallery.map(photo => (
-                <GalleryPhotoItem
-                  key={photo.id}
-                  photo={photo}
-                  isPrimary={plant.primaryPhotoUrl === photo.url}
-                  isSelected={selectedPhotoIds.has(photo.id)}
-                  isManagingPhotos={isManagingPhotos}
-                  plantCommonName={plant.commonName}
-                  onPhotoClick={onOpenGridPhotoDialog}
-                  onToggleSelection={onTogglePhotoSelection}
-                  onOpenEditDialog={onOpenEditPhotoDialog}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
-          )}
+          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4", isManagingPhotos ? "filter blur-sm opacity-60 transition-all" : "")}>
+            {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
+                sortedPhotosForGallery.map(photo => (
+                  <GalleryPhotoItem
+                    key={photo.id}
+                    photo={photo}
+                    isPrimary={plant.primaryPhotoUrl === photo.url}
+                    isSelected={selectedPhotoIds.has(photo.id)}
+                    isManagingPhotos={isManagingPhotos}
+                    plantCommonName={plant.commonName}
+                    onPhotoClick={onOpenGridPhotoDialog}
+                    onToggleSelection={onTogglePhotoSelection}
+                    onOpenEditDialog={onOpenEditPhotoDialog}
+                  />
+                ))
+            ) : (
+              <p className="text-muted-foreground text-center py-4 col-span-full">{t('plantDetail.growthTracker.noPhotos')}</p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {!isManagingPhotos && chartData.length > 0 && (
-        <Card>
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />

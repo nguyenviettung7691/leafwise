@@ -2,9 +2,9 @@
 {
   "settings": {
     "title": "Cài đặt",
-    "description": "Cài đặt ứng dụng",
+    "description": "Quản lý các tùy chọn ứng dụng của bạn.",
     "language": "Ngôn ngữ",
-    "featureInProgress": "Trang cài đặt đang được xây dựng. <br /> Tùy chỉnh các tùy chọn ứng dụng của bạn tại đây sớm!",
+    "featureInProgress": "Nhiều cài đặt hơn sắp ra mắt!",
     "darkMode": "Chế độ tối"
   },
   "nav": {
@@ -26,10 +26,10 @@
     "submit": "Gửi",
     "confirm": "Xác nhận",
     "error": "Lỗi",
-    "success": "Thành công",
+    "success": "Thành công!",
     "loading": "Đang tải...",
     "unknown": "Không rõ",
-    "notApplicable": "Không áp dụng",
+    "notApplicable": "Không có",
     "healthy": "Khỏe mạnh",
     "needs_attention": "Cần chú ý",
     "sick": "Bị bệnh",
@@ -53,10 +53,10 @@
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
     "navigating": "Đang điều hướng...",
-    "managePlants": "Quản lý",
-    "doneManaging": "Xong",
+    "managePlants": "Quản lý cây",
+    "doneManaging": "Hoàn tất quản lý",
     "deleteSelected": "Xóa ({{count}})",
-    "confirmDeleteTitle": "Bạn có chắc không?",
+    "confirmDeleteTitle": "Xóa các cây đã chọn?",
     "confirmDeleteDescription": "Hành động này không thể hoàn tác. Thao tác này sẽ xóa vĩnh viễn {{count}} cây đã chọn.",
     "plantsDeletedToastTitle": "Đã xóa cây",
     "plantsDeletedToastDescription": "{{count}} cây đã được xóa.",
@@ -68,17 +68,17 @@
     "loadingPlants": "Đang tải những cây xinh đẹp của bạn...",
     "filterSortCard": {
       "title": "Lọc & Sắp xếp cây",
-      "searchChipPrefix": "Tìm kiếm: \"{{term}}\"",
+      "searchChipPrefix": "Tìm: \"{{term}}\"",
       "ageChipPrefix": "Tuổi: {{label}}",
       "healthChipPrefix": "Sức khỏe: {{label}}",
       "locationChipPrefix": "Vị trí: \"{{location}}\"",
       "familyChipPrefix": "Họ: \"{{family}}\"",
       "sortChipPrefix": "Sắp xếp: {{label}} ({{direction}})",
-      "clearSearchLabel": "Xóa cụm từ tìm kiếm",
-      "clearAgeLabel": "Xóa bộ lọc tuổi",
-      "clearHealthLabel": "Xóa bộ lọc sức khỏe",
-      "clearLocationLabel": "Xóa bộ lọc vị trí",
-      "clearFamilyLabel": "Xóa bộ lọc họ",
+      "clearSearchLabel": "Xóa tìm kiếm",
+      "clearAgeLabel": "Xóa lọc tuổi",
+      "clearHealthLabel": "Xóa lọc sức khỏe",
+      "clearLocationLabel": "Xóa lọc vị trí",
+      "clearFamilyLabel": "Xóa lọc họ",
       "resetSortLabel": "Đặt lại sắp xếp",
       "searchGroupTitle": "Tìm kiếm",
       "searchPlaceholder": "Tên, vị trí, họ...",
@@ -107,15 +107,15 @@
       "healthConditionSort": "Tình trạng sức khỏe",
       "createdDateSort": "Ngày tạo",
       "lastCaredDateSort": "Ngày chăm sóc cuối",
-      "nextCareTaskSort": "Công việc tiếp theo",
+      "nextCareTaskSort": "Việc chăm sóc kế tiếp",
       "directionLabel": "Thứ tự",
       "selectDirection": "Chọn thứ tự",
       "ascending": "Tăng dần",
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc",
-      "noPlantsFoundTitle": "Vườn cây LeafWise của bạn đang trống!",
+      "noPlantsFoundTitle": "Vườn LeafWise của bạn đang nảy mầm!",
       "noPlantsHint": "Hãy thêm người bạn xanh đầu tiên, hoặc thử điều chỉnh tìm kiếm/bộ lọc nếu bạn đã có cây.",
-      "noPlantsHintAI": "Hãy thêm người bạn xanh đầu tiên! Bạn có thể thêm thủ công, hoặc để AI của chúng tôi giúp bạn nhận dạng và thêm cây từ ảnh tại trang {{diagnoseLink}}."
+      "noPlantsHintAI": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng cây tại trang {{diagnoseLink}}!"
     }
   },
   "addNewPlantPage": {
@@ -128,17 +128,20 @@
     "initialDiagnosisNotes": "Được thêm thủ công vào bộ sưu tập."
   },
   "savePlantForm": {
-    "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
+    "formTitle": "Lưu vào Cây của tôi",
+    "formDescription": "Xác nhận hoặc cập nhật chi tiết cho cây này.",
+    "submitButtonText": "Lưu cây",
+    "primaryPhotoLabel": "Ảnh chính",
     "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 4MB)",
-    "gallerySelectLabel": "Hoặc chọn từ Thư viện (Tùy chọn)",
+    "gallerySelectLabel": "Hoặc chọn từ Thư viện",
     "commonNameLabel": "Tên thường gọi",
-    "commonNamePlaceholder": "VD: Trầu Bà Lỗ",
-    "scientificNameLabel": "Tên khoa học (Tùy chọn)",
+    "commonNamePlaceholder": "VD: Trầu Bà Lá Xẻ",
+    "scientificNameLabel": "Tên khoa học",
     "scientificNamePlaceholder": "VD: Monstera deliciosa",
     "familyCategoryLabel": "Họ thực vật",
     "familyCategoryPlaceholder": "VD: Araceae",
-    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính) (Tùy chọn)",
+    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính)",
     "ageEstimateYearsPlaceholder": "VD: 2",
     "healthConditionLabel": "Tình trạng sức khỏe",
     "healthConditionPlaceholder": "Chọn tình trạng sức khỏe",
@@ -148,9 +151,9 @@
       "sick": "Bị bệnh",
       "unknown": "Không rõ"
     },
-    "locationLabel": "Vị trí (Tùy chọn)",
+    "locationLabel": "Vị trí",
     "locationPlaceholder": "VD: Cửa sổ phòng khách",
-    "customNotesLabel": "Ghi chú tùy chỉnh (Tùy chọn)",
+    "customNotesLabel": "Ghi chú tùy chỉnh",
     "customNotesPlaceholder": "VD: Tưới khi lớp đất mặt khô.",
     "savingButton": "Đang lưu..."
   },
@@ -187,11 +190,7 @@
       "plantSavedAlertTitle": "Đã lưu cây!",
       "plantSavedAlertDescription": "{{plantName}} đã được lưu vào Cây của tôi.",
       "viewPlantLink": "Xem {{plantName}} trong Cây của tôi",
-      "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
-      "saveFormTitle": "Lưu vào Cây của tôi",
-      "saveFormDescription": "Xác nhận hoặc cập nhật chi tiết cho {{plantName}} trước khi lưu.",
-      "saveFormSubmitButton": "Lưu cây",
-      "initialDiagnosisNotes": "Nhận dạng qua chẩn đoán AI"
+      "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn."
     },
     "carePlanGenerator": {
       "title": "Tạo kế hoạch chăm sóc chi tiết",
@@ -241,7 +240,7 @@
     "backToMyPlants": "Quay lại Cây của tôi",
     "headerCard": {
       "close": "Đóng",
-      "deleteConfirmTitle": "Bạn có chắc không?",
+      "deleteConfirmTitle": "Xóa cây?",
       "deleteConfirmDescription": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn cây \"{{plantName}}\" của bạn.",
       "cancel": "Hủy",
       "delete": "Xóa",
@@ -256,13 +255,14 @@
       "fullSizePhotoTitleAltSuffix": "Kích thước đầy đủ"
     },
     "infoGrid": {
+      "detailsTitle": "Chi tiết cây",
       "ageEstimate": "Tuổi ước tính",
       "createdDate": "Ngày tạo",
       "location": "Vị trí",
       "family": "Họ",
       "notes": "Ghi chú",
       "unknown": "Không rõ",
-      "notApplicable": "Không áp dụng"
+      "notApplicable": "Không có"
     },
     "healthConditions": {
       "healthy": "Khỏe mạnh",
@@ -272,7 +272,7 @@
     },
     "careManagement": {
       "sectionTitle": "Kế hoạch chăm sóc",
-      "manageButton": "Quản lý",
+      "manageButton": "Quản lý công việc",
       "doneButton": "Xong",
       "addTaskButton": "Thêm công việc",
       "deleteSelectedButton": "Xóa ({{count}})",
@@ -281,15 +281,16 @@
       "taskFrequencyLabel": "Tần suất",
       "taskTimeOfDayLabel": "Thời gian",
       "nextDueDateLabel": "Tiếp theo",
-      "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Quản lý' để thêm.",
+      "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Thêm công việc' để tạo.",
       "noTasksNormal": "Chưa có công việc chăm sóc nào.",
-      "atTimePrefix": "lúc "
+      "atTimePrefix": "lúc ",
+      "selectTaskAria": "Chọn công việc {{taskName}}"
     },
     "growthTracker": {
       "sectionTitle": "Theo dõi tăng trưởng",
       "addPhotoDiagnoseButton": "Thêm ảnh & Chẩn đoán",
       "diagnosingButton": "Đang chẩn đoán...",
-      "manageButton": "Quản lý",
+      "manageButton": "Quản lý ảnh",
       "doneButton": "Xong",
       "deleteSelectedButton": "Xóa ({{count}})",
       "photoGalleryTitle": "Thư viện ảnh",
@@ -353,12 +354,12 @@
       "editDescription": "Cập nhật chi tiết cho công việc chăm sóc này của {{plantName}}."
     },
     "deleteTaskDialog": {
-      "title": "Bạn có chắc không?",
+      "title": "Xóa công việc?",
       "description": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn {{count}} công việc đã chọn.",
       "deleteButton": "Xóa công việc"
     },
     "deletePhotosDialog": {
-      "title": "Bạn có chắc không?",
+      "title": "Xóa ảnh?",
       "description": "Hành động này không thể hoàn tác. Điều này sẽ xóa vĩnh viễn {{count}} ảnh đã chọn. Dữ liệu chẩn đoán liên quan cũng sẽ bị xóa.",
       "warningPrimaryDeleted": "Cảnh báo: Một trong những ảnh được chọn là ảnh chính hiện tại. Xóa nó sẽ loại bỏ nó khỏi vị trí ảnh chính. Ảnh mới nhất còn lại sẽ được sử dụng làm ảnh chính mới.",
       "deleteButton": "Xóa ảnh"
@@ -414,7 +415,7 @@
     }
   },
   "plantCard": {
-    "nextPrefix": "Kế tiếp:",
+    "nextPrefix": "Tiếp theo:",
     "lastCaredPrefix": "Chăm sóc cuối:",
     "noUpcomingTasks": "Không có việc sắp tới",
     "dueToday": "Hôm nay",
@@ -537,7 +538,6 @@
     "preferencesCardDescription": "Quản lý cài đặt ứng dụng của bạn.",
     "emailNotificationsLabel": "Thông báo qua Email",
     "pushNotificationsLabel": "Thông báo đẩy",
-    "darkModeLabel": "Chế độ tối",
     "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu (mô phỏng) vào bộ nhớ cục bộ.",
     "dataManagementCardTitle": "Quản lý dữ liệu",
     "dataManagementCardDescription": "Xuất dữ liệu cây của bạn hoặc nhập dữ liệu từ tệp sao lưu.",
@@ -562,20 +562,20 @@
     "destroyConfirmAction": "HỦY",
     "toasts": {
       "avatarImageTooLargeTitle": "Ảnh quá lớn",
-      "avatarImageTooLargeDesc": "Vui lòng chọn ảnh đại diện nhỏ hơn 2MB.",
+      "avatarImageTooLargeDesc": "Vui lòng chọn ảnh đại diện nhỏ hơn 4MB.",
       "profileUpdateError": "Không thể cập nhật hồ sơ.",
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
       "exportErrorNoData": "Không tìm thấy dữ liệu người dùng để xuất.",
-      "exportSuccessTitle": "Xuất thành công",
+      "exportSuccessTitle": "Xuất thành công!",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
       "importFailedReadFile": "Không thể đọc tệp đã chọn.",
       "importFailedInvalidFormat": "Định dạng tệp không hợp lệ. Thiếu dữ liệu 'userProfile' hoặc 'plants'.",
       "importSuccess": "Dữ liệu của bạn đã được nhập. Tải lại hoặc điều hướng để xem thay đổi.",
       "destroyEmailMismatch": "Xác nhận email không thành công.",
-      "destroySuccessTitle": "Đã xóa dữ liệu",
+      "destroySuccessTitle": "Đã xóa dữ liệu!",
       "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
     }
   },
@@ -612,17 +612,17 @@
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
     "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
     "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật.",
-    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới)."
+    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa."
   },
   "authContextToasts": {
-    "loginSuccessTitle": "Đăng nhập Thành công",
+    "loginSuccessTitle": "Đăng nhập Thành công!",
     "loginSuccessDescription": "Chào mừng trở lại, {{name}}!",
-    "registrationSuccessTitle": "Đăng ký Thành công",
+    "registrationSuccessTitle": "Đăng ký Thành công!",
     "registrationSuccessDescription": "Chào mừng, {{name}}!",
     "loggedOutTitle": "Đã Đăng xuất",
     "loggedOutDescription": "Bạn đã đăng xuất thành công.",
-    "profileUpdatedTitle": "Hồ sơ Đã cập nhật",
+    "profileUpdatedTitle": "Hồ sơ Đã cập nhật!",
     "profileUpdatedDescription": "Hồ sơ của bạn đã được cập nhật thành công.",
-    "errorNoUserSession": "Không tìm thấy phiên người dùng."
+    "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
   }
 }

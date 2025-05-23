@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
-import { format, parseISO, isToday, compareAsc } from 'date-fns';
+import { format, parseISO, isToday as fnsIsToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,7 +30,7 @@ const formatDate = (dateString?: string, t?: (key: string, replacements?: Record
   if (!dateString || !t) return t ? t('common.notApplicable') : 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'MMM d, yyyy', { locale });
+    return format(date, 'PPP', { locale });
   } catch (error) {
     console.error("Error parsing date:", dateString, error);
     return t ? t('common.error') : 'Invalid Date';
@@ -56,10 +56,10 @@ const translateFrequencyDisplayLocal = (frequency: string, t: Function): string 
   if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
   if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
 
-  const everyXMatch = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
-  if (everyXMatch) {
-    const count = parseInt(everyXMatch[1], 10);
-    const unit = everyXMatch[2].toLowerCase();
+  const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
+  if (everyXMatchResult) {
+    const count = parseInt(everyXMatchResult[1], 10);
+    const unit = everyXMatchResult[2].toLowerCase();
     if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
     if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
     if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
@@ -128,13 +128,18 @@ export function PlantCareManagement({
   }, [plant.careTasks]);
 
   const toggleManageMode = () => {
-    setIsManagingCarePlan(prev => !prev);
+    setIsManagingCarePlan(prev => {
+      if (prev) { // If exiting manage mode
+        onToggleTaskSelection(''); // Clear selections, pass dummy or handle in parent
+      }
+      return !prev;
+    });
   };
 
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-3 pt-6 border-t">
+      <div className="flex justify-between items-center mb-3">
         <h3 className="font-semibold text-lg">{t('plantDetail.careManagement.sectionTitle')}</h3>
         <div className="flex items-center gap-2">
           {isManagingCarePlan && selectedTaskIds.size > 0 && (
@@ -158,10 +163,10 @@ export function PlantCareManagement({
           )}
         </div>
       </div>
-      {sortedTasks && sortedTasks.length > 0 ? (
-        <div className="space-y-3">
-          {sortedTasks.map(task => {
-            const isTaskToday = task.nextDueDate && !task.isPaused && isToday(parseISO(task.nextDueDate!));
+      <div className={cn("space-y-3", isManagingCarePlan ? "filter blur-sm opacity-60 transition-all" : "")}>
+        {sortedTasks && sortedTasks.length > 0 ? (
+          sortedTasks.map(task => {
+            const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
             const isSelected = selectedTaskIds.has(task.id);
             const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
             const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
@@ -189,7 +194,7 @@ export function PlantCareManagement({
                         checked={isSelected}
                         onCheckedChange={() => onToggleTaskSelection(task.id)}
                         onClick={(e) => e.stopPropagation()}
-                        aria-label={`Select task ${task.name}`}
+                        aria-label={t('plantDetail.careManagement.selectTaskAria', { taskName: task.name })}
                     />
                   </div>
                 )}
@@ -259,19 +264,21 @@ export function PlantCareManagement({
                 </div>
               </CardContent>
             </Card>
-          )})}
+          )})
+        ) : (
+          <p className="text-muted-foreground text-sm text-center py-4">
+            {isManagingCarePlan ? t('plantDetail.careManagement.noTasksManage') : t('plantDetail.careManagement.noTasksNormal')}
+          </p>
+        )}
+      </div>
+      {!isManagingCarePlan && plant.careTasks && plant.careTasks.length > 0 && (
+        <div className={cn(isManagingCarePlan ? "filter blur-sm opacity-60 transition-all" : "")}>
+          <DynamicWeeklyCareCalendarView
+            tasks={plant.careTasks}
+            onEditTask={onOpenEditTaskDialog}
+            onDeleteTask={onOpenDeleteTaskDialog}
+          />
         </div>
-      ) : (
-        <p className="text-muted-foreground text-sm text-center py-4">
-          {isManagingCarePlan ? t('plantDetail.careManagement.noTasksManage') : t('plantDetail.careManagement.noTasksNormal')}
-        </p>
-      )}
-      {plant.careTasks && plant.careTasks.length > 0 && !isManagingCarePlan && (
-        <DynamicWeeklyCareCalendarView
-          tasks={plant.careTasks}
-          onEditTask={onOpenEditTaskDialog}
-          onDeleteTask={onOpenDeleteTaskDialog}
-        />
       )}
     </div>
   );
