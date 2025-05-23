@@ -187,8 +187,8 @@ export function CareCalendarView({
 
       let currentOccurrenceForward = new Date(seedDate);
       let safetyForward = 0;
-      const maxIterations = viewMode === 'week' ? 100 : 400; 
-      
+      const maxIterations = viewMode === 'week' ? 100 : 400;
+
       while (currentOccurrenceForward <= calcRangeEndDate && safetyForward < maxIterations ) {
         if (currentOccurrenceForward >= calcRangeStartDate && isActive(task, currentOccurrenceForward)) {
           occurrences.push({ ...taskOccurrenceBase, occurrenceDate: new Date(currentOccurrenceForward) });
@@ -305,20 +305,10 @@ export function CareCalendarView({
 
   const renderTaskItem = (occurrence: DisplayableTaskOccurrence, compact: boolean = false, timeSlotType?: 'daytime' | 'nighttime') => {
     const getTaskItemStyles = () => {
-      let nameColor = occurrence.originalTask.level === 'advanced' ? "text-primary-foreground" : "text-card-foreground";
-      let iconColorClass = occurrence.originalTask.level === 'advanced' 
-          ? 'text-primary-foreground/80 hover:text-primary-foreground' 
+      const nameColor = occurrence.originalTask.level === 'advanced' ? "text-primary-foreground" : "text-card-foreground";
+      const iconColorClass = occurrence.originalTask.level === 'advanced'
+          ? 'text-primary-foreground/80 hover:text-primary-foreground'
           : 'text-foreground/70 hover:text-foreground';
-  
-      if (occurrence.originalTask.level === 'basic' && compact && timeSlotType) { // Apply only for compact monthly view basic tasks
-          if (timeSlotType === 'daytime') {
-              nameColor = "text-amber-700 dark:text-amber-400";
-              iconColorClass = "text-amber-700/70 hover:text-amber-700 dark:text-amber-400/70 dark:hover:text-amber-400";
-          } else if (timeSlotType === 'nighttime') {
-              nameColor = "text-sky-700 dark:text-sky-400";
-              iconColorClass = "text-sky-700/70 hover:text-sky-700 dark:text-sky-400/70 dark:hover:text-sky-400";
-          }
-      }
       return { nameColor, iconColorClass };
     };
     const { nameColor, iconColorClass } = getTaskItemStyles();
@@ -493,19 +483,19 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1.5 border-r border-b min-h-[100px] flex flex-col relative", 
+                                    "p-1.5 border-r border-b min-h-[100px] flex flex-col relative",
                                     today ? "border-2 border-primary" : "",
                                 )}
                             >
                                 <div className={cn(
-                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5 z-10", 
+                                    "text-sm font-semibold self-end mb-0.5 absolute top-1 right-1.5 z-10",
                                     !isCurrentMonthDay ? "text-muted-foreground/50" : "text-foreground",
                                     today ? "text-primary font-bold" : ""
                                 )}>
                                   {getDate(day)}
                                 </div>
-                                
-                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-8"> 
+
+                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-6">
                                     {dayTasksAllDay.length > 0 && (
                                         <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5 min-h-[20px]", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
