@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
+import { compressImage } from '@/lib/image-utils'; // Import compressImage
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
@@ -48,6 +49,7 @@ export default function ProfilePage() {
   const [isDestroyConfirmOpen, setIsDestroyConfirmOpen] = useState(false);
   const [destroyEmailInput, setDestroyEmailInput] = useState('');
   const [isDestroyingData, setIsDestroyingData] = useState(false);
+  const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
 
 
   const { toast } = useToast();
@@ -57,11 +59,15 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      if (!editedAvatarPreviewUrl && authUser.avatarUrl) {
-        setEditedAvatarPreviewUrl(authUser.avatarUrl);
+      if (!editedAvatarPreviewUrl && authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:')) { // Check if it's not already a data URL
+         // If avatarUrl is a regular URL (e.g. placeholder), don't overwrite preview with it if user is trying to upload.
+         // Only set if editedAvatarPreviewUrl is null.
+      } else if (authUser.avatarUrl) {
+         setEditedAvatarPreviewUrl(authUser.avatarUrl);
       }
     }
   }, [authUser, editedAvatarPreviewUrl]);
+
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -78,23 +84,37 @@ export default function ProfilePage() {
     setIsEditing(!isEditing);
   };
 
-  const handleAvatarFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { 
+      if (file.size > 5 * 1024 * 1024) { // Increased limit slightly for pre-compression
         toast({
           variant: 'destructive',
           title: t('profilePage.toasts.avatarImageTooLargeTitle'),
           description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
         setEditedAvatarFile(null);
+        setEditedAvatarPreviewUrl(user?.avatarUrl || null); // Revert to original or null
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         return;
       }
-      setEditedAvatarFile(file);
+      
+      setIsCompressingAvatar(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditedAvatarPreviewUrl(reader.result as string);
+      reader.onloadend = async () => {
+        try {
+          const originalDataUrl = reader.result as string;
+          const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.7, type: 'image/jpeg', maxWidth: 300, maxHeight: 300 });
+          setEditedAvatarPreviewUrl(compressedDataUrl);
+          // We don't need to store the File object itself if we have the data URL
+          setEditedAvatarFile(null); 
+        } catch (error) {
+          console.error("Error compressing avatar:", error);
+          toast({ title: t('common.error'), description: "Failed to process image.", variant: "destructive" });
+          setEditedAvatarPreviewUrl(user?.avatarUrl || null); // Revert on error
+        } finally {
+          setIsCompressingAvatar(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -108,15 +128,18 @@ export default function ProfilePage() {
       name: editedName,
     };
 
-    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== user.avatarUrl) {
+    // Only include avatarUrl if it has actually changed and is a data URL (meaning new/compressed)
+    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== authUser?.avatarUrl) {
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
-    } else if (!editedAvatarPreviewUrl && user.avatarUrl) {
-      updatedUserData.avatarUrl = undefined; 
+    } else if (!editedAvatarPreviewUrl && authUser?.avatarUrl) {
+      updatedUserData.avatarUrl = undefined; // To clear it
     }
+
 
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
+      // Avatar file is already handled via preview URL
     } catch (error) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
@@ -224,7 +247,7 @@ export default function ProfilePage() {
     setIsDestroyingData(false);
   };
 
-  const avatarSrcToDisplay = isEditing ? (editedAvatarPreviewUrl || 'https://placehold.co/100x100.png') : (user?.avatarUrl || 'https://placehold.co/100x100.png');
+  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : authUser?.avatarUrl) || 'https://placehold.co/100x100.png?text=LF';
 
 
   if (authLoading || !user) {
@@ -273,12 +296,12 @@ export default function ProfilePage() {
             </Button>
           ) : (
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEditToggle} disabled={authLoading || isLoggingOut}>
+              <Button variant="outline" onClick={handleEditToggle} disabled={authLoading || isLoggingOut || isCompressingAvatar}>
                 <X className="mr-2 h-4 w-4" /> {t('common.cancel')}
               </Button>
-              <Button onClick={handleSaveChanges} disabled={authLoading || isLoggingOut}>
-                {authLoading ? <AuthLoader className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
-                {authLoading ? t('profilePage.savingButton') : t('profilePage.saveChangesButton')}
+              <Button onClick={handleSaveChanges} disabled={authLoading || isLoggingOut || isCompressingAvatar}>
+                {(authLoading || isCompressingAvatar) ? <AuthLoader className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                {(authLoading || isCompressingAvatar) ? t('profilePage.savingButton') : t('profilePage.saveChangesButton')}
               </Button>
             </div>
           )}
@@ -292,12 +315,17 @@ export default function ProfilePage() {
                   className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
                   onClick={() => isEditing && avatarInputRef.current?.click()}
                 >
+                  {isCompressingAvatar && isEditing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full z-10">
+                      <AuthLoader className="h-6 w-6 text-white animate-spin" />
+                    </div>
+                  )}
                   <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
                   <AvatarFallback className="text-2xl bg-muted">
-                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                   </AvatarFallback>
                 </Avatar>
-                {isEditing && (
+                {isEditing && !isCompressingAvatar && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                        onClick={() => avatarInputRef.current?.click()}
                   >
@@ -311,7 +339,7 @@ export default function ProfilePage() {
                 className="hidden"
                 accept="image/png, image/jpeg, image/gif, image/webp"
                 onChange={handleAvatarFileChange}
-                disabled={!isEditing || authLoading || isLoggingOut}
+                disabled={!isEditing || authLoading || isLoggingOut || isCompressingAvatar}
               />
               <div>
                 {isEditing ? (
@@ -322,7 +350,7 @@ export default function ProfilePage() {
                       value={editedName}
                       onChange={(e) => setEditedName(e.target.value)}
                       className="text-2xl font-semibold p-1"
-                      disabled={authLoading || isLoggingOut}
+                      disabled={authLoading || isLoggingOut || isCompressingAvatar}
                     />
                      <p className="text-md text-muted-foreground">{user.email} ({t('profilePage.emailCannotBeChanged')})</p>
                   </div>
@@ -473,12 +501,8 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('profilePage.destroyConfirmDescription1')}
-            </AlertDialogDescription>
-            <AlertDialogDescription>
-              {t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}
-            </AlertDialogDescription>
+             <AlertDialogDescription >{t('profilePage.destroyConfirmDescription1')}</AlertDialogDescription>
+             <AlertDialogDescription >{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
             <Label htmlFor="destroy-confirm-email" className="sr-only">{t('profilePage.destroyConfirmEmailPlaceholder')}</Label>
@@ -508,4 +532,3 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
-
