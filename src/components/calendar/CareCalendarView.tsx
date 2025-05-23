@@ -385,7 +385,7 @@ export function CareCalendarView({
               <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('calendarPage.calendarView.timeColumnHeader')}</div>
               {daysInWeek.map(day => {
                 const dayOfWeek = getDay(day);
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
                 const today = isToday(day);
                 return (
                   <div
@@ -466,7 +466,7 @@ export function CareCalendarView({
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative",
+                                    "p-1 border-r border-b min-h-[100px] flex flex-col relative", // min-h for base height, cell can grow
                                     today ? "border-2 border-primary" : "",
                                 )}
                             >
@@ -477,21 +477,21 @@ export function CareCalendarView({
                                 )}>
                                   {getDate(day)}
                                 </div>
-                                <div className="flex-grow flex flex-col space-y-0.5 overflow-hidden text-[9px] leading-tight pt-4">
+                                <div className="flex-grow flex flex-col space-y-0.5 text-[9px] leading-tight pt-4">
                                     {dayTasksAllDay.length > 0 && (
-                                        <div className={cn("p-0.5 rounded-sm mb-0.5 calendar-day-cell-tasks overflow-y-auto", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
+                                        <div className={cn("p-0.5 rounded-sm mb-0.5 space-y-0.5", isCurrentMonthDay ? "bg-indigo-50 dark:bg-indigo-900/20" : "bg-muted/5")}>
                                            {dayTasksAllDay.map(occ => renderTaskItem(occ, true))}
                                         </div>
                                     )}
 
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px calendar-day-cell-tasks overflow-y-auto",
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px",
                                         isCurrentMonthDay ? "bg-yellow-50 dark:bg-yellow-700/10" : "bg-muted/20"
                                     )}>
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true))}
                                     </div>
                                     <div className={cn(
-                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px calendar-day-cell-tasks overflow-y-auto",
+                                        "flex-1 p-0.5 rounded-sm min-h-[30px] space-y-px",
                                         isCurrentMonthDay ? "bg-blue-50 dark:bg-blue-700/10" : "bg-muted/10"
                                     )}>
                                         {dayTasksNighttime.map(occ => renderTaskItem(occ, true))}
