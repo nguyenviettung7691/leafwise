@@ -1,12 +1,10 @@
 
 'use client';
 
-import Link from 'next/link'; // Keep NextLink for non-ProgressBarLink uses if any
 import { usePathname, useRouter } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { buttonVariants } from '@/components/ui/button';
-import { Logo } from './Logo';
+import { Logo } from './Logo'; // Updated to use the new Logo
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,8 +27,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react';
-import { ProgressBarLink } from './ProgressBarLink'; // New import
+import { Settings, LogIn, Menu, Palette, Languages, UserCircle as UserIcon } from 'lucide-react'; // Added UserIcon as fallback
+import { ProgressBarLink } from './ProgressBarLink';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
@@ -40,7 +38,7 @@ const isActive = (itemHref: string, currentPathname: string): boolean => {
 };
 
 export function Navbar() {
-  const { user, isLoading: authIsLoading } = useAuth();
+  const { user, isLoading: authIsLoading, logout } = useAuth(); // Added logout for potential future use here if needed
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -70,7 +68,7 @@ export function Navbar() {
           if (isMobile) setIsMobileMenuOpen(false);
         }}
       >
-        <item.icon className="h-4 w-4 mr-0" /> {/* Removed mr-2 to use gap-2 from parent */}
+        <item.icon className="h-4 w-4 mr-0" />
         {item.title}
       </ProgressBarLink>
     ))
@@ -82,7 +80,8 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-x-6">
-          <Logo iconSize={28} textSize="text-2xl" />
+          {/* Using the new Logo component */}
+          <Logo iconSize={28} textSize="text-2xl" iconColorClassName="text-primary" textColorClassName="text-foreground"/>
           <nav className="hidden md:flex items-center gap-1">
             <NavLinks />
           </nav>
@@ -111,7 +110,6 @@ export function Navbar() {
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
-              <Skeleton className="h-9 w-20" />
             </>
           ) : user ? (
             <>
@@ -122,9 +120,9 @@ export function Navbar() {
                     isProfileActive ? "border-primary" : "border-transparent"
                   )}
                 >
-                  <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name} data-ai-hint="person avatar" />
+                  <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name || "User"} data-ai-hint="person avatar" />
                   <AvatarFallback className="text-sm bg-muted">
-                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {(user.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </ProgressBarLink>
@@ -196,7 +194,7 @@ export function Navbar() {
               </Dialog>
             </>
           ) : (
-            <ProgressBarLink href="/login" className={cn(Button.name, buttonVariants({ variant: "ghost" }))}>
+            <ProgressBarLink href="/login" className={cn(Button.name, "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50", "bg-primary text-primary-foreground hover:bg-primary/90", "h-9 px-3")}>
               <LogIn className="h-5 w-5 mr-2" />
               {t('loginPage.signInButton')}
             </ProgressBarLink>
@@ -206,5 +204,3 @@ export function Navbar() {
     </header>
   );
 }
-
-    
