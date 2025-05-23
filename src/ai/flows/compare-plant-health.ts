@@ -39,8 +39,14 @@ const prompt = ai.definePrompt({
   name: 'comparePlantHealthPrompt',
   input: { schema: ComparePlantHealthInputSchema },
   output: { schema: ComparePlantHealthOutputSchema },
-  prompt: `CRITICAL INSTRUCTION: Your 'comparisonSummary' output field MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English.
+  prompt: `
+Output Language Instructions:
+Your 'comparisonSummary' output field MUST be in the language specified by '{{languageCode}}'.
+- If '{{languageCode}}' is 'vi', the summary must be in Vietnamese.
+- If '{{languageCode}}' is 'en' or not provided, the summary must be in English.
+The 'suggestedOverallHealth' field should be one of the enum values and not translated.
 
+Task:
 You are a plant health monitoring assistant.
 A plant's current overall health is recorded as: '{{currentPlantHealth}}'.
 A new photo of the plant has just been analyzed, yielding the following assessment:
@@ -48,15 +54,14 @@ A new photo of the plant has just been analyzed, yielding the following assessme
 {{#if newPhotoDiagnosisNotes}}- Diagnosis notes from new photo: "{{newPhotoDiagnosisNotes}}"{{/if}}
 
 Based on this new information, please:
-1.  Provide a brief 'comparisonSummary' (in the specified '{{languageCode}}') comparing the plant's recorded overall health with this new assessment.
+1.  Provide a brief 'comparisonSummary' (adhering to Output Language Instructions) comparing the plant's recorded overall health with this new assessment.
 2.  Determine if the new assessment is significantly different enough to warrant updating the plant's overall recorded health status ('shouldUpdateOverallHealth'). Consider if the new status is a clear change (e.g., 'healthy' to 'sick', or 'sick' to 'healthy'). Minor fluctuations or remaining in a similar state (e.g. 'needs_attention' to 'needs_attention' with slightly different notes) might not always warrant an overall status update unless the notes indicate a significant shift.
 3.  If an update is warranted, suggest the 'suggestedOverallHealth' status. This should usually be the 'newPhotoHealthStatus'.
 
 Examples:
-- If current is 'healthy' and new is 'sick' with "severe pest infestation", suggest update to 'sick'.
-- If current is 'sick' and new is 'healthy' with "plant has recovered well", suggest update to 'healthy'.
-- If current is 'needs_attention' and new is 'needs_attention' with "still some yellow leaves", likely don't suggest update, summary "Continues to need attention for yellow leaves" (or translated equivalent).
-- If current is 'healthy' and new is 'healthy', summary "Remains healthy." (or translated equivalent).
+- If current is 'healthy' and new is 'sick' with "severe pest infestation", suggest update to 'sick'. Summary (en): "The plant's health has declined from healthy to sick due to a severe pest infestation."
+- If current is 'sick' and new is 'healthy' with "plant has recovered well", suggest update to 'healthy'. Summary (vi): "Sức khỏe của cây đã cải thiện từ bị bệnh sang khỏe mạnh, cây phục hồi tốt."
+- If current is 'needs_attention' and new is 'needs_attention' with "still some yellow leaves", likely don't suggest update. Summary (en): "The plant continues to need attention for yellow leaves, with no significant change from the previous assessment."
 
 Return your response ONLY in the specified JSON format.
 `,
@@ -82,3 +87,6 @@ const comparePlantHealthFlow = ai.defineFlow(
     return output;
   }
 );
+
+
+    

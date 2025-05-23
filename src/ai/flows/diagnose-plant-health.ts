@@ -55,26 +55,45 @@ const prompt = ai.definePrompt({
   name: 'diagnosePlantHealthPrompt',
   input: {schema: DiagnosePlantHealthInputSchema},
   output: {schema: DiagnosePlantHealthOutputSchema},
-  prompt: `CRITICAL INSTRUCTION: ALL textual output in your response fields (commonName, familyCategory, diagnosis, careRecommendations action & details) MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond entirely in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English. The 'status' field in 'healthAssessment' MUST be one of 'healthy', 'needs_attention', 'sick', or 'unknown'. Scientific names can remain in Latin.
+  prompt: `
+Output Language Instructions:
+Your entire JSON response, specifically the string values for 'commonName', 'familyCategory', 'diagnosis', and all 'action' and 'details' fields within 'careRecommendations', MUST be in the language specified by the '{{languageCode}}' input parameter.
+- If '{{languageCode}}' is 'vi', all these fields must be in Vietnamese.
+- If '{{languageCode}}' is 'en' or if '{{languageCode}}' is not provided, all these fields must be in English.
+- Scientific names (e.g., 'scientificName') can remain in Latin as they are generally language-independent.
+- The 'status' field in 'healthAssessment' must be one of the exact enum values: 'healthy', 'needs_attention', 'sick', or 'unknown', and should not be translated.
 
-You are an expert botanist and plant pathologist.
-Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the language instruction above.
+Task:
+You are an expert botanist and plant pathologist. Analyze the provided plant image and optional user description to perform the following tasks, strictly adhering to the Output Language Instructions above.
 
-1.  **Identification**: Determine if the image contains a plant. If it does, identify its common name (in '{{languageCode}}'), scientific name, family category (in '{{languageCode}}' if a common term exists, otherwise standard botanical term), and estimate the plant's age in years (as a number). If unsure, indicate that.
-2.  **Health Assessment**: Assess the plant's health.
-    *   Determine its 'status' and set it to one of: 'healthy', 'needs_attention', 'sick', or 'unknown'.
-    *   Provide a 'diagnosis' (in '{{languageCode}}') detailing any issues.
-    *   State your 'confidence' level (low, medium, high).
-3.  **Care Recommendations**: Based on your diagnosis, suggest 2-3 actionable care steps. Frame these as common care task categories (e.g., Watering, Lighting, Pest Control) with action names and details in '{{languageCode}}'. Examples:
-    - If overwatered: 'Action: Điều chỉnh Tưới nước', 'Details: Giảm tần suất và đảm bảo chậu thoát nước tốt.' (if languageCode='vi')
-    - If pests: 'Action: Pest Control', 'Details: Identify pest and treat with organic insecticide.' (if languageCode='en')
+1.  **Identification**:
+    *   Determine if the image contains a plant ('isPlant': boolean).
+    *   If it is a plant, identify its 'commonName' (in the specified language).
+    *   Identify its 'scientificName' (Latin).
+    *   Identify its 'familyCategory' (in the specified language if a common term exists, otherwise use a standard botanical term).
+    *   Estimate the plant's 'ageEstimateYears' (numeric).
+    *   If unsure about any identification detail, indicate that appropriately in the specified language or leave the field blank if optional.
 
+2.  **Health Assessment**:
+    *   Assess the plant's health 'status' (must be one of 'healthy', 'needs_attention', 'sick', 'unknown').
+    *   Provide a 'diagnosis' (in the specified language) detailing any issues.
+    *   State your 'confidence' level for the assessment ('low', 'medium', 'high').
+
+3.  **Care Recommendations**:
+    *   Based on your diagnosis, suggest 2-3 actionable care steps as an array of objects in 'careRecommendations'.
+    *   Each object should have an 'action' (a short summary of the care category, in the specified language, e.g., "Watering Adjustment", "Pest Control").
+    *   Each object can have 'details' (more specific advice, in the specified language).
+    *   Example for languageCode='vi': { "action": "Điều chỉnh Tưới nước", "details": "Giảm tần suất và đảm bảo chậu thoát nước tốt." }
+    *   Example for languageCode='en': { "action": "Pest Control", "details": "Identify pest and treat with organic insecticide." }
+
+User Input:
 User Description (if provided): {{{description}}}
 Plant Photo: {{media url=photoDataUri}}
 
+Output Format:
 Provide your response ONLY in the structured JSON format defined by the output schema.
-If the image does not appear to be a plant, set 'isPlant' to false and 'healthAssessment.status' to 'unknown'. Leave other text fields blank or indicate non-applicability in the specified language.
-If the plant is healthy, set 'healthAssessment.status' to 'healthy' and reflect this in 'diagnosis' (in '{{languageCode}}'), and provide general care tips if appropriate (in '{{languageCode}}').
+If the image does not appear to be a plant, set 'isPlant' to false and 'healthAssessment.status' to 'unknown'. Leave other text fields blank or provide non-applicable messages in the specified language.
+If the plant is healthy, set 'healthAssessment.status' to 'healthy', provide a 'diagnosis' stating it's healthy (in the specified language), and give general care tips if appropriate for 'careRecommendations' (in the specified language).
 `,
 });
 
@@ -90,8 +109,12 @@ const diagnosePlantHealthFlow = ai.defineFlow(
         console.warn('Diagnose plant health prompt returned null output. Returning default structure.');
         const lang = input.languageCode === 'vi' ? 'vi' : 'en';
         const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
+        const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
         return {
-            identification: { isPlant: false },
+            identification: { 
+              isPlant: false,
+              commonName: isPlantMsg,
+            },
             healthAssessment: { status: 'unknown', diagnosis: errorMsg },
             careRecommendations: [],
         };
@@ -110,3 +133,6 @@ const diagnosePlantHealthFlow = ai.defineFlow(
     };
   }
 );
+
+
+    

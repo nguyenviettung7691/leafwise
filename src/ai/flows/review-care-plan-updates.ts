@@ -74,9 +74,14 @@ const prompt = ai.definePrompt({
   name: 'reviewCarePlanUpdatesPrompt',
   input: { schema: ReviewCarePlanInputSchema },
   output: { schema: ReviewCarePlanOutputSchema },
-  prompt: `CRITICAL INSTRUCTION: ALL textual output in your response fields ('overallAssessment', 'reasoning' in taskModifications, 'name' and 'description' in updatedDetails, 'taskName' and 'taskDescription' in newTasks) MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond entirely in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English.
+  prompt: `
+Output Language Instructions:
+ALL textual output in your response fields ('overallAssessment', 'reasoning' in taskModifications, 'name' and 'description' in updatedDetails, 'taskName' and 'taskDescription' in newTasks) MUST be in the language specified by '{{languageCode}}'.
+- If '{{languageCode}}' is 'vi', respond entirely in Vietnamese.
+- If '{{languageCode}}' is 'en' or not provided, respond in English.
 
-You are an expert horticulturalist assisting a user with updating their plant's care plan, strictly adhering to the language instruction above.
+Task:
+You are an expert horticulturalist assisting a user with updating their plant's care plan, strictly adhering to the Output Language Instructions above.
 Plant Name: {{plantCommonName}}
 
 A new photo diagnosis has been performed:
@@ -126,20 +131,24 @@ const reviewCarePlanFlow = ai.defineFlow(
       currentCareTasks: Array.isArray(input.currentCareTasks) ? input.currentCareTasks : [],
     };
     const { output } = await prompt(saneInput);
+    const lang = input.languageCode === 'vi' ? 'vi' : 'en';
+    const defaultAssessment = lang === 'vi' ? "Đánh giá của AI không được cung cấp." : "AI assessment was not provided.";
+
     if (!output) {
       console.warn('Review Care Plan Updates prompt returned null output. Returning default structure.');
-      const lang = input.languageCode === 'vi' ? 'vi' : 'en';
-      const errorMsg = lang === 'vi' ? "Không thể xem xét kế hoạch chăm sóc vào lúc này. AI không cung cấp phản hồi." : "Unable to review care plan at this time. The AI did not provide a response.";
       return {
-        overallAssessment: errorMsg,
+        overallAssessment: defaultAssessment,
         taskModifications: [],
         newTasks: [],
       };
     }
     return {
-      overallAssessment: output.overallAssessment || (input.languageCode === 'vi' ? "Đánh giá của AI không được cung cấp." : "AI assessment was not provided."),
+      overallAssessment: output.overallAssessment || defaultAssessment,
       taskModifications: Array.isArray(output.taskModifications) ? output.taskModifications : [],
       newTasks: Array.isArray(output.newTasks) ? output.newTasks : [],
     };
   }
 );
+
+
+    

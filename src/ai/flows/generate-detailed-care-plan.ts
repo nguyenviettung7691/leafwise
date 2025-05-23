@@ -34,9 +34,9 @@ export type AIGeneratedTask = z.infer<typeof AIGeneratedTaskSchema>;
 
 const GenerateDetailedCarePlanOutputSchema = z.object({
   generatedTasks: z.array(AIGeneratedTaskSchema).describe("A list of specific, actionable care tasks. Aim for 3-5 tasks for 'basic' mode, and 5-8 for 'advanced' mode, covering various aspects of care relevant to the plant and mode."),
-  customizableSchedulesPlaceholder: z.string().describe('Placeholder text for customizable schedules feature.'),
-  pushNotificationsPlaceholder: z.string().describe('Placeholder text for push notifications feature.'),
-  activityTrackingPlaceholder: z.string().describe('Placeholder text for activity completion tracking feature.'),
+  customizableSchedulesPlaceholder: z.string().describe('Placeholder text for customizable schedules feature. MUST be in the specified languageCode.'),
+  pushNotificationsPlaceholder: z.string().describe('Placeholder text for push notifications feature. MUST be in the specified languageCode.'),
+  activityTrackingPlaceholder: z.string().describe('Placeholder text for activity completion tracking feature. MUST be in the specified languageCode.'),
 });
 export type GenerateDetailedCarePlanOutput = z.infer<typeof GenerateDetailedCarePlanOutputSchema>;
 
@@ -48,9 +48,14 @@ const prompt = ai.definePrompt({
   name: 'generateDetailedCarePlanPrompt',
   input: {schema: GenerateDetailedCarePlanInputSchema},
   output: {schema: GenerateDetailedCarePlanOutputSchema},
-  prompt: `CRITICAL INSTRUCTION: ALL textual output for 'taskName' and 'taskDescription' in the 'generatedTasks' array MUST be in the language specified by '{{languageCode}}'. If '{{languageCode}}' is 'vi', respond in Vietnamese. If '{{languageCode}}' is 'en' or not provided, respond in English. The placeholder texts should also be in the specified language.
+  prompt: `
+Output Language Instructions:
+ALL textual output in your response, specifically 'taskName' and 'taskDescription' in the 'generatedTasks' array, and the placeholder texts ('customizableSchedulesPlaceholder', 'pushNotificationsPlaceholder', 'activityTrackingPlaceholder'), MUST be in the language specified by '{{languageCode}}'.
+- If '{{languageCode}}' is 'vi', respond entirely in Vietnamese.
+- If '{{languageCode}}' is 'en' or not provided, respond in English.
 
-You are an expert horticulturist creating a structured and actionable list of care tasks for a plant, strictly adhering to the language instruction above.
+Task:
+You are an expert horticulturist creating a structured and actionable list of care tasks for a plant, strictly adhering to the Output Language Instructions above.
 
 Plant Information:
 - Common Name: {{{plantCommonName}}}
@@ -61,7 +66,7 @@ Plant Information:
 Requested Care Plan Mode: {{{carePlanMode}}}
 
 Generate a list of 'generatedTasks'. Each task MUST include:
--   'taskName': A specific name (e.g., "Tưới đẫm", "Xoay chậu đều sáng", "Bón phân giàu đạm" if languageCode='vi').
+-   'taskName': A specific name (in '{{languageCode}}', e.g., "Tưới đẫm", "Xoay chậu đều sáng", "Bón phân giàu đạm" if languageCode='vi').
 -   'taskDescription': Clear, concise instructions for the task (in '{{languageCode}}').
 -   'suggestedFrequency': How often. Please use one of these exact formats: 'Daily', 'Weekly', 'Monthly', 'Yearly', 'Ad-hoc', 'Every X Days', 'Every X Weeks', or 'Every X Months' (e.g., "Every 7 Days" or "Weekly"). Do not use "Once a week" or "From 2-4 days".
 -   'suggestedTimeOfDay': When. Please use 'All day' or HH:MM format (e.g., "09:00", "14:30"). Do not use "Morning" or "Evening".
@@ -89,26 +94,22 @@ const generateDetailedCarePlanFlow = ai.defineFlow(
   },
   async (input: GenerateDetailedCarePlanInput) => {
     const {output} = await prompt(input);
-    if (!output) {
-        console.warn('Generate Detailed Care Plan prompt returned null output. Returning default structure.');
-        const lang = input.languageCode === 'vi' ? 'vi' : 'en';
-        const customizablePlaceholder = lang === 'vi' ? "Lịch chăm sóc và danh sách công việc tùy chỉnh sẽ có trong bản cập nhật tới." : "Customizable care schedules and task lists will be available in a future update.";
-        const pushPlaceholder = lang === 'vi' ? "Thông báo đẩy nhắc nhở công việc chăm sóc sắp ra mắt!" : "Push notification reminders for care tasks are coming soon!";
-        const activityPlaceholder = lang === 'vi' ? "Theo dõi hoàn thành hoạt động cho công việc chăm sóc sẽ được triển khai trong phiên bản tới." : "Activity completion tracking for your care tasks will be implemented in a future version.";
-        return {
-            generatedTasks: [],
-            customizableSchedulesPlaceholder: customizablePlaceholder,
-            pushNotificationsPlaceholder: pushPlaceholder,
-            activityTrackingPlaceholder: activityPlaceholder,
-        };
-    }
-    // Ensure generatedTasks is always an array, even if AI fails to provide it
-    // Also ensure placeholders are in the correct language if the AI somehow misses this for them
     const lang = input.languageCode === 'vi' ? 'vi' : 'en';
+
     const defaultCustomizablePlaceholder = lang === 'vi' ? "Lịch chăm sóc và danh sách công việc tùy chỉnh sẽ có trong bản cập nhật tới." : "Customizable care schedules and task lists will be available in a future update.";
     const defaultPushPlaceholder = lang === 'vi' ? "Thông báo đẩy nhắc nhở công việc chăm sóc sắp ra mắt!" : "Push notification reminders for care tasks are coming soon!";
     const defaultActivityPlaceholder = lang === 'vi' ? "Theo dõi hoàn thành hoạt động cho công việc chăm sóc sẽ được triển khai trong phiên bản tới." : "Activity completion tracking for your care tasks will be implemented in a future version.";
 
+    if (!output) {
+        console.warn('Generate Detailed Care Plan prompt returned null output. Returning default structure.');
+        return {
+            generatedTasks: [],
+            customizableSchedulesPlaceholder: defaultCustomizablePlaceholder,
+            pushNotificationsPlaceholder: defaultPushPlaceholder,
+            activityTrackingPlaceholder: defaultActivityPlaceholder,
+        };
+    }
+    
     return {
         ...output,
         generatedTasks: Array.isArray(output.generatedTasks) ? output.generatedTasks : [],
@@ -119,3 +120,5 @@ const generateDetailedCarePlanFlow = ai.defineFlow(
   }
 );
 
+
+    
