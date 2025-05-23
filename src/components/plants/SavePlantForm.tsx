@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { Leaf, UploadCloud, Save, Edit, ImageOff } from 'lucide-react';
+import { Leaf, UploadCloud, Save, Edit, ImageOff, Loader2 } from 'lucide-react'; // Added Loader2
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -36,7 +36,7 @@ const plantFormSchema = z.object({
   location: z.string().optional(),
   customNotes: z.string().optional(),
   primaryPhoto: primaryPhotoSchema,
-  diagnosedPhotoDataUrl: z.string().optional().nullable(), // This will hold the data URL if new file, or IDB key if gallery selection
+  diagnosedPhotoDataUrl: z.string().optional().nullable(),
 });
 
 type SavePlantFormValues = z.infer<typeof plantFormSchema>;
@@ -80,29 +80,44 @@ export function SavePlantForm({
     },
   });
 
-  // imagePreview will hold dataURL for new uploads, or be null if using gallery/existing IDB image
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedGalleryPhotoUrl, setSelectedGalleryPhotoUrl] = useState<string | null>(null); // Stores IDB key from gallery
+  const [selectedGalleryPhotoUrl, setSelectedGalleryPhotoUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // This effect is for initializing preview from initialData (which could be an IDB key)
-  const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(
-    initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')
+  const idbKeyForInitialDisplay = initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')
       ? initialData.diagnosedPhotoDataUrl
-      : undefined
-  );
+      : undefined;
+  const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(idbKeyForInitialDisplay);
+
 
   useEffect(() => {
+    // Reset form when initialData changes
+    form.reset({
+      commonName: initialData?.commonName || '',
+      scientificName: initialData?.scientificName || '',
+      familyCategory: initialData?.familyCategory || '',
+      ageEstimateYears: initialData?.ageEstimateYears !== undefined ? initialData.ageEstimateYears : undefined,
+      healthCondition: initialData?.healthCondition || 'unknown',
+      location: initialData?.location || '',
+      customNotes: initialData?.customNotes || '',
+      primaryPhoto: null, // Always reset file input
+      diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
+    });
+
+    // Set preview based on initialData
     if (initialData?.diagnosedPhotoDataUrl) {
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-        setImagePreview(initialData.diagnosedPhotoDataUrl); // From diagnosis (data URL)
+        setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoUrl(null);
       } else {
         // It's an IDB key, initialImageFromDb will handle it.
-        // Don't set imagePreview here directly to avoid conflict with useIndexedDbImage
-        setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl); // Mark as selected from gallery/existing
+        // No need to setImagePreview here directly as useIndexedDbImage will update initialImageFromDb
+        setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
+        setImagePreview(null); // Clear data URL preview if we are using an IDB key
       }
-      form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
+    } else {
+      setImagePreview(null);
+      setSelectedGalleryPhotoUrl(null);
     }
   }, [initialData, form]);
 
@@ -111,20 +126,19 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        // diagnosedPhotoDataUrl already holds the correct value (data URL for new, IDB key for gallery/existing)
     };
     await onSave(formDataToSave);
   };
 
-  const currentFormTitle = formTitle || t('diagnosePage.resultDisplay.saveFormTitle');
-  const currentFormDescription = formDescription || t('diagnosePage.resultDisplay.saveFormDescription', { plantName: initialData?.commonName || t('common.unknown')});
-  const currentSubmitButtonText = submitButtonText || t('diagnosePage.resultDisplay.saveFormSubmitButton');
-  const FormIcon = currentFormTitle.toLowerCase().includes(t('common.edit').toLowerCase()) ? Edit : Leaf;
+  const currentFormTitle = formTitle || t('savePlantForm.formTitle');
+  const currentFormDescription = formDescription || t('savePlantForm.formDescription', { plantName: initialData?.commonName || t('common.unknown')});
+  const currentSubmitButtonText = submitButtonText || t('savePlantForm.submitButtonText');
+  const FormIcon = initialData ? Edit : Leaf;
 
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
-    setImagePreview(null); // Let useIndexedDbImage handle preview for gallery (IDB key)
-    setSelectedGalleryPhotoUrl(photo.url); // photo.url is the IDB key
+    setImagePreview(null); 
+    setSelectedGalleryPhotoUrl(photo.url); 
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
     form.setValue('primaryPhoto', null); 
     if (fileInputRef.current) {
@@ -132,11 +146,11 @@ export function SavePlantForm({
     }
   };
 
-  const displayUrl = imagePreview || (selectedGalleryPhotoUrl ? initialImageFromDb : (initialData?.diagnosedPhotoDataUrl?.startsWith('data:image/') ? initialData.diagnosedPhotoDataUrl : initialImageFromDb));
-  const isDisplayLoading = isLoadingInitialImage && (selectedGalleryPhotoUrl || (initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')));
+  const displayUrl = imagePreview || (selectedGalleryPhotoUrl ? initialImageFromDb : null);
+  const isDisplayLoading = isLoadingInitialImage && !!selectedGalleryPhotoUrl;
   
   return (
-    <Card className="shadow-lg animate-in fade-in-50">
+    <Card className={cn("shadow-lg animate-in fade-in-50", hideInternalHeader ? "border-0 shadow-none" : "")}>
       {!hideInternalHeader && (
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2">
@@ -148,7 +162,7 @@ export function SavePlantForm({
       )}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className={cn("space-y-6", hideInternalHeader ? "pt-6" : "")}>
+          <CardContent className={cn("space-y-6", hideInternalHeader ? "pt-0" : "")}>
             {isDisplayLoading ? (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
                 <Skeleton className="w-[150px] h-[150px] rounded-md" />
@@ -165,7 +179,7 @@ export function SavePlantForm({
                   onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/150x150.png?text=Error';}}
                 />
               </div>
-            ) : (initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:')) ? ( // If it was an IDB key but not found/error
+            ) : (initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:')) ? (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center items-center h-[150px] w-[150px] mx-auto">
                  <ImageOff size={32} className="text-muted-foreground"/>
               </div>
@@ -176,7 +190,7 @@ export function SavePlantForm({
               name="primaryPhoto"
               render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -189,7 +203,7 @@ export function SavePlantForm({
                                     <span className="font-semibold">{t('savePlantForm.uploadAreaText')}</span>
                                 </p>
                                 <p className="text-xs text-muted-foreground">{t('savePlantForm.uploadAreaHint')}</p>
-                                {form.getValues('primaryPhoto')?.[0] && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
+                                {(form.getValues('primaryPhoto')?.[0] && imagePreview) && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
                             </div>
                             <Input
                                 id="primaryPhoto-input"
@@ -209,13 +223,16 @@ export function SavePlantForm({
                                         if (files[0].size > 4 * 1024 * 1024) { 
                                             form.setError("primaryPhoto", { type: "manual", message: t('diagnosePage.toasts.imageTooLargeDesc')});
                                             setImagePreview(null);
-                                            setSelectedGalleryPhotoUrl(null);
-                                            if (initialData?.diagnosedPhotoDataUrl?.startsWith('data:image/')) {
+                                            // Keep gallery selection or initial IDB key if new file is invalid
+                                            if (selectedGalleryPhotoUrl) {
+                                                form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl);
+                                            } else if (initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
                                                 form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
-                                            } else if (initialData?.diagnosedPhotoDataUrl) {
-                                                setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl); // Re-select original gallery if new file invalid
+                                                setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
+                                            } else if (initialData?.diagnosedPhotoDataUrl?.startsWith('data:image/')) {
                                                 form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
-                                            } else {
+                                            }
+                                            else {
                                                 form.setValue('diagnosedPhotoDataUrl', null);
                                             }
                                             e.target.value = ''; 
@@ -223,15 +240,16 @@ export function SavePlantForm({
                                             form.clearErrors("primaryPhoto");
                                             const reader = new FileReader();
                                             reader.onloadend = () => {
-                                                setImagePreview(reader.result as string);
-                                                form.setValue('diagnosedPhotoDataUrl', reader.result as string, {shouldDirty: true});
+                                                const result = reader.result as string;
+                                                setImagePreview(result);
+                                                form.setValue('diagnosedPhotoDataUrl', result, {shouldDirty: true});
                                             };
                                             reader.readAsDataURL(files[0]);
                                             setSelectedGalleryPhotoUrl(null); 
                                         }
-                                    } else { // No file selected or selection cancelled
+                                    } else { 
                                         setImagePreview(null);
-                                        if (selectedGalleryPhotoUrl) { // If a gallery image was previously selected, keep it
+                                        if (selectedGalleryPhotoUrl) { 
                                             form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl);
                                         } else if (initialData?.diagnosedPhotoDataUrl) {
                                             form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
@@ -259,13 +277,14 @@ export function SavePlantForm({
                   <div className="flex space-x-3 p-3">
                     {galleryPhotos.map((photo) => {
                       const { imageUrl: galleryThumbUrl, isLoading: isLoadingGalleryThumb } = useIndexedDbImage(photo.url);
+                      const isSelected = selectedGalleryPhotoUrl === photo.url && !imagePreview; // Only highlight if no new file is previewed
                       return (
                         <button
                           type="button"
                           key={photo.id}
                           className={cn(
                             "flex-shrink-0 rounded-md w-20 h-20 overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted flex items-center justify-center",
-                            selectedGalleryPhotoUrl === photo.url ? "border-primary ring-2 ring-primary ring-offset-1" : "border-transparent hover:border-muted-foreground/50"
+                            isSelected ? "border-primary ring-2 ring-primary ring-offset-1" : "border-transparent hover:border-muted-foreground/50"
                           )}
                           onClick={() => handleGalleryPhotoSelect(photo)}
                         >
@@ -295,7 +314,7 @@ export function SavePlantForm({
               name="commonName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.commonNameLabel')} <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.commonNameLabel')} <span className="text-destructive text-xs align-super">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder={t('savePlantForm.commonNamePlaceholder')} {...field} />
                   </FormControl>
@@ -308,7 +327,7 @@ export function SavePlantForm({
               name="scientificName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.scientificNameLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.scientificNameLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <Input placeholder={t('savePlantForm.scientificNamePlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
@@ -321,7 +340,7 @@ export function SavePlantForm({
               name="familyCategory"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.familyCategoryLabel')} <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.familyCategoryLabel')} <span className="text-destructive text-xs align-super">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder={t('savePlantForm.familyCategoryPlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
@@ -334,7 +353,7 @@ export function SavePlantForm({
               name="ageEstimateYears"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.ageEstimateYearsLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.ageEstimateYearsLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <Input type="number" step="0.1" placeholder={t('savePlantForm.ageEstimateYearsPlaceholder')} {...field} value={field.value ?? ''} onChange={e => field.onChange(e.target.value === '' ? undefined : +e.target.value)} />
                   </FormControl>
@@ -347,7 +366,7 @@ export function SavePlantForm({
               name="healthCondition"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.healthConditionLabel')} <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.healthConditionLabel')} <span className="text-destructive text-xs align-super">*</span></FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -370,7 +389,7 @@ export function SavePlantForm({
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.locationLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.locationLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <Input placeholder={t('savePlantForm.locationPlaceholder')} {...field} value={field.value ?? ''} />
                   </FormControl>
@@ -383,7 +402,7 @@ export function SavePlantForm({
               name="customNotes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.customNotesLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.customNotesLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <Textarea placeholder={t('savePlantForm.customNotesPlaceholder')} {...field} rows={3} value={field.value ?? ''}/>
                   </FormControl>
