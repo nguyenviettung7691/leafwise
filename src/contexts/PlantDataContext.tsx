@@ -5,6 +5,7 @@ import type { Plant } from '@/types';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { defaultPlants } from '@/lib/mock-data';
+import { clearPlantImages } from '@/lib/idb-helper'; // Import IDB helper
 
 const LOCAL_STORAGE_KEY = 'leafwisePlants';
 
@@ -16,8 +17,8 @@ interface PlantDataContextType {
   updatePlant: (plantId: string, updatedPlantData: Plant) => void;
   deletePlant: (plantId: string) => void;
   deleteMultiplePlants: (plantIds: Set<string>) => void;
-  setAllPlants: (allNewPlants: Plant[]) => void; // For import
-  clearAllPlantData: () => void; // For "destroy data"
+  setAllPlants: (allNewPlants: Plant[]) => void;
+  clearAllPlantData: () => Promise<void>; // Make it async
 }
 
 const PlantContext = createContext<PlantDataContextType | undefined>(undefined);
@@ -42,7 +43,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading) { // Avoid saving initial empty/default state before loading
+    if (!isLoading) {
       try {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(plants));
       } catch (error) {
@@ -67,18 +68,27 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
 
   const deletePlant = useCallback((plantId: string) => {
     setPlantsState(prevPlants => prevPlants.filter(plant => plant.id !== plantId));
+    // Note: Deleting associated images from IndexedDB should also happen here
+    // For now, image deletion logic will be added to the calling components
   }, []);
 
   const deleteMultiplePlants = useCallback((plantIds: Set<string>) => {
     setPlantsState(prevPlants => prevPlants.filter(plant => !plantIds.has(plant.id)));
+    // Note: Deleting associated images from IndexedDB for multiple plants
   }, []);
 
   const setAllPlants = useCallback((allNewPlants: Plant[]) => {
     setPlantsState(allNewPlants);
   }, []);
   
-  const clearAllPlantData = useCallback(() => {
-    setPlantsState([]);
+  const clearAllPlantData = useCallback(async () => {
+    setPlantsState([]); // Clear plants from context and localStorage
+    try {
+      await clearPlantImages(); // Clear images from IndexedDB
+      console.log("All plant images cleared from IndexedDB.");
+    } catch (error) {
+      console.error("Error clearing plant images from IndexedDB:", error);
+    }
   }, []);
 
   return (

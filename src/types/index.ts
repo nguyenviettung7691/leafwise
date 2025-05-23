@@ -1,11 +1,11 @@
 
 export interface PlantPhoto {
   id: string;
-  url: string;
-  notes?: string; // General notes for the photo
-  dateTaken: string; // ISO string - This will be the date of diagnosis/photo upload
-  healthCondition: PlantHealthCondition; // Health condition AT THE TIME of this photo/diagnosis
-  diagnosisNotes?: string; // Specific diagnosis notes from AI for this photo
+  url: string; // This will now store the key/ID for IndexedDB retrieval
+  notes?: string;
+  dateTaken: string;
+  healthCondition: PlantHealthCondition;
+  diagnosisNotes?: string;
 }
 
 export interface CareTask {
@@ -33,12 +33,12 @@ export interface Plant {
   ageEstimateYears?: number;
   healthCondition: PlantHealthCondition;
   location?: string;
-  plantingDate?: string; // ISO String
+  plantingDate?: string;
   customNotes?: string;
-  primaryPhotoUrl?: string;
+  primaryPhotoUrl?: string; // Will store the ID of the primary photo
   photos: PlantPhoto[];
   careTasks: CareTask[];
-  lastCaredDate?: string; // ISO String
+  lastCaredDate?: string;
 }
 
 export interface PlantFormData {
@@ -50,13 +50,13 @@ export interface PlantFormData {
   location?: string;
   customNotes?: string;
   primaryPhoto?: FileList | null;
-  diagnosedPhotoDataUrl?: string | null; // Used for pre-filling or when a gallery photo is selected
+  diagnosedPhotoDataUrl?: string | null;
 }
 
 export type CarePlanTaskFormData = {
   name: string;
   description?: string;
-  startDate: string; // ISO string for the first due date
+  startDate: string;
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly';
   frequencyValue?: number;
   timeOfDayOption: 'specific_time' | 'all_day';
@@ -111,12 +111,40 @@ export interface CareTaskForAIReview {
     level: 'basic' | 'advanced';
 }
 
-export interface ReviewCarePlanInput {
-    plantCommonName: string;
-    newPhotoDiagnosisNotes: string;
-    newPhotoHealthIsHealthy: boolean;
-    currentCareTasks: CareTaskForAIReview[];
-}
+// Explicitly type the input for the Genkit flow
+export type DiagnosePlantHealthFlowInput = {
+    photoDataUri: string;
+    description?: string;
+    languageCode?: string;
+};
+
+export type DiagnosePlantHealthFlowOutput = {
+    identification: {
+        isPlant: boolean;
+        commonName?: string;
+        scientificName?: string;
+        familyCategory?: string;
+        ageEstimateYears?: number;
+    };
+    healthAssessment: {
+        isHealthy: boolean;
+        diagnosis?: string;
+        confidence?: 'low' | 'medium' | 'high';
+    };
+    careRecommendations: Array<{
+        action: string;
+        details?: string;
+    }>;
+};
+
+export type OnSaveTaskData = {
+    name: string;
+    description?: string;
+    startDate: string;
+    frequency: string;
+    timeOfDay: string;
+    level: 'basic' | 'advanced';
+};
 
 export interface NavItemConfig {
   titleKey: string;
@@ -145,52 +173,6 @@ export interface User {
   preferences?: UserPreferences;
 }
 
-export interface ComparePlantHealthInput {
-  currentPlantHealth: PlantHealthCondition;
-  newPhotoDiagnosisNotes?: string;
-  newPhotoHealthStatus: PlantHealthCondition;
-}
-
-export interface ComparePlantHealthOutput {
-  comparisonSummary: string;
-  shouldUpdateOverallHealth: boolean;
-  suggestedOverallHealth?: PlantHealthCondition;
-}
-
-export type DiagnosePlantHealthInput = {
-    photoDataUri: string;
-    description?: string;
-};
-
-export type DiagnosePlantHealthOutput = {
-    identification: {
-        isPlant: boolean;
-        commonName?: string;
-        scientificName?: string;
-        familyCategory?: string;
-        ageEstimateYears?: number;
-    };
-    healthAssessment: {
-        isHealthy: boolean;
-        diagnosis?: string;
-        confidence?: 'low' | 'medium' | 'high';
-    };
-    careRecommendations: Array<{
-        action: string;
-        details?: string;
-    }>;
-};
-
-export type OnSaveTaskData = {
-    name: string;
-    description?: string;
-    startDate: string;
-    frequency: string;
-    timeOfDay: string;
-    level: 'basic' | 'advanced';
-};
-
-// This specific type for the global calendar component
 export interface GlobalCalendarTaskOccurrence {
   originalTask: CareTask;
   occurrenceDate: Date;
