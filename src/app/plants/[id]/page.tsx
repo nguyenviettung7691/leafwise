@@ -24,6 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
+import { ImageOff } from 'lucide-react'; // Added ImageOff
 
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
@@ -42,6 +44,7 @@ import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import useIndexedDbImage
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -159,13 +162,13 @@ export default function PlantDetailPage() {
     if (id) {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
-        setPlant(JSON.parse(JSON.stringify(foundPlant))); // Deep copy
+        setPlant(JSON.parse(JSON.stringify(foundPlant))); 
       } else if (!isLoadingPage && !foundPlant) { 
         notFound();
       }
     }
     setIsLoadingPage(false);
-  }, [id, getPlantById, contextPlants, isLoadingPage]); // Ensure contextPlants re-triggers this
+  }, [id, getPlantById, contextPlants, isLoadingPage]); 
 
 
  const handleToggleTaskPause = async (taskId: string) => {
@@ -205,18 +208,17 @@ export default function PlantDetailPage() {
     if (!plant) return;
     setIsDeleting(true);
     
-    // Delete associated images from IndexedDB
     for (const photo of plant.photos) {
       try {
-        await deleteImage(photo.url); // Assuming photo.url is the IDB key
+        await deleteImage(photo.url); 
       } catch (e) {
         console.error(`Failed to delete image ${photo.url} from IDB:`, e);
       }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
     const plantNameForToast = plant.commonName || t('common.thePlant');
-    deletePlantFromContext(id); // Use context function
+    deletePlantFromContext(id); 
     toast({
       title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
       description: t('plantDetail.toasts.plantDeletedDesc', {plantName: plantNameForToast}),
@@ -236,7 +238,7 @@ export default function PlantDetailPage() {
 
     setIsDiagnosingNewPhoto(true);
     setNewPhotoJournaled(false);
-    setNewPhotoDiagnosisDialogState({open: false}); 
+    setNewPhotoDiagnosisDialogState({open: false, isLoadingCarePlanReview: true}); 
 
 
     const reader = new FileReader();
@@ -246,6 +248,7 @@ export default function PlantDetailPage() {
         if (!base64Image.startsWith('data:image/')) {
             toast({ title: t('plantDetail.toasts.invalidFileType'), description: t('plantDetail.toasts.invalidFileTypeDesc'), variant: "destructive"});
             setIsDiagnosingNewPhoto(false);
+            setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
             return;
         }
 
@@ -262,7 +265,8 @@ export default function PlantDetailPage() {
                 setNewPhotoDiagnosisDialogState({
                     open: true,
                     newPhotoDiagnosisResult,
-                    newPhotoPreviewUrl: base64Image
+                    newPhotoPreviewUrl: base64Image,
+                    isLoadingCarePlanReview: false,
                 });
                 return;
             }
@@ -344,7 +348,7 @@ export default function PlantDetailPage() {
         } catch (e) {
             console.error("Error saving journal photo to IDB:", e);
             toast({ title: t('common.error'), description: "Failed to save journal image.", variant: "destructive" });
-            photoIdbKey = `https://placehold.co/400x400.png?text=${encodeURIComponent(plant.commonName + ' journal ' + Date.now().toString().slice(-4))}`; // Fallback
+            photoIdbKey = `https://placehold.co/400x400.png?text=${encodeURIComponent(plant.commonName + ' journal ' + Date.now().toString().slice(-4))}`; 
         }
     } else {
         toast({ title: t('common.error'), description: "Failed to process journal image.", variant: "destructive" });
@@ -352,8 +356,8 @@ export default function PlantDetailPage() {
     }
 
     const newPhoto: PlantPhoto = {
-        id: photoIdbKey, // Use the IDB key as the photo's ID as well for consistency
-        url: photoIdbKey, // Store IDB key
+        id: photoIdbKey, 
+        url: photoIdbKey, 
         dateTaken: new Date().toISOString(),
         healthCondition: newHealthStatusFromDiagnosis,
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || "No specific diagnosis notes.",
@@ -374,7 +378,7 @@ export default function PlantDetailPage() {
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
   
-    // Handle English structured strings (from AI or direct input)
+    
     if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
     if (freqLower === 'daily') return addDays(now, 1).toISOString();
     if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
@@ -439,7 +443,7 @@ export default function PlantDetailPage() {
             default:
                 break;
         }
-        if (updatedCareTasks.some(t => t.id === mod.taskId)) { // Check if task wasn't removed
+        if (updatedCareTasks.some(t => t.id === mod.taskId)) { 
             updatedCareTasks[taskIndex] = taskToUpdate;
         }
     });
@@ -606,20 +610,18 @@ export default function PlantDetailPage() {
   
     const photoIdsToDelete = Array.from(selectedPhotoIds);
     for (const photoId of photoIdsToDelete) {
-      // Assuming photo.url (which is an IDB key) is the same as photo.id for IDB stored images
       await deleteImage(photoId);
     }
   
     let updatedPhotos = (plant.photos || []).filter(p => !selectedPhotoIds.has(p.id));
     let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
   
-    if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.primaryPhotoUrl)) { // Check if primary photo ID is in selectedPhotoIds
+    if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.primaryPhotoUrl)) { 
       if (updatedPhotos.length > 0) {
         const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url; // url is the IDB key
+        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url; 
       } else {
-        // If all photos are deleted, generate a placeholder or set to undefined
-        newPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(plant.commonName || 'Plant')}`;
+        newPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(plant.commonName || t('common.thePlant'))}`;
       }
     }
   
@@ -703,6 +705,9 @@ export default function PlantDetailPage() {
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.isHealthy ? 'healthy' :
                                    (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
                                     newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
+  
+  const { imageUrl: dialogImageUrl, isLoading: isLoadingDialogImage, error: dialogImageError } = useIndexedDbImage(selectedGridPhoto?.url);
+
 
   return (
     <AppLayout>
@@ -744,7 +749,6 @@ export default function PlantDetailPage() {
           onOpenGridPhotoDialog={openGridPhotoDialog}
           onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
           isDiagnosingNewPhoto={isDiagnosingNewPhoto}
-          growthPhotoInputRef={growthPhotoInputRef}
           onChartDotClick={handleChartDotClick}
           isManagingPhotos={isManagingPhotos}
           onToggleManagePhotos={toggleManagePhotosMode}
@@ -930,7 +934,15 @@ export default function PlantDetailPage() {
                 </DialogHeader>
                 {selectedGridPhoto && (
                     <div className="space-y-3 py-3">
-                        <Image src={selectedGridPhoto.url} alt={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
+                        {isLoadingDialogImage ? (
+                            <Skeleton className="w-full h-[300px] rounded-md" />
+                        ) : dialogImageError || !dialogImageUrl ? (
+                            <div className="w-full h-[300px] flex items-center justify-center bg-muted rounded-md">
+                                <ImageOff className="w-16 h-16 text-muted-foreground" />
+                            </div>
+                        ) : (
+                           <Image src={dialogImageUrl} alt={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
+                        )}
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
                         <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
@@ -1119,3 +1131,5 @@ export default function PlantDetailPage() {
     </AppLayout>
   );
 }
+
+    
