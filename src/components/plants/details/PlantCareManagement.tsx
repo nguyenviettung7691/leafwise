@@ -132,144 +132,150 @@ export function PlantCareManagement({
 
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-semibold text-lg">{t('plantDetail.careManagement.sectionTitle')}</h3>
-        <div className="flex items-center gap-2">
-          {isManagingCarePlan && selectedTaskIds.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={onDeleteSelectedTasks}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
+    <Card>
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="font-semibold text-lg">{t('plantDetail.careManagement.sectionTitle')}</h3>
+          <div className="flex items-center gap-2">
+            {isManagingCarePlan && selectedTaskIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onDeleteSelectedTasks}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
+              {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
+              {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
             </Button>
-          )}
-           <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
-            {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-            {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
-          </Button>
-          {isManagingCarePlan && (
-            <Button variant="default" size="sm" onClick={onOpenAddTaskDialog}>
-              <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
-            </Button>
-          )}
+            {isManagingCarePlan && (
+              <Button variant="default" size="sm" onClick={onOpenAddTaskDialog}>
+                <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="space-y-3">
-        {sortedTasks && sortedTasks.length > 0 ? (
-          sortedTasks.map(task => {
-            const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
-            const isSelected = selectedTaskIds.has(task.id);
-            const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
-            const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
-            const isAdvanced = task.level === 'advanced';
+        <div className={cn("space-y-3", isManagingCarePlan ? "" : "")}> {/* Container for tasks, NOT blurred */}
+          {sortedTasks && sortedTasks.length > 0 ? (
+            sortedTasks.map(task => {
+              const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
+              const isSelected = selectedTaskIds.has(task.id);
+              const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
+              const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
+              const isAdvanced = task.level === 'advanced';
 
-            return (
-            <Card
-              key={task.id}
-              className={cn(
-                "bg-card border border-border shadow-sm transition-all border-l-4",
-                isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
-                task.isPaused ? "opacity-70" : "",
-                isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
-                isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
-              )}
-            >
-              <CardContent className="p-4 flex justify-between items-center">
-                {isManagingCarePlan && (
-                  <div className="mr-3">
-                    <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => onToggleTaskSelection(task.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={t('plantDetail.careManagement.selectTaskAria', { taskName: task.name })}
-                    />
-                  </div>
+              return (
+              <Card
+                key={task.id}
+                className={cn(
+                  "bg-card border border-border shadow-sm transition-all border-l-4",
+                  isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
+                  task.isPaused ? "opacity-70" : "",
+                  isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
+                  isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
                 )}
-                <div className="flex-1 min-w-0">
-                  <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
-                    <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
-                    <Badge
-                      variant={task.level === 'advanced' ? 'default' : 'outline'}
-                      className={cn(
-                        "text-xs capitalize shrink-0",
-                        task.level === 'advanced' ? "bg-primary text-primary-foreground" : ""
-                      )}
-                    >
-                      {t(task.level === 'advanced' ? 'common.advanced' : 'common.basic')}
-                    </Badge>
-                    {task.isPaused && (
-                      <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
-                        {t('plantDetail.careManagement.taskPausedBadge')}
+                // onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
+                // role={isManagingCarePlan ? "button" : undefined}
+                // tabIndex={isManagingCarePlan ? 0 : undefined}
+                // aria-pressed={isManagingCarePlan ? isSelected : undefined}
+              >
+                <CardContent className="p-4 flex justify-between items-center">
+                  {isManagingCarePlan && (
+                    <div className="mr-3">
+                      <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => onToggleTaskSelection(task.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label={t('plantDetail.careManagement.selectTaskAria', { taskName: task.name })}
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
+                      <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
+                      <Badge
+                        variant={task.level === 'advanced' ? 'default' : 'outline'}
+                        className={cn(
+                          "text-xs capitalize shrink-0",
+                          isAdvanced ? "bg-primary text-primary-foreground" : ""
+                        )}
+                      >
+                        {t(task.level === 'advanced' ? 'common.advanced' : 'common.basic')}
                       </Badge>
+                      {task.isPaused && (
+                        <Badge variant="outline" className="text-xs bg-gray-200 text-gray-700 border-gray-400 dark:bg-gray-600 dark:text-gray-300 dark:border-gray-500 shrink-0">
+                          {t('plantDetail.careManagement.taskPausedBadge')}
+                        </Badge>
+                      )}
+                    </div>
+                    {task.description && (
+                      <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
+                      {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
+                      {task.isPaused ? (
+                        task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
+                      ) : (
+                        task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {isManagingCarePlan && !isSelected && (
+                      <>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label={t('common.edit')}>
+                          <EditTaskIcon className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenDeleteTaskDialog(task.id);}} aria-label={t('common.delete')} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    {!isManagingCarePlan && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleTaskPause(task.id)}
+                        disabled={loadingTaskId === task.id}
+                        className="w-28 text-xs"
+                      >
+                        {loadingTaskId === task.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : task.isPaused ? (
+                          <>
+                            <Play className="mr-1.5 h-3.5 w-3.5" /> {t('common.resume')}
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="mr-1.5 h-3.5 w-3.5" /> {t('common.pause')}
+                          </>
+                        )}
+                      </Button>
                     )}
                   </div>
-                  {task.description && (
-                    <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{task.description}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
-                    {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
-                    {task.isPaused ? (
-                      task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
-                    ) : (
-                      task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  {isManagingCarePlan && !isSelected && (
-                    <>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenEditTaskDialog(task);}} aria-label={t('common.edit')}>
-                        <EditTaskIcon className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onOpenDeleteTaskDialog(task.id);}} aria-label={t('common.delete')} className="text-destructive hover:text-destructive/90 hover:bg-destructive/10">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                  {!isManagingCarePlan && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onToggleTaskPause(task.id)}
-                      disabled={loadingTaskId === task.id}
-                      className="w-28 text-xs"
-                    >
-                      {loadingTaskId === task.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : task.isPaused ? (
-                        <>
-                          <Play className="mr-1.5 h-3.5 w-3.5" /> {t('common.resume')}
-                        </>
-                      ) : (
-                        <>
-                          <Pause className="mr-1.5 h-3.5 w-3.5" /> {t('common.pause')}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )})
-        ) : (
-          <p className="text-muted-foreground text-sm text-center py-4">
-            {isManagingCarePlan ? t('plantDetail.careManagement.noTasksManage') : t('plantDetail.careManagement.noTasksNormal')}
-          </p>
-        )}
-      </div>
-      {!isManagingCarePlan && plant.careTasks && plant.careTasks.length > 0 && (
-        <div className={cn(isManagingCarePlan ? "filter blur-sm opacity-60 transition-all" : "")}>
-          <DynamicWeeklyCareCalendarView
-            tasks={plant.careTasks}
-            onEditTask={onOpenEditTaskDialog}
-            onDeleteTask={onOpenDeleteTaskDialog}
-          />
+                </CardContent>
+              </Card>
+            )})
+          ) : (
+            <p className="text-muted-foreground text-sm text-center py-4">
+              {isManagingCarePlan ? t('plantDetail.careManagement.noTasksManage') : t('plantDetail.careManagement.noTasksNormal')}
+            </p>
+          )}
         </div>
-      )}
-    </div>
+        {plant.careTasks && plant.careTasks.length > 0 && (
+          <div className={cn("mt-6", isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all")}>
+            <DynamicWeeklyCareCalendarView
+              tasks={plant.careTasks}
+              onEditTask={onOpenEditTaskDialog}
+              onDeleteTask={onOpenDeleteTaskDialog}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
