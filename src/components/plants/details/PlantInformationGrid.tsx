@@ -3,18 +3,18 @@
 
 import type { Plant } from '@/types';
 import { CalendarDays, MapPin, Users, Timer } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, type Locale } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PlantInformationGridProps {
   plant: Plant;
 }
 
-const formatDate = (dateString?: string, t?: (key: string) => string) => {
+const formatDate = (dateString?: string, t?: (key: string) => string, locale?: Locale) => {
   if (!dateString) return t ? t('plantDetail.infoGrid.notApplicable') : 'N/A';
   try {
     const date = parseISO(dateString);
-    return format(date, 'MMM d, yyyy');
+    return format(date, 'MMM d, yyyy', { locale });
   } catch (error) {
     console.error("Error parsing date:", dateString, error);
     return 'Invalid Date';
@@ -22,7 +22,7 @@ const formatDate = (dateString?: string, t?: (key: string) => string) => {
 };
 
 export function PlantInformationGrid({ plant }: PlantInformationGridProps) {
-  const { t } = useLanguage();
+  const { t, dateFnsLocale } = useLanguage();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
@@ -37,7 +37,7 @@ export function PlantInformationGrid({ plant }: PlantInformationGridProps) {
         <CalendarDays className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div>
           <p className="font-medium">{t('plantDetail.infoGrid.createdDate')}</p>
-          <p className="text-muted-foreground">{formatDate(plant.plantingDate, t)}</p>
+          <p className="text-muted-foreground">{formatDate(plant.plantingDate, t, dateFnsLocale)}</p>
         </div>
       </div>
       <div className="flex items-start gap-3">
