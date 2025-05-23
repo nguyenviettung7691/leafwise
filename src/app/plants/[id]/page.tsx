@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
 import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ReviewCarePlanInput, AIGeneratedTask } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import NextImage from 'next/image'; // Renamed for clarity with lucide-react Image icon
+import NextImage from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +24,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, ListChecks, MessageSquareWarning, Edit3 } from 'lucide-react';
+import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, ListChecks, MessageSquareWarning, Edit3, Settings2 } from 'lucide-react';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
@@ -53,57 +53,6 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
   unknown: 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-700/30 dark:text-gray-300 dark:border-gray-500',
 };
 
-const transformCareTaskToFormData = (task: CareTask, t: Function): CarePlanTaskFormData => {
-  const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = {
-    name: task.name,
-    description: task.description || '',
-    level: task.level,
-    startDate: task.nextDueDate || new Date().toISOString(),
-  };
-
-  const freqLower = task.frequency.toLowerCase();
-  
-  if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) formData.frequencyMode = 'adhoc';
-  else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) formData.frequencyMode = 'daily';
-  else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) formData.frequencyMode = 'weekly';
-  else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
-  else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
-  else {
-    const everyXDaysMatch = freqLower.match(/every (\d+) days|mỗi (\d+) ngày/i);
-    if (everyXDaysMatch) {
-      formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
-      formData.frequencyMode = 'every_x_days';
-    } else {
-      const everyXWeeksMatch = freqLower.match(/every (\d+) weeks|mỗi (\d+) tuần/i);
-      if (everyXWeeksMatch) {
-        formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
-        formData.frequencyMode = 'every_x_weeks';
-      } else {
-        const everyXMonthsMatch = freqLower.match(/every (\d+) months|mỗi (\d+) tháng/i);
-        if (everyXMonthsMatch) {
-          formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
-          formData.frequencyMode = 'every_x_months';
-        } else {
-          formData.frequencyMode = 'adhoc'; 
-          console.warn(`Could not parse frequency for edit form: "${task.frequency}"`);
-        }
-      }
-    }
-  }
-
-  if (task.timeOfDay && (task.timeOfDay.toLowerCase() === 'all day' || task.timeOfDay.toLowerCase() === t('carePlanTaskForm.timeOfDayOptionAllDay').toLowerCase())) {
-    formData.timeOfDayOption = 'all_day';
-    formData.specificTime = '';
-  } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
-    formData.timeOfDayOption = 'specific_time';
-    formData.specificTime = task.timeOfDay;
-  } else {
-    formData.timeOfDayOption = 'all_day';
-    formData.specificTime = '';
-  }
-
-  return formData as CarePlanTaskFormData;
-};
 
 interface DialogPhotoDisplayProps {
   photoId: string | undefined;
@@ -141,6 +90,7 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altTex
   );
 };
 
+
 export default function PlantDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -156,6 +106,7 @@ export default function PlantDetailPage() {
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
   const [newPhotoJournaled, setNewPhotoJournaled] = useState(false);
+
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
@@ -191,19 +142,77 @@ export default function PlantDetailPage() {
   const [editedPhotoNotes, setEditedPhotoNotes] = useState('');
   const [isSavingPhotoDetails, setIsSavingPhotoDetails] = useState(false);
 
-  useEffect(() => {
-    if (id && contextPlants.length > 0) {
-      const foundPlant = getPlantById(id);
-      if (foundPlant) {
-        setPlant(JSON.parse(JSON.stringify(foundPlant))); 
+  const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
+
+
+  const transformCareTaskToFormData = useCallback((task: CareTask): CarePlanTaskFormData => {
+    const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = {
+      name: task.name,
+      description: task.description || '',
+      level: task.level,
+      startDate: task.nextDueDate || new Date().toISOString(),
+    };
+  
+    const freqLower = task.frequency.toLowerCase();
+    
+    if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) formData.frequencyMode = 'adhoc';
+    else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) formData.frequencyMode = 'daily';
+    else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) formData.frequencyMode = 'weekly';
+    else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
+    else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
+    else {
+      const everyXDaysMatch = freqLower.match(/every (\d+) days|mỗi (\d+) ngày/i);
+      if (everyXDaysMatch) {
+        formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
+        formData.frequencyMode = 'every_x_days';
       } else {
-        // Plant not found from context, likely means it was deleted or ID is invalid
+        const everyXWeeksMatch = freqLower.match(/every (\d+) weeks|mỗi (\d+) tuần/i);
+        if (everyXWeeksMatch) {
+          formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
+          formData.frequencyMode = 'every_x_weeks';
+        } else {
+          const everyXMonthsMatch = freqLower.match(/every (\d+) months|mỗi (\d+) tháng/i);
+          if (everyXMonthsMatch) {
+            formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
+            formData.frequencyMode = 'every_x_months';
+          } else {
+            formData.frequencyMode = 'adhoc'; 
+            console.warn(`Could not parse frequency for edit form: "${task.frequency}"`);
+          }
+        }
       }
     }
-    if (id || contextPlants.length > 0) { 
+  
+    if (task.timeOfDay && (task.timeOfDay.toLowerCase() === 'all day' || task.timeOfDay.toLowerCase() === t('carePlanTaskForm.timeOfDayOptionAllDay').toLowerCase())) {
+      formData.timeOfDayOption = 'all_day';
+      formData.specificTime = '';
+    } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
+      formData.timeOfDayOption = 'specific_time';
+      formData.specificTime = task.timeOfDay;
+    } else {
+      formData.timeOfDayOption = 'all_day';
+      formData.specificTime = '';
+    }
+  
+    return formData as CarePlanTaskFormData;
+  }, [t]);
+
+
+  useEffect(() => {
+    if (id && contextPlants.length > 0) { // Ensure contextPlants are loaded
+      const foundPlant = getPlantById(id);
+      if (foundPlant) {
+        setPlant(JSON.parse(JSON.stringify(foundPlant))); // Deep copy to avoid direct state mutation issues
+      } else {
+        // Plant not found in context, which might mean it was deleted or ID is invalid
+        // The subsequent check `if (!plant && !isLoadingPage)` will trigger notFound()
+      }
+    }
+    if (id || contextPlants.length > 0) { // Mark loading as false if we have an ID or context plants are available
       setIsLoadingPage(false);
     }
   }, [id, getPlantById, contextPlants]);
+
 
   const handleToggleTaskPause = async (taskId: string) => {
     if (!plant) return;
@@ -215,7 +224,7 @@ export default function PlantDetailPage() {
     const wasPausedBeforeUpdate = taskBeingToggled.isPaused;
 
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 700));
+    await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API call
 
     const updatedTasks = plant.careTasks.map(t =>
       t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : (t.resumeDate || addWeeks(new Date(), 1).toISOString()) } : t
@@ -223,7 +232,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant); 
-    setPlant(updatedPlant); 
+    // setPlant(updatedPlant); // Local state will be updated by useEffect watching contextPlants
     
     setLoadingTaskId(null);
 
@@ -242,22 +251,24 @@ export default function PlantDetailPage() {
     if (!plant) return;
     setIsDeletingPlant(true);
     
+    // Delete images from IndexedDB first
     for (const photo of plant.photos) {
-      if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
+      if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) { // Ensure it's an IDB key
         try {
           await deleteImage(photo.url); 
         } catch (e) {
           console.error(`Failed to delete image ${photo.url} from IDB:`, e);
+          // Continue even if image deletion fails for some reason
         }
       }
     }
     const plantNameForToast = plant.commonName || t('common.thePlant');
-    deletePlantFromContext(id); 
+    deletePlantFromContext(id); // Delete from context (and localStorage)
     toast({
       title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
       description: t('plantDetail.toasts.plantDeletedDesc', {plantName: plantNameForToast}),
     });
-    router.push('/');
+    router.push('/'); // Navigate to home page after deletion
   };
 
   const handleGrowthPhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,7 +283,7 @@ export default function PlantDetailPage() {
 
     setIsDiagnosingNewPhoto(true);
     setNewPhotoJournaled(false);
-    setNewPhotoDiagnosisDialogState({open: false, isLoadingCarePlanReview: true}); 
+    setNewPhotoDiagnosisDialogState({open: false, isLoadingCarePlanReview: true}); // Keep existing results until new ones are ready, but indicate loading for care plan review
 
 
     const reader = new FileReader();
@@ -289,6 +300,7 @@ export default function PlantDetailPage() {
                 return;
             }
 
+            // Call AI to diagnose the new photo
             const diagnosisInput = {
                 photoDataUri: compressedDataUrl,
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`,
@@ -310,6 +322,7 @@ export default function PlantDetailPage() {
             const newHealthStatusFromDiagnosis = newPhotoDiagnosisResult.healthAssessment.status;
 
 
+            // Call AI to compare current health with new diagnosis
             const healthComparisonInput: ComparePlantHealthInput = {
                 currentPlantHealth: plant.healthCondition,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
@@ -318,14 +331,16 @@ export default function PlantDetailPage() {
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
+            // Initially open dialog with diagnosis and comparison, and start loading care plan review
             setNewPhotoDiagnosisDialogState({
                 open: true,
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
                 newPhotoPreviewUrl: compressedDataUrl,
-                isLoadingCarePlanReview: true,
+                isLoadingCarePlanReview: true, // Indicate that care plan review is loading
             });
 
+            // Call AI to review care plan based on new diagnosis
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
@@ -343,19 +358,20 @@ export default function PlantDetailPage() {
             };
             const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput);
 
+            // Update dialog state with care plan review results
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
                 carePlanReviewResult,
-                isLoadingCarePlanReview: false,
+                isLoadingCarePlanReview: false, // Care plan review is done
             }));
 
         } catch (e: any) {
             const errorMsg = e instanceof Error ? e.message : t('plantDetail.toasts.errorDiagnosisOrPlan');
             toast({ title: t('common.error'), description: errorMsg, variant: "destructive" });
-            setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
+            setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false})); // Stop loading on error
         } finally {
-            setIsDiagnosingNewPhoto(false);
-            if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
+            setIsDiagnosingNewPhoto(false); // Diagnosis process (both AI calls) is complete
+            if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = ""; // Reset file input
         }
     };
   };
@@ -364,9 +380,9 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local state update for immediate feedback
     toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}));
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }})) // Reflect that action was taken
   };
 
   const addPhotoToJournal = async () => {
@@ -379,24 +395,24 @@ export default function PlantDetailPage() {
     if (blob) {
         photoIdbKey = `photo-${plant.id}-journal-${Date.now()}`;
         try {
-            await addImage(photoIdbKey, blob);
+            await addImage(photoIdbKey, blob); // Save to IDB
         } catch (e) {
             console.error("Error saving journal photo to IDB:", e);
             toast({ title: t('common.error'), description: "Failed to save journal image.", variant: "destructive" });
-            photoIdbKey = undefined; 
+            photoIdbKey = undefined; // Fallback if IDB save fails
         }
     } else {
         toast({ title: t('common.error'), description: "Failed to process journal image.", variant: "destructive" });
         photoIdbKey = undefined;
     }
     
-    if (!photoIdbKey) { 
-        return;
+    if (!photoIdbKey) { // If IDB key is undefined (e.g. failed to save to IDB)
+        return; // Don't proceed to add photo to journal
     }
 
     const newPhoto: PlantPhoto = {
-        id: photoIdbKey, 
-        url: photoIdbKey, 
+        id: photoIdbKey, // Use IDB key as photo ID
+        url: photoIdbKey, // Store IDB key in url field
         dateTaken: new Date().toISOString(),
         healthCondition: newHealthStatusFromDiagnosis,
         diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'), 
@@ -405,26 +421,27 @@ export default function PlantDetailPage() {
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
-
+    // setPlant(updatedPlant); // Local state update
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
     setNewPhotoJournaled(true);
   };
 
   const calculateNextDueDateFromFrequency = (frequency: string, startDate?: string): string | undefined => {
     const baseDate = startDate ? parseISO(startDate) : new Date();
-    const now = new Date(baseDate);
+    const now = new Date(baseDate); // Use the baseDate for calculation
   
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
   
+    // Direct matches (ensure these are the exact strings AI is asked to produce, case-insensitive matching)
     if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
     if (freqLower === 'daily') return addDays(now, 1).toISOString();
     if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
     if (freqLower === 'monthly') return addMonths(now, 1).toISOString();
     if (freqLower === 'yearly') return addYears(now, 1).toISOString();
   
-    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i);
+    // Regex for "Every X Days/Weeks/Months"
+    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i); // Allow optional 's'
     if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1], 10)).toISOString();
   
     const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i);
@@ -433,6 +450,7 @@ export default function PlantDetailPage() {
     const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i);
     if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1], 10)).toISOString();
     
+    // Fallback or log warning for unhandled frequencies
     console.warn(`calculateNextDueDateFromFrequency unhandled freq: ${frequency}`);
     return undefined;
   };
@@ -445,23 +463,25 @@ export default function PlantDetailPage() {
     let updatedCareTasks = [...(plant.careTasks || [])];
     const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
 
+    // Apply modifications to existing tasks
     taskModifications.forEach(mod => {
         const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
-        if (taskIndex === -1) return;
+        if (taskIndex === -1) return; // Task not found, skip
 
-        let taskToUpdate = {...updatedCareTasks[taskIndex]};
+        let taskToUpdate = {...updatedCareTasks[taskIndex]}; // Copy task to modify
 
         switch (mod.suggestedAction) {
             case 'pause':
                 taskToUpdate.isPaused = true;
-                taskToUpdate.resumeDate = null;
+                taskToUpdate.resumeDate = null; // Clear resume date when pausing
                 break;
             case 'resume':
                 taskToUpdate.isPaused = false;
+                // Potentially set nextDueDate based on resumeDate if that's the logic, for now just resumes
                 break;
             case 'remove':
                 updatedCareTasks = updatedCareTasks.filter(t => t.id !== mod.taskId);
-                return; 
+                return; // Task removed, no further processing for this mod
             case 'update_details':
                 if (mod.updatedDetails) {
                     const oldFrequency = taskToUpdate.frequency;
@@ -473,19 +493,26 @@ export default function PlantDetailPage() {
                         timeOfDay: mod.updatedDetails.timeOfDay || taskToUpdate.timeOfDay,
                         level: mod.updatedDetails.level || taskToUpdate.level,
                     };
+                    // Recalculate nextDueDate if frequency changed
                     if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
-                         taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, taskToUpdate.nextDueDate || new Date().toISOString());
+                         // Use current nextDueDate as base if available and valid, otherwise today
+                         const baseDateForFreqRecalc = taskToUpdate.nextDueDate && parseISO(taskToUpdate.nextDueDate) > new Date(0) 
+                                                        ? taskToUpdate.nextDueDate 
+                                                        : new Date().toISOString();
+                         taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, baseDateForFreqRecalc);
                     }
                 }
                 break;
-            default: 
+            default: // 'keep_as_is' or unhandled action
                 break;
         }
+        // Update the task in the array if it wasn't removed
         if (updatedCareTasks.some(t => t.id === mod.taskId)) { 
             updatedCareTasks[taskIndex] = taskToUpdate;
         }
     });
 
+    // Add new tasks
     newTasks.forEach((aiTask: AIGeneratedTask) => {
         updatedCareTasks.push({
             id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -496,20 +523,20 @@ export default function PlantDetailPage() {
             timeOfDay: aiTask.suggestedTimeOfDay,
             level: aiTask.taskLevel,
             isPaused: false,
-            nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
+            nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()), // New tasks start from today
         });
     });
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local state update
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined})); // Clear suggestions after applying
   };
 
   const handleKeepCurrentCarePlan = () => {
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined }));
+    setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined })); // Clear suggestions
     toast({ title: t('plantDetail.toasts.carePlanUnchanged'), description: t('plantDetail.toasts.carePlanUnchangedDesc') });
   };
 
@@ -520,14 +547,14 @@ export default function PlantDetailPage() {
   };
   const closeGridPhotoDialog = () => {
     setIsGridPhotoDialogVisible(false);
-    setTimeout(() => setSelectedGridPhoto(null), 300);
+    setTimeout(() => setSelectedGridPhoto(null), 300); // Delay clearing to allow fade-out
   };
 
   const handleSetAsPrimaryPhoto = (photoUrl: string) => {
     if (!plant) return;
     const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local state update
     toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
     closeGridPhotoDialog();
   };
@@ -538,7 +565,7 @@ export default function PlantDetailPage() {
   
     let updatedTasks: CareTask[];
   
-    if (taskToEdit) { 
+    if (taskToEdit) { // Editing existing task
       updatedTasks = (plant.careTasks || []).map(t =>
         t.id === taskToEdit.id ? {
           ...t,
@@ -547,11 +574,11 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: taskData.startDate, 
+          nextDueDate: taskData.startDate, // Form's startDate is the new nextDueDate
         } : t
       );
       toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
-    } else { 
+    } else { // Adding new task
       const newTask: CareTask = {
         id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         plantId: plant.id,
@@ -561,7 +588,7 @@ export default function PlantDetailPage() {
         timeOfDay: taskData.timeOfDay,
         level: taskData.level,
         isPaused: false,
-        nextDueDate: taskData.startDate, 
+        nextDueDate: taskData.startDate, // Form's startDate is the first nextDueDate
       };
       updatedTasks = [...(plant.careTasks || []), newTask];
       toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
@@ -569,7 +596,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local update
   
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -579,13 +606,13 @@ export default function PlantDetailPage() {
 
   const openAddTaskDialog = () => {
     setTaskToEdit(null);
-    setInitialTaskFormData(undefined); 
+    setInitialTaskFormData(undefined); // Ensure form is fresh for new task
     setIsTaskFormDialogOpen(true);
   };
 
   const openEditTaskDialog = (task: CareTask) => {
     setTaskToEdit(task);
-    setInitialTaskFormData(transformCareTaskToFormData(task, t));
+    setInitialTaskFormData(transformCareTaskToFormData(task));
     setIsTaskFormDialogOpen(true);
   };
 
@@ -605,12 +632,24 @@ export default function PlantDetailPage() {
     const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local update
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
     setSelectedTaskIds(new Set());
   };
+
+  const toggleManageCarePlanMode = useCallback(() => {
+    setIsManagingCarePlan(prev => !prev);
+  }, [setIsManagingCarePlan]);
+
+  // Effect to clear selected tasks when exiting manage mode
+  useEffect(() => {
+    if (!isManagingCarePlan) {
+      setSelectedTaskIds(new Set());
+    }
+  }, [isManagingCarePlan, setSelectedTaskIds]);
+
 
   const handleToggleTaskSelection = useCallback((taskId: string) => {
     setSelectedTaskIds(prevSelected => {
@@ -626,7 +665,7 @@ export default function PlantDetailPage() {
 
   const toggleManagePhotosMode = useCallback(() => {
     setIsManagingPhotos(prev => {
-      if (prev) { 
+      if (prev) { // If exiting manage mode
         setSelectedPhotoIds(new Set());
       }
       return !prev;
@@ -650,26 +689,28 @@ export default function PlantDetailPage() {
   
     const photoIdsToDelete = Array.from(selectedPhotoIds);
     for (const photoId of photoIdsToDelete) {
-      if (photoId && !photoId.startsWith('http') && !photoId.startsWith('data:')) {
-        await deleteImage(photoId); 
+      if (photoId && !photoId.startsWith('http') && !photoId.startsWith('data:')) { // Ensure it's an IDB key
+        await deleteImage(photoId); // Delete from IDB
       }
     }
   
     let updatedPhotos = (plant.photos || []).filter(p => !selectedPhotoIds.has(p.id));
     let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
   
+    // If the primary photo was among the selected ones
     if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.primaryPhotoUrl)) { 
       if (updatedPhotos.length > 0) {
+        // Set the most recent remaining photo as primary
         const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url; 
+        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url; // url is the IDB key
       } else {
-        newPrimaryPhotoUrl = undefined; 
+        newPrimaryPhotoUrl = undefined; // No photos left, clear primary
       }
     }
   
     const updatedPlant = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local update
   
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
@@ -679,6 +720,7 @@ export default function PlantDetailPage() {
 
 
   const handleChartDotClick = (clickedDotPayload: any) => {
+      // The payload from recharts LineChart onClick already contains the specific data point
       if (clickedDotPayload && clickedDotPayload.id && plant) {
         const clickedPhoto = plant.photos.find(p => p.id === clickedDotPayload.id);
         if (clickedPhoto) {
@@ -709,7 +751,7 @@ export default function PlantDetailPage() {
   const handleSaveEditedPhotoDetails = async () => {
     if (!plant || !photoToEdit) return;
     setIsSavingPhotoDetails(true);
-    await new Promise(resolve => setTimeout(resolve, 700));
+    await new Promise(resolve => setTimeout(resolve, 700)); // Simulate API call
 
     const updatedPhotos = (plant.photos || []).map(p =>
       p.id === photoToEdit.id
@@ -725,7 +767,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
-    setPlant(updatedPlant);
+    // setPlant(updatedPlant); // Local update
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
@@ -733,48 +775,74 @@ export default function PlantDetailPage() {
     setIsSavingPhotoDetails(false);
   };
 
-  const translateFrequencyDisplayLocal = (frequency: string): string => {
+  // Helper for translating frequency in this component
+  const translateFrequencyDisplayLocal = useCallback((frequency: string): string => {
     if (!frequency) return '';
     const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
-    if (t(directKey) !== directKey) {
-      if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
-        const countMatch = frequency.match(/\d+/);
-        const count = countMatch ? parseInt(countMatch[0], 10) : 0;
-        return t(directKey + '_formatted', {count});
-      }
-      return t(directKey);
+    if (t(directKey) !== directKey) { // Check if a direct key exists (like "daily", "weekly")
+        // For keys like "every_x_days_formatted"
+        if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
+            const countMatch = frequency.match(/\d+/);
+            const count = countMatch ? parseInt(countMatch[0], 10) : 0;
+            return t(directKey + '_formatted', {count});
+        }
+        return t(directKey);
     }
-  
+
+    // Fallback for direct parsing if key structure isn't perfectly matched above
+    // (This part should ideally match the structure used in carePlanTaskForm.frequencyOptions)
     const lowerFreq = frequency.toLowerCase();
     if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
     if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
     if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
     if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
     if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
-  
+
     const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
     if (everyXMatchResult) {
-      const count = parseInt(everyXMatchResult[1], 10);
-      const unit = everyXMatchResult[2].toLowerCase();
-      if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
-      if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
-      if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
+        const count = parseInt(everyXMatchResult[1], 10);
+        const unit = everyXMatchResult[2].toLowerCase();
+        if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
+        if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
+        if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
     }
-    return frequency;
-  };
-  
-  const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined): string => {
-    if (!timeOfDay) return '';
-    if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
-    if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay;
-    return timeOfDay;
-  };
+    return frequency; // Fallback to original string if no translation found
+  }, [t]);
+
+  // Helper for translating time of day in this component
+  const translateTimeOfDayDisplayLocal = useCallback((timeOfDay: string | undefined): string => {
+      if (!timeOfDay) return '';
+      if (timeOfDay.toLowerCase() === 'all day') return t('carePlanTaskForm.timeOfDayOptionAllDay');
+      if (/^\d{2}:\d{2}$/.test(timeOfDay)) return timeOfDay; // HH:MM format is usually universal
+      return timeOfDay; // Fallback
+  }, [t]);
+
 
   if (isLoadingPage || !plant) {
+    // If still loading or plant not found after loading, show loader or a not found message
+    if (isLoadingPage) {
+      return (
+        <AppLayout>
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+          </div>
+        </AppLayout>
+      );
+    }
+    // If not loading and plant is still null, it means getPlantById returned undefined.
+    // The notFound() call should be handled by Next.js's mechanisms.
+    // To be absolutely safe, you could explicitly call notFound() here again.
+    // However, the useEffect hook above should have already called it if the plant wasn't found.
+    // This is a fallback UI in case Next.js doesn't immediately redirect to the 404 page.
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-full">
-          <Loader2 className="h-12 w-12 animate-spin text-primary"/>
+        <div className="flex flex-col justify-center items-center h-full text-center">
+          <Settings2 className="h-16 w-16 text-destructive mb-4" /> {/* Placeholder icon */}
+          <h1 className="text-2xl font-semibold mb-2">{t('common.error')}</h1>
+          <p className="text-muted-foreground">{t('plantDetail.notFound')}</p>
+          <ProgressBarLink href="/" className="mt-4">
+            <Button variant="outline">{t('plantDetail.backToMyPlants')}</Button>
+          </ProgressBarLink>
         </div>
       </AppLayout>
     );
@@ -813,6 +881,8 @@ export default function PlantDetailPage() {
           onDeleteSelectedTasks={() => {
             setShowDeleteSelectedTasksDialog(true);
           }}
+          isManagingCarePlan={isManagingCarePlan}
+          onToggleManageCarePlan={toggleManageCarePlanMode}
         />
 
         <PlantGrowthTracker
@@ -843,7 +913,7 @@ export default function PlantDetailPage() {
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false});
-                setNewPhotoJournaled(false);
+                setNewPhotoJournaled(false); // Reset journaled state when dialog closes
             }
         }}>
             <DialogContent className="sm:max-w-2xl">
