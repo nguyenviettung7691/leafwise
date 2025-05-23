@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { Leaf, UploadCloud, Save, Edit, ImageOff, Loader2 } from 'lucide-react'; // Added Loader2
+import { Leaf, UploadCloud, Save, Edit, ImageOff, Loader2 } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,46 @@ interface SavePlantFormProps {
   submitButtonText?: string;
   hideInternalHeader?: boolean;
 }
+
+// New internal component for displaying gallery thumbnails
+interface GalleryPhotoThumbnailProps {
+  photo: PlantPhoto;
+  isSelected: boolean;
+  onClick: () => void;
+}
+
+const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, onClick }) => {
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url);
+
+  return (
+    <button
+      type="button"
+      key={photo.id}
+      className={cn(
+        "flex-shrink-0 rounded-md w-20 h-20 overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted flex items-center justify-center",
+        isSelected ? "border-primary ring-2 ring-primary ring-offset-1" : "border-transparent hover:border-muted-foreground/50"
+      )}
+      onClick={onClick}
+    >
+      {isLoadingImage ? (
+        <Skeleton className="w-full h-full" />
+      ) : imageError || !imageUrl ? (
+        <ImageOff size={24} className="text-muted-foreground" />
+      ) : (
+        <Image
+          src={imageUrl}
+          alt={`Gallery photo ${photo.id}`}
+          width={80}
+          height={80}
+          className="object-cover w-full h-full"
+          data-ai-hint="plant gallery thumbnail"
+          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80.png?text=Error';}}
+        />
+      )}
+    </button>
+  );
+};
+
 
 export function SavePlantForm({
   initialData,
@@ -91,7 +131,6 @@ export function SavePlantForm({
 
 
   useEffect(() => {
-    // Reset form when initialData changes
     form.reset({
       commonName: initialData?.commonName || '',
       scientificName: initialData?.scientificName || '',
@@ -100,20 +139,17 @@ export function SavePlantForm({
       healthCondition: initialData?.healthCondition || 'unknown',
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
-      primaryPhoto: null, // Always reset file input
+      primaryPhoto: null,
       diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
     });
 
-    // Set preview based on initialData
     if (initialData?.diagnosedPhotoDataUrl) {
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoUrl(null);
       } else {
-        // It's an IDB key, initialImageFromDb will handle it.
-        // No need to setImagePreview here directly as useIndexedDbImage will update initialImageFromDb
         setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
-        setImagePreview(null); // Clear data URL preview if we are using an IDB key
+        setImagePreview(null); 
       }
     } else {
       setImagePreview(null);
@@ -126,6 +162,7 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
+        diagnosedPhotoDataUrl: imagePreview || selectedGalleryPhotoUrl, 
     };
     await onSave(formDataToSave);
   };
@@ -137,17 +174,17 @@ export function SavePlantForm({
 
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
-    setImagePreview(null); 
-    setSelectedGalleryPhotoUrl(photo.url); 
+    setImagePreview(null);
+    setSelectedGalleryPhotoUrl(photo.url);
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null); 
+    form.setValue('primaryPhoto', null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = "";
     }
   };
 
   const displayUrl = imagePreview || (selectedGalleryPhotoUrl ? initialImageFromDb : null);
-  const isDisplayLoading = isLoadingInitialImage && !!selectedGalleryPhotoUrl;
+  const isDisplayLoading = isLoadingInitialImage && !!selectedGalleryPhotoUrl && !imagePreview;
   
   return (
     <Card className={cn("shadow-lg animate-in fade-in-50", hideInternalHeader ? "border-0 shadow-none" : "")}>
@@ -157,7 +194,7 @@ export function SavePlantForm({
             <FormIcon className="h-6 w-6 text-primary" />
             {currentFormTitle}
           </CardTitle>
-          {formDescription && <CardDescription>{formDescription}</CardDescription>}
+          {currentFormDescription && <CardDescription>{currentFormDescription}</CardDescription>}
         </CardHeader>
       )}
       <Form {...form}>
@@ -212,18 +249,17 @@ export function SavePlantForm({
                                 accept="image/png, image/jpeg, image/gif, image/webp"
                                 name={name}
                                 ref={(e) => {
-                                  formRefSetter(e); 
-                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e; 
+                                  formRefSetter(e);
+                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
                                 }}
                                 onBlur={onBlur}
                                 onChange={(e) => {
                                     const files = e.target.files;
-                                    onChange(files); 
+                                    onChange(files);
                                     if (files && files[0]) {
-                                        if (files[0].size > 4 * 1024 * 1024) { 
+                                        if (files[0].size > 4 * 1024 * 1024) {
                                             form.setError("primaryPhoto", { type: "manual", message: t('diagnosePage.toasts.imageTooLargeDesc')});
                                             setImagePreview(null);
-                                            // Keep gallery selection or initial IDB key if new file is invalid
                                             if (selectedGalleryPhotoUrl) {
                                                 form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl);
                                             } else if (initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
@@ -235,7 +271,7 @@ export function SavePlantForm({
                                             else {
                                                 form.setValue('diagnosedPhotoDataUrl', null);
                                             }
-                                            e.target.value = ''; 
+                                            e.target.value = '';
                                         } else {
                                             form.clearErrors("primaryPhoto");
                                             const reader = new FileReader();
@@ -243,13 +279,13 @@ export function SavePlantForm({
                                                 const result = reader.result as string;
                                                 setImagePreview(result);
                                                 form.setValue('diagnosedPhotoDataUrl', result, {shouldDirty: true});
+                                                setSelectedGalleryPhotoUrl(null); 
                                             };
                                             reader.readAsDataURL(files[0]);
-                                            setSelectedGalleryPhotoUrl(null); 
                                         }
-                                    } else { 
+                                    } else {
                                         setImagePreview(null);
-                                        if (selectedGalleryPhotoUrl) { 
+                                        if (selectedGalleryPhotoUrl) {
                                             form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoUrl);
                                         } else if (initialData?.diagnosedPhotoDataUrl) {
                                             form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
@@ -275,34 +311,14 @@ export function SavePlantForm({
                 <Label className="text-sm font-medium">{t('savePlantForm.gallerySelectLabel')}</Label>
                 <ScrollArea className="w-full whitespace-nowrap rounded-md border">
                   <div className="flex space-x-3 p-3">
-                    {galleryPhotos.map((photo) => {
-                      const { imageUrl: galleryThumbUrl, isLoading: isLoadingGalleryThumb } = useIndexedDbImage(photo.url);
-                      const isSelected = selectedGalleryPhotoUrl === photo.url && !imagePreview; // Only highlight if no new file is previewed
-                      return (
-                        <button
-                          type="button"
-                          key={photo.id}
-                          className={cn(
-                            "flex-shrink-0 rounded-md w-20 h-20 overflow-hidden border-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted flex items-center justify-center",
-                            isSelected ? "border-primary ring-2 ring-primary ring-offset-1" : "border-transparent hover:border-muted-foreground/50"
-                          )}
-                          onClick={() => handleGalleryPhotoSelect(photo)}
-                        >
-                          {isLoadingGalleryThumb ? <Skeleton className="w-full h-full" /> :
-                           galleryThumbUrl ? (
-                            <Image
-                              src={galleryThumbUrl}
-                              alt={`Gallery photo ${photo.id}`}
-                              width={80}
-                              height={80}
-                              className="object-cover w-full h-full"
-                              data-ai-hint="plant gallery thumbnail"
-                              onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80.png?text=Error';}}
-                            />
-                          ) : <ImageOff size={24} className="text-muted-foreground" />}
-                        </button>
-                      );
-                    })}
+                    {galleryPhotos.map((photo) => (
+                      <GalleryPhotoThumbnail
+                        key={photo.id}
+                        photo={photo}
+                        isSelected={selectedGalleryPhotoUrl === photo.url && !imagePreview}
+                        onClick={() => handleGalleryPhotoSelect(photo)}
+                      />
+                    ))}
                   </div>
                   <ScrollBar orientation="horizontal" />
                 </ScrollArea>
@@ -425,3 +441,6 @@ export function SavePlantForm({
     </Card>
   );
 }
+
+
+    
