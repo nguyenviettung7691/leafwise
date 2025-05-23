@@ -3,14 +3,14 @@
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
 import React, { useMemo, useRef } from 'react';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed to avoid conflict with lucide-react Image icon
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
 import { format, parseISO } from 'date-fns';
-import { ChartConfig } from '@/components/ui/chart';
+import type { ChartConfig } from '@/components/ui/chart'; // Ensured type import
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -49,7 +49,7 @@ interface GalleryPhotoItemProps {
   isPrimary: boolean;
   isSelected: boolean;
   isManagingPhotos: boolean;
-  plantCommonName: string; // For alt text
+  plantCommonName: string;
   onPhotoClick: (photo: PlantPhoto) => void;
   onToggleSelection: (photoId: string) => void;
   onOpenEditDialog: (photo: PlantPhoto) => void;
@@ -126,7 +126,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           <span className="text-xs">{t('plantCard.imageError')}</span>
         </div>
       ) : (
-        <Image
+        <NextImage
           src={imageSrc}
           alt={`${t('plantDetail.growthTracker.photoGalleryTitle')} - ${formatDateForGallery(photo.dateTaken)}`}
           width={200} height={200}
@@ -229,7 +229,7 @@ export function PlantGrowthTracker({
 
 
   const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload) {
+    if (dotPayload) { // dotPayload is already the direct payload from the custom dot
       onChartDotClick(dotPayload);
     }
   };
@@ -278,7 +278,7 @@ export function PlantGrowthTracker({
 
       <div className="mt-4 pt-4 border-t">
         <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <ImageIcon className="h-5 w-5 text-primary" /> {/* Changed from Sparkles to ImageIcon */}
           {t('plantDetail.growthTracker.photoGalleryTitle')}
         </h4>
         {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
