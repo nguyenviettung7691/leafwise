@@ -101,22 +101,30 @@ body {
   display: none !important;
 }
 
-/* Default NProgress spinner animation - commented out as spinner is hidden */
-/*
-.nprogress-custom-parent {
-  overflow: hidden;
-  position: relative;
+/* Custom Scrollbar Styles */
+/* Apply globally to all WebKit scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-.nprogress-custom-parent #nprogress .spinner,
-.nprogress-custom-parent #nprogress .bar {
-  position: absolute;
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background) / 0.15); /* Slightly more visible track for contrast */
+  border-radius: 3px;
 }
-@-webkit-keyframes nprogress-spinner {
-  0%   { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4); /* Muted thumb */
+  border-radius: 3px;
 }
-@keyframes nprogress-spinner {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6); /* Darker thumb on hover */
 }
-*/
+
+/* For Firefox */
+/* Apply to html for the main scrollbar, and it cascades */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--background) / 0.15); /* thumb track */
+}
