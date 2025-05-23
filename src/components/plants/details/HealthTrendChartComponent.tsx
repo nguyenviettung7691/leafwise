@@ -7,6 +7,8 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import type { PlantHealthCondition } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))', // Lime Green
@@ -17,7 +19,7 @@ const healthConditionDotColors: Record<PlantHealthCondition, string> = {
 
 interface ChartDataItem {
   id: string;
-  photoUrl?: string;
+  photoUrl?: string; // This is the IDB key
   date: string;
   originalDate: Date;
   health: number;
@@ -53,6 +55,34 @@ const CustomChartDot = (props: any) => {
   );
 };
 
+// Helper component to display image in tooltip
+const TooltipImageDisplay = ({ photoId }: { photoId?: string }) => {
+  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId);
+  const { t } = useLanguage();
+
+  if (!photoId) return null;
+  if (isLoading) return <Skeleton className="w-16 h-16 rounded-sm my-1 mx-auto" />;
+  if (error || !imageUrl) {
+    return (
+      <div className="w-16 h-16 rounded-sm my-1 mx-auto flex items-center justify-center bg-muted text-muted-foreground text-xs">
+        {t('plantCard.imageError')}
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imageUrl}
+      alt={t('plantDetail.growthTracker.photoGalleryTitle')} // Generic alt
+      width={64}
+      height={64}
+      className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
+      data-ai-hint="plant chart thumbnail"
+    />
+  );
+};
+
+
 export default function HealthTrendChartComponent({
   chartData,
   chartConfig,
@@ -61,7 +91,7 @@ export default function HealthTrendChartComponent({
 }: HealthTrendChartComponentProps) {
   const { t } = useLanguage();
 
-  if (!chartData || chartData.length < 1) { // Changed from < 2 to < 1 to allow chart for single point
+  if (!chartData || chartData.length < 1) {
     return <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotosForTrend')}</p>;
   }
    if (chartData.length < 2) {
@@ -108,16 +138,8 @@ export default function HealthTrendChartComponent({
               formatter={(value, name, props: any) => { // value here is the health score (0-3)
                 return (
                   <div className="text-sm">
-                    {props.payload?.photoUrl && (
-                      <Image
-                        src={props.payload.photoUrl}
-                        alt={t('plantDetail.growthTracker.photoGalleryTitle')} // Generic alt
-                        width={64}
-                        height={64}
-                        className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
-                        data-ai-hint="plant chart thumbnail"
-                      />
-                    )}
+                    {/* Use TooltipImageDisplay with the IDB key */}
+                    <TooltipImageDisplay photoId={props.payload?.photoUrl} />
                     <p className="font-medium text-foreground">{props.payload?.date}</p> {/* Display formatted date */}
                     <p className="text-muted-foreground">{t('common.health')}: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
                   </div>
@@ -138,4 +160,3 @@ export default function HealthTrendChartComponent({
     </ChartContainer>
   );
 }
-
