@@ -24,8 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
-import { ImageOff } from 'lucide-react'; // Added ImageOff
+import { Skeleton } from '@/components/ui/skeleton';
+import { ImageOff, CalendarIcon, Sparkles } from 'lucide-react';
 
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
@@ -33,8 +33,8 @@ import { PlantInformationGrid } from '@/components/plants/details/PlantInformati
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, CheckCircle, Info, MessageSquareWarning, Sparkles, ChevronLeft, Edit3 as EditPlantIcon, Check, ListChecks, Trash2, SaveIcon, CalendarIcon } from 'lucide-react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { Loader2, CheckCircle, Info, MessageSquareWarning, ChevronLeft, Edit3 as EditPlantIcon, Check, ListChecks, Trash2, SaveIcon } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow } from '@/ai/flows/diagnose-plant-health';
@@ -43,8 +43,8 @@ import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-upd
 import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import useIndexedDbImage
+import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -105,6 +105,41 @@ const transformCareTaskToFormData = (task: CareTask, t: Function): CarePlanTaskF
   return formData as CarePlanTaskFormData;
 };
 
+interface DialogPhotoDisplayProps {
+  photoId: string | undefined;
+  altText: string;
+  width?: number;
+  height?: number;
+  className?: string;
+}
+
+const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altText, width = 400, height = 300, className = "rounded-md object-contain max-h-[300px] mx-auto" }) => {
+  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId);
+
+  if (isLoading) {
+    return <Skeleton className={cn("w-full rounded-md", `h-[${height}px]`)} style={{height: `${height}px`}} />;
+  }
+
+  if (error || !imageUrl) {
+    return (
+      <div className={cn("w-full flex items-center justify-center bg-muted rounded-md", `h-[${height}px]`)} style={{height: `${height}px`}}>
+        <ImageOff className="w-16 h-16 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imageUrl}
+      alt={altText}
+      width={width}
+      height={height}
+      className={className}
+      data-ai-hint="plant detail"
+    />
+  );
+};
+
 
 export default function PlantDetailPage() {
   const params = useParams();
@@ -122,12 +157,13 @@ export default function PlantDetailPage() {
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
   const [newPhotoJournaled, setNewPhotoJournaled] = useState(false);
 
+
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutputFlow;
     healthComparisonResult?: ComparePlantHealthOutputFlowType;
     carePlanReviewResult?: ReviewCarePlanOutputFlowType;
-    newPhotoPreviewUrl?: string;
+    newPhotoPreviewUrl?: string; // This is a data URL
     isLoadingCarePlanReview?: boolean;
     isApplyingCarePlanChanges?: boolean;
   }>({ open: false });
@@ -148,7 +184,6 @@ export default function PlantDetailPage() {
   const [showDeletePhotosDialog, setShowDeletePhotosDialog] = useState(false);
   const [isPrimaryPhotoSelectedForDeletion, setIsPrimaryPhotoSelectedForDeletion] = useState(false);
 
-
   const [isEditPhotoDialogVisible, setIsEditPhotoDialogVisible] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<PlantPhoto | null>(null);
   const [editedPhotoDate, setEditedPhotoDate] = useState<Date | undefined>(new Date());
@@ -157,13 +192,12 @@ export default function PlantDetailPage() {
   const [editedPhotoNotes, setEditedPhotoNotes] = useState('');
   const [isSavingPhotoDetails, setIsSavingPhotoDetails] = useState(false);
 
-
   useEffect(() => {
     if (id) {
       const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(JSON.parse(JSON.stringify(foundPlant))); 
-      } else if (!isLoadingPage && !foundPlant) { 
+      } else if (!isLoadingPage && !foundPlant && contextPlants.length > 0) { 
         notFound();
       }
     }
@@ -189,8 +223,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
-    // setPlant(updatedPlant); // UI updates via context now
-
+    
     setLoadingTaskId(null);
 
     if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
@@ -253,11 +286,12 @@ export default function PlantDetailPage() {
         }
 
         try {
-            const newPhotoDiagnosisResult = await diagnosePlantHealth({
+            const diagnosisInput = {
                 photoDataUri: base64Image,
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`,
                 languageCode: language,
-            });
+            };
+            const newPhotoDiagnosisResult = await diagnosePlantHealth(diagnosisInput);
 
             if (!newPhotoDiagnosisResult.identification.isPlant) {
                 toast({ title: t('plantDetail.toasts.notAPlant'), description: t('plantDetail.toasts.notAPlantDesc'), variant: "default"});
@@ -700,15 +734,10 @@ export default function PlantDetailPage() {
     );
   }
 
-
-  const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.isHealthy ? 'healthy' :
                                    (newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('sick') ||
                                     newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.diagnosis?.toLowerCase().includes('severe') ? 'sick' : 'needs_attention');
   
-  const { imageUrl: dialogImageUrl, isLoading: isLoadingDialogImage, error: dialogImageError } = useIndexedDbImage(selectedGridPhoto?.url);
-
-
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-6">
@@ -786,7 +815,7 @@ export default function PlantDetailPage() {
 
                 <div className="space-y-4 py-4">
                     {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
-                         <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.title')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
+                         <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.latestDiagnosisTitle')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
                     )}
 
 
@@ -857,7 +886,7 @@ export default function PlantDetailPage() {
 
                                 {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.length > 0 && (
                                     <div>
-                                        <h4 className="font-semibold mb-1">{t('plantDetail.newPhotoDialog.taskModificationSuggestion', {taskName: '', action:''}).split(':')[0]}:</h4>
+                                        <h4 className="font-semibold mb-1">{t('plantDetail.newPhotoDialog.taskModificationSuggestionTitle')}:</h4>
                                         <ul className="list-disc list-inside space-y-2 pl-2">
                                             {newPhotoDiagnosisDialogState.carePlanReviewResult.taskModifications.map(mod => (
                                                 <li key={mod.taskId}>
@@ -912,7 +941,7 @@ export default function PlantDetailPage() {
                 </div>
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
-                    { !newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant ? (
+                    {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant ? (
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
                        </Button>
@@ -934,15 +963,10 @@ export default function PlantDetailPage() {
                 </DialogHeader>
                 {selectedGridPhoto && (
                     <div className="space-y-3 py-3">
-                        {isLoadingDialogImage ? (
-                            <Skeleton className="w-full h-[300px] rounded-md" />
-                        ) : dialogImageError || !dialogImageUrl ? (
-                            <div className="w-full h-[300px] flex items-center justify-center bg-muted rounded-md">
-                                <ImageOff className="w-16 h-16 text-muted-foreground" />
-                            </div>
-                        ) : (
-                           <Image src={dialogImageUrl} alt={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})} width={400} height={300} className="rounded-md object-contain max-h-[300px] mx-auto" data-ai-hint="plant detail"/>
-                        )}
+                        <DialogPhotoDisplay
+                          photoId={selectedGridPhoto.url}
+                          altText={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}
+                        />
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
                         <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
@@ -1051,7 +1075,13 @@ export default function PlantDetailPage() {
                 {photoToEdit && (
                     <div className="space-y-4 py-4">
                         <div className="flex justify-center mb-4">
-                             <Image src={photoToEdit.url} alt={t('plantDetail.editPhotoDialog.photoAlt', {date: formatDateForDialog(photoToEdit.dateTaken)})} width={200} height={200} className="rounded-md object-contain max-h-[200px]" data-ai-hint="plant detail edit"/>
+                           <DialogPhotoDisplay
+                              photoId={photoToEdit.url}
+                              altText={t('plantDetail.editPhotoDialog.photoAlt', {date: formatDateForDialog(photoToEdit.dateTaken)})}
+                              width={200}
+                              height={200}
+                              className="rounded-md object-contain max-h-[200px]"
+                            />
                         </div>
                         <div>
                             <Label htmlFor="edit-photo-date">{t('plantDetail.editPhotoDialog.dateTakenLabel')}</Label>
