@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Plant, PlantPhoto, PlantHealthCondition } from '@/types';
@@ -8,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import type { ChartConfig } from '@/components/ui/chart'; // Ensured type import
+import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,7 +28,6 @@ const DynamicHealthTrendChart = dynamic(
     ssr: false,
   }
 );
-
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -229,92 +228,96 @@ export function PlantGrowthTracker({
 
 
   const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload) { // dotPayload is already the direct payload from the custom dot
+    if (dotPayload) {
       onChartDotClick(dotPayload);
     }
   };
 
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-3 pt-6 border-t">
-        <h3 className="font-semibold text-lg">{t('plantDetail.growthTracker.sectionTitle')}</h3>
-        <div className="flex items-center gap-2">
-          {isManagingPhotos && selectedPhotoIds.size > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={onDeleteSelectedPhotos}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              {t('plantDetail.growthTracker.deleteSelectedButton', {count: selectedPhotoIds.size})}
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ImageIcon className="h-5 w-5 text-primary" />
+            {t('plantDetail.growthTracker.photoGalleryTitle')}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {isManagingPhotos && selectedPhotoIds.size > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onDeleteSelectedPhotos}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t('plantDetail.growthTracker.deleteSelectedButton', {count: selectedPhotoIds.size})}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
+              {isManagingPhotos ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
+              {isManagingPhotos ? t('common.done') : t('common.manage')}
             </Button>
-          )}
-           <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
-            {isManagingPhotos ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-            {isManagingPhotos ? t('common.done') : t('common.manage')}
-          </Button>
-          {!isManagingPhotos && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onTriggerNewPhotoUpload}
-              disabled={isDiagnosingNewPhoto}
-            >
-              {isDiagnosingNewPhoto ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {t('plantDetail.growthTracker.diagnosingButton')}
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t">
-        <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-          <ImageIcon className="h-5 w-5 text-primary" /> {/* Changed from Sparkles to ImageIcon */}
-          {t('plantDetail.growthTracker.photoGalleryTitle')}
-        </h4>
-        {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {sortedPhotosForGallery.map(photo => (
-              <GalleryPhotoItem
-                key={photo.id}
-                photo={photo}
-                isPrimary={plant.primaryPhotoUrl === photo.url}
-                isSelected={selectedPhotoIds.has(photo.id)}
-                isManagingPhotos={isManagingPhotos}
-                plantCommonName={plant.commonName}
-                onPhotoClick={onOpenGridPhotoDialog}
-                onToggleSelection={onTogglePhotoSelection}
-                onOpenEditDialog={onOpenEditPhotoDialog}
-              />
-            ))}
+            {!isManagingPhotos && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onTriggerNewPhotoUpload}
+                disabled={isDiagnosingNewPhoto}
+              >
+                {isDiagnosingNewPhoto ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t('plantDetail.growthTracker.diagnosingButton')}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
+                  </>
+                )}
+              </Button>
+            )}
           </div>
-        ) : (
-          <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
-        )}
-      </div>
+        </CardHeader>
+        <CardContent>
+          {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {sortedPhotosForGallery.map(photo => (
+                <GalleryPhotoItem
+                  key={photo.id}
+                  photo={photo}
+                  isPrimary={plant.primaryPhotoUrl === photo.url}
+                  isSelected={selectedPhotoIds.has(photo.id)}
+                  isManagingPhotos={isManagingPhotos}
+                  plantCommonName={plant.commonName}
+                  onPhotoClick={onOpenGridPhotoDialog}
+                  onToggleSelection={onTogglePhotoSelection}
+                  onOpenEditDialog={onOpenEditPhotoDialog}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">{t('plantDetail.growthTracker.noPhotos')}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {!isManagingPhotos && chartData.length > 0 && (
-        <div className="mt-4 mb-6 pt-4 border-t">
-          <h4 className="font-semibold text-md mb-3 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            {t('plantDetail.growthTracker.healthTrendTitle')}
-          </h4>
-          <DynamicHealthTrendChart
-            chartData={chartData}
-            chartConfig={chartConfig}
-            healthScoreLabels={healthScoreLabels}
-            onChartDotClick={handleRechartsDotClick}
-          />
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              {t('plantDetail.growthTracker.healthTrendTitle')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DynamicHealthTrendChart
+              chartData={chartData}
+              chartConfig={chartConfig}
+              healthScoreLabels={healthScoreLabels}
+              onChartDotClick={handleRechartsDotClick}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

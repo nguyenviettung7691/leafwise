@@ -1,11 +1,10 @@
-
 'use client';
 
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/AppLayout';
-import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ComparePlantHealthOutput as ComparePlantHealthOutputFlowType, ReviewCarePlanInput, ReviewCarePlanOutput as ReviewCarePlanOutputFlowType } from '@/types';
+import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ReviewCarePlanInput } from '@/types';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed for clarity with lucide-react Image icon
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -13,11 +12,10 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTrigger,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader,
   AlertDialogTitle as AlertDialogTitlePrimitive
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,23 +23,22 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ImageOff, CalendarIcon, Sparkles } from 'lucide-react';
+import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, ListChecks } from 'lucide-react'; // EditPlantIcon was unused
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-
 
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
 
-import { Loader2, CheckCircle, Info, MessageSquareWarning, ChevronLeft, Edit3 as EditPlantIcon, Check, ListChecks, Trash2, SaveIcon } from 'lucide-react';
+import { Loader2, MessageSquareWarning } from 'lucide-react';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow } from '@/ai/flows/diagnose-plant-health';
-import { comparePlantHealthAndUpdateSuggestion } from '@/ai/flows/compare-plant-health';
-import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
-import { addDays, addWeeks, addMonths, addYears, parseISO, format, isSameWeek } from 'date-fns';
+import { comparePlantHealthAndUpdateSuggestion, type ComparePlantHealthOutput as ComparePlantHealthOutputFlowType } from '@/ai/flows/compare-plant-health';
+import { reviewAndSuggestCarePlanUpdates, type ReviewCarePlanOutput as ReviewCarePlanOutputFlowType } from '@/ai/flows/review-care-plan-updates';
+import { addDays, addWeeks, addMonths, addYears, parseISO, format, isToday as fnsIsToday } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { addImage, deleteImage, dataURLtoBlob } from '@/lib/idb-helper';
@@ -132,7 +129,7 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altTex
   }
 
   return (
-    <Image
+    <NextImage
       src={imageUrl}
       alt={altText}
       width={width}
@@ -142,7 +139,6 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, altTex
     />
   );
 };
-
 
 export default function PlantDetailPage() {
   const params = useParams();
@@ -155,11 +151,10 @@ export default function PlantDetailPage() {
   const [plant, setPlant] = useState<Plant | null>(null);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingPlant, setIsDeletingPlant] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
   const [newPhotoJournaled, setNewPhotoJournaled] = useState(false);
-
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
@@ -195,11 +190,14 @@ export default function PlantDetailPage() {
   const [editedPhotoNotes, setEditedPhotoNotes] = useState('');
   const [isSavingPhotoDetails, setIsSavingPhotoDetails] = useState(false);
 
+
   useEffect(() => {
     if (id && contextPlants.length > 0) { 
       const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(JSON.parse(JSON.stringify(foundPlant))); 
+      } else {
+         // Plant not found from context, likely means it was deleted or ID is invalid
       }
     }
     if (id || contextPlants.length > 0) { 
@@ -208,7 +206,7 @@ export default function PlantDetailPage() {
   }, [id, getPlantById, contextPlants]); 
 
 
- const handleToggleTaskPause = async (taskId: string) => {
+  const handleToggleTaskPause = async (taskId: string) => {
     if (!plant) return;
 
     const taskBeingToggled = plant.careTasks.find(t => t.id === taskId);
@@ -226,6 +224,7 @@ export default function PlantDetailPage() {
     
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant); 
+    setPlant(updatedPlant); // Keep local UI in sync immediately
     
     setLoadingTaskId(null);
 
@@ -242,7 +241,7 @@ export default function PlantDetailPage() {
 
   const handleDeletePlant = async () => {
     if (!plant) return;
-    setIsDeleting(true);
+    setIsDeletingPlant(true);
     
     for (const photo of plant.photos) {
       if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
@@ -366,6 +365,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
     toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
     setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}));
   };
@@ -406,6 +406,7 @@ export default function PlantDetailPage() {
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
 
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
     setNewPhotoJournaled(true);
@@ -437,7 +438,6 @@ export default function PlantDetailPage() {
     console.warn(`calculateNextDueDateFromFrequency unhandled freq: ${frequency}`);
     return undefined;
   };
-
 
   const handleApplyCarePlanChanges = () => {
     if (!plant || !newPhotoDiagnosisDialogState.carePlanReviewResult) return;
@@ -504,6 +504,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
@@ -528,6 +529,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
     updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
     toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
     closeGridPhotoDialog();
   };
@@ -573,6 +575,7 @@ export default function PlantDetailPage() {
     }
     
     updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -606,8 +609,9 @@ export default function PlantDetailPage() {
         .join(', ');
 
     const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
-    const newPlantState = { ...plant, careTasks: updatedTasks };
-    updatePlant(plant.id, newPlantState);
+    const updatedPlant = { ...plant, careTasks: updatedTasks };
+    updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
@@ -669,8 +673,9 @@ export default function PlantDetailPage() {
       }
     }
   
-    const newPlantState = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
-    updatePlant(plant.id, newPlantState);
+    const updatedPlant = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
+    updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
   
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
@@ -725,7 +730,8 @@ export default function PlantDetailPage() {
     );
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
-    updatePlant(plant.id, updatedPlant); // Persist through context
+    updatePlant(plant.id, updatedPlant);
+    setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
@@ -770,8 +776,7 @@ export default function PlantDetailPage() {
     return timeOfDay;
   };
 
-
-  if (isLoadingPage || !plant) {
+  if (isLoadingPage) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-full">
@@ -779,6 +784,10 @@ export default function PlantDetailPage() {
         </div>
       </AppLayout>
     );
+  }
+
+  if (!plant) {
+    return notFound();
   }
   
   const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.healthAssessment.status;
@@ -797,7 +806,7 @@ export default function PlantDetailPage() {
           plant={plant}
           onEditPlant={handleEditPlant}
           onConfirmDelete={handleDeletePlant}
-          isDeleting={isDeleting}
+          isDeleting={isDeletingPlant}
         />
 
         <PlantInformationGrid plant={plant} />
@@ -841,7 +850,6 @@ export default function PlantDetailPage() {
           onChange={handleGrowthPhotoFileChange}
         />
 
-
         <Dialog open={newPhotoDiagnosisDialogState.open} onOpenChange={(isOpen) => {
             if (!isOpen) {
                 setNewPhotoDiagnosisDialogState({open: false});
@@ -858,9 +866,8 @@ export default function PlantDetailPage() {
 
                 <div className="space-y-4 py-4"> 
                     {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
-                         <Image src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.latestDiagnosisTitle')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
+                         <NextImage src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.latestDiagnosisTitle')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
                     )}
-
 
                     {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && (
                         <Card>
@@ -882,7 +889,6 @@ export default function PlantDetailPage() {
                             </CardContent>
                         </Card>
                     )}
-
 
                     {newPhotoDiagnosisDialogState.healthComparisonResult && (
                         <Card>
@@ -907,7 +913,6 @@ export default function PlantDetailPage() {
                             </CardContent>
                         </Card>
                     )}
-
 
                     {newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
                         <div className="flex items-center justify-center p-4">
@@ -970,7 +975,7 @@ export default function PlantDetailPage() {
                                             {t('plantDetail.newPhotoDialog.keepCurrentPlanButton')}
                                         </Button>
                                         <Button size="sm" onClick={handleApplyCarePlanChanges} disabled={newPhotoDiagnosisDialogState.isApplyingCarePlanChanges}>
-                                            {newPhotoDiagnosisDialogState.isApplyingCarePlanChanges ? <Loader2 className="h-4 w-4 animate-spin mr-1.5"/> : <Check className="h-4 w-4 mr-1.5"/>}
+                                            {newPhotoDiagnosisDialogState.isApplyingCarePlanChanges ? <Loader2 className="h-4 w-4 animate-spin mr-1.5"/> : <CheckCircle className="h-4 w-4 mr-1.5"/>}
                                             {t('plantDetail.newPhotoDialog.applyChangesButton')}
                                         </Button>
                                     </div>
@@ -984,16 +989,18 @@ export default function PlantDetailPage() {
                 </div>
 
                 <DialogFooter className="sm:justify-between pt-4 border-t">
-                    {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant ? (
+                  <div>
+                    {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant && (
                        <Button type="button" variant="default" onClick={addPhotoToJournal}>
                            <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
                        </Button>
-                     ) : <div className="flex-1" /> }
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">
-                            {t('common.close')}
-                        </Button>
-                    </DialogClose>
+                     )}
+                  </div>
+                  <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                          {t('common.close')}
+                      </Button>
+                  </DialogClose>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
