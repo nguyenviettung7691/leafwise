@@ -2,11 +2,11 @@
 'use client';
 
 import type { Plant, CareTask } from '@/types';
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2 } from 'lucide-react';
+import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks } from 'lucide-react'; // Added ListChecks
 import { format, parseISO, isToday as fnsIsToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -135,7 +135,10 @@ export function PlantCareManagement({
     <Card>
       <CardContent className="p-4 sm:p-6">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-lg">{t('plantDetail.careManagement.sectionTitle')}</h3>
+          <h3 className="font-semibold text-lg flex items-center gap-2">
+            <ListChecks className="h-5 w-5 text-primary" />
+            {t('plantDetail.careManagement.sectionTitle')}
+          </h3>
           <div className="flex items-center gap-2">
             {isManagingCarePlan && selectedTaskIds.size > 0 && (
               <Button
@@ -158,7 +161,7 @@ export function PlantCareManagement({
             )}
           </div>
         </div>
-        <div className={cn("space-y-3", isManagingCarePlan ? "" : "")}> {/* Container for tasks, NOT blurred */}
+        <div className={cn("space-y-3")}>
           {sortedTasks && sortedTasks.length > 0 ? (
             sortedTasks.map(task => {
               const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
@@ -175,12 +178,8 @@ export function PlantCareManagement({
                   isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
                   task.isPaused ? "opacity-70" : "",
                   isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
-                  isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : "",
+                  isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : ""
                 )}
-                // onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
-                // role={isManagingCarePlan ? "button" : undefined}
-                // tabIndex={isManagingCarePlan ? 0 : undefined}
-                // aria-pressed={isManagingCarePlan ? isSelected : undefined}
               >
                 <CardContent className="p-4 flex justify-between items-center">
                   {isManagingCarePlan && (
@@ -197,7 +196,7 @@ export function PlantCareManagement({
                     <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
                       <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
                       <Badge
-                        variant={task.level === 'advanced' ? 'default' : 'outline'}
+                        variant={isAdvanced ? 'default' : 'outline'}
                         className={cn(
                           "text-xs capitalize shrink-0",
                           isAdvanced ? "bg-primary text-primary-foreground" : ""
@@ -218,7 +217,7 @@ export function PlantCareManagement({
                       {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
                       {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
                       {task.isPaused ? (
-                        task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
+                        task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)!})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                       ) : (
                         task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
                       )}

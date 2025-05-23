@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2, Sun, Moon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2, Sun, Moon, CalendarDays } from 'lucide-react'; // Added CalendarDays
 import {
   format,
   startOfWeek,
@@ -211,7 +211,10 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
   return (
     <Card className="mt-6 shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
-        <CardTitle className="text-lg font-medium">{t('weeklyCareCalendar.title')}</CardTitle>
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <CalendarDays className="h-5 w-5 text-primary" />
+          {t('weeklyCareCalendar.title')}
+        </CardTitle>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label={t('weeklyCareCalendar.previousWeekAria')}>
             <ChevronLeft className="h-4 w-4" />
@@ -296,7 +299,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                             key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
                             className={cn(
                               "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px] border border-border border-l-2 shadow-sm",
-                              "bg-card", // Consistent background for all
+                              "bg-card",
                               isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
                             )}
                             onClick={() => onEditTask(occurrence.originalTask)}
@@ -343,7 +346,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                               key={occurrence.originalTask.id + occurrence.occurrenceDate.toISOString()}
                               className={cn(
                                 "p-1 rounded hover:opacity-80 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-[9px] border border-border border-l-2 shadow-sm",
-                                "bg-card", // Consistent background
+                                "bg-card", 
                                 isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
                               )}
                               onClick={() => onEditTask(occurrence.originalTask)}
@@ -370,4 +373,3 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
-
