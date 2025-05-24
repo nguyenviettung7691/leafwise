@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { NavItem } from '@/types';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,6 @@ import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hoo
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
-    // Highlight "My Plants" if on root or any /plants/... page (except /plants/new if it had its own nav item)
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
@@ -47,16 +46,17 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = React.useState(false);
 
-  // Get the displayable avatar URL using the hook
   const { imageUrl: userDisplayAvatarUrl, isLoading: isAvatarLoading } = useIndexedDbImage(
     user?.avatarUrl && !user.avatarUrl.startsWith('data:') && !user.avatarUrl.startsWith('http')
       ? user.avatarUrl
       : undefined,
     user?.id
   );
-  
-  // Determine the final src for the avatar, prioritizing IDB fetched URL, then direct URL, then placeholder
-  const avatarSrc = userDisplayAvatarUrl || (user?.avatarUrl?.startsWith('data:') || user?.avatarUrl?.startsWith('http') ? user.avatarUrl : 'https://placehold.co/100x100.png');
+
+  const avatarSrc = userDisplayAvatarUrl ||
+                    (user?.avatarUrl && (user.avatarUrl.startsWith('data:') || user.avatarUrl.startsWith('http'))
+                      ? user.avatarUrl
+                      : `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`);
 
 
   const navItems: NavItem[] = React.useMemo(() => {
@@ -105,7 +105,7 @@ export function Navbar() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">{t('nav.settings')}</span> {/* Fallback accessible name */}
+                <span className="sr-only">{t('nav.settings')}</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4">
@@ -161,20 +161,20 @@ export function Navbar() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-6 py-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
-                        <div className='flex items-center gap-3'>
-                            <Palette className="h-5 w-5 text-primary" />
-                            <Label htmlFor="themePreference-dialog" className="text-base font-medium">
-                            {t('settings.darkMode')}
-                            </Label>
-                        </div>
-                        <Switch
-                            id="themePreference-dialog"
-                            checked={theme === 'dark'}
-                            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                            aria-label={t('settings.darkMode')}
-                            disabled={authIsLoading}
-                        />
+                    <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
+                      <div className='flex items-center gap-3'>
+                          <Palette className="h-5 w-5 text-primary" />
+                          <Label htmlFor="themePreference-dialog" className="text-base font-medium">
+                          {t('settings.darkMode')}
+                          </Label>
+                      </div>
+                      <Switch
+                          id="themePreference-dialog"
+                          checked={theme === 'dark'}
+                          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                          aria-label={t('settings.darkMode')}
+                          disabled={authIsLoading}
+                      />
                     </div>
                     <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                       <div className="flex items-center gap-3 mb-2">
