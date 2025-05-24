@@ -2,14 +2,16 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Loader2, Filter } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState, useEffect, useMemo } from 'react';
 import type { Plant, CareTask } from '@/types';
 import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
-// import { CareCalendarView } from '@/components/calendar/CareCalendarView'; // Original import
 import { usePlantData } from '@/contexts/PlantDataContext';
 import dynamic from 'next/dynamic';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card for filter wrapper
+import { Filter } from 'lucide-react'; // Added Filter icon
 
 const DynamicCareCalendarView = dynamic(
   () => import('@/components/calendar/CareCalendarView').then(mod => mod.CareCalendarView),
@@ -19,7 +21,7 @@ const DynamicCareCalendarView = dynamic(
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     ),
-    ssr: false, // Disable SSR for this complex client-side component
+    ssr: false, 
   }
 );
 
@@ -35,14 +37,13 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!isLoadingContextPlants) {
       setAllPlants(contextPlants);
-      // Initialize selectedPlantIds to all plants by default
       setSelectedPlantIds(new Set(contextPlants.map(p => p.id)));
       setPageIsLoading(false);
     }
   }, [contextPlants, isLoadingContextPlants]);
 
   const filteredPlants = useMemo(() => {
-    if (selectedPlantIds.size === allPlants.length && allPlants.length > 0) { // Ensure allPlants is not empty
+    if (selectedPlantIds.size === allPlants.length && allPlants.length > 0) {
       return allPlants;
     }
     return allPlants.filter(plant => selectedPlantIds.has(plant.id));
@@ -77,14 +78,13 @@ export default function CalendarPage() {
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.careCalendar')}</h1>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-1/5 lg:max-w-[280px] xl:max-w-xs flex-shrink-0">
-          <PlantFilterControls
-            allPlants={allPlants}
-            selectedPlantIds={selectedPlantIds}
-            onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
-          />
-        </div>
+      {/* PlantFilterControls is now above the calendar and takes full width */}
+      <div className="flex flex-col gap-6">
+        <PlantFilterControls
+          allPlants={allPlants}
+          selectedPlantIds={selectedPlantIds}
+          onSelectedPlantIdsChange={handleSelectedPlantIdsChange}
+        />
 
         <div className="flex-grow">
           <DynamicCareCalendarView

@@ -10,10 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // Card used as wrapper
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -32,18 +33,18 @@ const PlantFilterAvatar: React.FC<PlantFilterAvatarProps> = ({ photoId, plantNam
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {
-    return <Skeleton className={cn("h-8 w-8 rounded-full", className)} />;
+    return <Skeleton className={cn("h-full w-full rounded-full", className)} />;
   }
 
   return (
-    <Avatar className={cn("h-8 w-8 flex-shrink-0", className)}>
+    <>
       {imageUrl ? (
         <AvatarImage src={imageUrl} alt={plantName} data-ai-hint="plant avatar" />
       ) : null}
-      <AvatarFallback className="text-xs bg-muted">
+      <AvatarFallback className={cn("text-xs bg-muted", className?.includes('h-8') ? "text-sm" : "")}>
         {fallbackText}
       </AvatarFallback>
-    </Avatar>
+    </>
   );
 };
 
@@ -87,80 +88,86 @@ export function PlantFilterControls({
 
   return (
     <Card className="shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between py-3 px-4 border-b">
-        <CardTitle className="text-lg flex items-center gap-2 font-medium">
-          <Filter className="h-5 w-5 text-primary" />
-          {t('calendarPage.filterControls.title')}
-        </CardTitle>
-        <div className="relative">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleToggleSelectAll}
-                  disabled={allPlants.length === 0}
-                  className="h-8 w-8"
-                >
-                  {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{tooltipText}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          {selectedCount > 0 && (
-            <Badge
-              variant="default"
-              className="absolute -top-1.5 -right-1.5 h-5 w-5 min-w-[1.25rem] p-0 flex items-center justify-center rounded-full text-xs pointer-events-none"
-            >
-              {selectedCount}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="p-0">
-        {allPlants.length > 0 ? (
-          <ScrollArea className="w-full max-h-80 rounded-b-md border-t">
-            <div className="p-3 space-y-2">
-              {allPlants.map(plant => (
-                <TooltipProvider key={plant.id} delayDuration={200}>
+      <Accordion type="single" collapsible className="w-full" defaultValue="plant-filter-accordion">
+        <AccordionItem value="plant-filter-accordion" className="border-b-0">
+          <AccordionTrigger className="hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-t-lg">
+            <div className="flex flex-row items-center justify-between py-3 px-4 w-full">
+              <CardTitle className="text-lg flex items-center gap-2 font-medium">
+                <Filter className="h-5 w-5 text-primary" />
+                {t('calendarPage.filterControls.title')}
+              </CardTitle>
+              <div className="relative">
+                <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button
-                        onClick={() => handleTogglePlant(plant.id)}
-                        className={cn(
-                          "flex flex-row items-center w-full gap-2 p-2 rounded-md cursor-pointer transition-all hover:bg-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-left",
-                          selectedPlantIds.has(plant.id) ? "bg-primary/10 ring-1 ring-primary" : "bg-card hover:bg-muted"
-                        )}
-                        aria-pressed={selectedPlantIds.has(plant.id)}
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleToggleSelectAll(); }} // Stop propagation to prevent accordion toggle
+                        disabled={allPlants.length === 0}
+                        className="h-8 w-8"
                       >
-                        <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} />
-                        <span className={cn(
-                          "text-xs font-medium truncate flex-grow",
-                          selectedPlantIds.has(plant.id) ? "text-primary" : "text-foreground"
-                        )}>
-                          {plant.commonName}
-                        </span>
-                      </button>
+                        {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                      </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{plant.commonName}</p>
-                      <p className="text-xs text-muted-foreground">{t(selectedPlantIds.has(plant.id) ? 'calendarPage.filterControls.plantTooltipSelected' : 'calendarPage.filterControls.plantTooltipUnselected')}</p>
+                      <p>{tooltipText}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-              ))}
+                {selectedCount > 0 && (
+                  <Badge
+                    variant="default"
+                    className="absolute -top-1.5 -right-1.5 h-5 w-5 min-w-[1.25rem] p-0 flex items-center justify-center rounded-full text-xs pointer-events-none"
+                  >
+                    {selectedCount}
+                  </Badge>
+                )}
+              </div>
             </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
-        ) : (
-          <p className="text-sm text-muted-foreground text-center py-4 px-3">{t('calendarPage.filterControls.noPlantsToFilter')}</p>
-        )}
-      </CardContent>
+          </AccordionTrigger>
+          <AccordionContent className="border-t">
+            <div className="p-3">
+              {allPlants.length > 0 ? (
+                <ScrollArea className="w-full rounded-md">
+                  <div className="flex space-x-3 pb-2">
+                    {allPlants.map(plant => (
+                      <TooltipProvider key={plant.id} delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePlant(plant.id)}
+                              className={cn(
+                                "rounded-full p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 flex-shrink-0",
+                                selectedPlantIds.has(plant.id) ? "ring-2 ring-primary bg-primary/10" : "ring-0 hover:ring-1 hover:ring-muted-foreground"
+                              )}
+                              aria-pressed={selectedPlantIds.has(plant.id)}
+                            >
+                              <Avatar className="h-10 w-10">
+                                <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} className="h-10 w-10" />
+                              </Avatar>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{plant.commonName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t(selectedPlantIds.has(plant.id) ? 'calendarPage.filterControls.plantTooltipSelected' : 'calendarPage.filterControls.plantTooltipUnselected')}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">{t('calendarPage.filterControls.noPlantsToFilter')}</p>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </Card>
   );
 }
