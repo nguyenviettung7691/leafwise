@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Cài đặt",
@@ -190,8 +191,9 @@
       "viewPlantLink": "Xem {{plantName}} trong Cây của tôi",
       "aiDisclaimer": "Chẩn đoán dựa trên AI. Luôn đối chiếu với các nguồn khác nếu không chắc chắn.",
       "saveFormTitle": "Lưu cây vào Bộ sưu tập",
-      "saveFormDescription": "Xác nhận hoặc cập nhật chi tiết cho {plantName} trước khi lưu.",
-      "saveFormSubmitButton": "Lưu Cây"
+      "saveFormDescription": "Xác nhận hoặc cập nhật chi tiết cho {{plantName}} trước khi lưu.",
+      "saveFormSubmitButton": "Lưu Cây",
+      "initialDiagnosisNotes": "Chẩn đoán AI ban đầu."
     },
     "carePlanGenerator": {
       "title": "Tạo kế hoạch chăm sóc chi tiết",
@@ -285,7 +287,8 @@
       "noTasksManage": "Chưa có công việc chăm sóc nào. Nhấn 'Quản lý' rồi 'Thêm công việc' để tạo.",
       "noTasksNormal": "Chưa có công việc chăm sóc nào.",
       "atTimePrefix": "lúc ",
-      "selectTaskAria": "Chọn công việc {{taskName}}"
+      "selectTaskAria": "Chọn công việc {{taskName}}",
+      "reviewCarePlanButton": "Đánh giá Kế hoạch"
     },
     "growthTracker": {
       "sectionTitle": "Theo dõi tăng trưởng",
@@ -338,6 +341,13 @@
         "remove": "loại bỏ",
         "update_details": "cập nhật chi tiết"
       }
+    },
+    "proactiveReviewDialog": {
+      "title": "AI Đánh giá Kế hoạch Chăm sóc",
+      "description": "Xem lại đề xuất của AI cho kế hoạch chăm sóc của {{plantName}} dựa trên chi tiết hiện tại.",
+      "assessmentTitle": "Đánh giá Tổng thể của AI",
+      "noChangesSuggested": "AI nhận thấy kế hoạch chăm sóc hiện tại của bạn phù hợp. Không có thay đổi cụ thể nào được đề xuất vào lúc này.",
+      "noResult": "Không thể truy xuất đánh giá của AI vào lúc này."
     },
     "photoDetailsDialog": {
       "title": "Chi tiết ảnh - {{date}}",
@@ -409,7 +419,8 @@
       "taskPaused": "Công việc \"{{taskName}}\" đã được tạm dừng.",
       "taskResumed": "Công việc \"{{taskName}}\" đã được tiếp tục.",
       "plantDeletedTitle": "{{plantName}} đã bị xóa",
-      "plantDeletedDesc": "{{plantName}} đã được xóa khỏi bộ sưu tập của bạn."
+      "plantDeletedDesc": "{{plantName}} đã được xóa khỏi bộ sưu tập của bạn.",
+      "errorProactiveReview": "Đã xảy ra lỗi khi đánh giá kế hoạch chăm sóc."
     },
     "footer": {
       "lastUpdated": "Cập nhật lần cuối: {{date}} (Mô phỏng - phản ánh tương tác cuối cùng)"
@@ -568,7 +579,6 @@
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
-      "exportErrorNoData": "Không tìm thấy dữ liệu người dùng để xuất.",
       "exportSuccessTitle": "Xuất thành công!",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
@@ -611,7 +621,7 @@
     "formDescription": "Cập nhật chi tiết cho {{plantName}}.",
     "submitButtonText": "Cập nhật Cây",
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
-    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật (mô phỏng).",
+    "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
     "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật.",
     "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới)."
   },
@@ -627,3 +637,5 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
   }
 }
+
+    

@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Settings",
@@ -190,8 +191,9 @@
       "viewPlantLink": "View {{plantName}} in My Plants",
       "aiDisclaimer": "AI-powered diagnosis. Always cross-reference with other sources if unsure.",
       "saveFormTitle": "Save Plant to Collection",
-      "saveFormDescription": "Confirm or update the details for {plantName} before saving.",
-      "saveFormSubmitButton": "Save Plant"
+      "saveFormDescription": "Confirm or update the details for {{plantName}} before saving.",
+      "saveFormSubmitButton": "Save Plant",
+      "initialDiagnosisNotes": "Initial AI diagnosis."
     },
     "carePlanGenerator": {
       "title": "Generate Detailed Care Plan",
@@ -285,7 +287,8 @@
       "noTasksManage": "No care tasks defined yet. Click 'Manage' then 'Add Task' to create one.",
       "noTasksNormal": "No care tasks defined yet.",
       "atTimePrefix": "at ",
-      "selectTaskAria": "Select task {{taskName}}"
+      "selectTaskAria": "Select task {{taskName}}",
+      "reviewCarePlanButton": "Review Care Plan"
     },
     "growthTracker": {
       "sectionTitle": "Growth Monitoring",
@@ -338,6 +341,13 @@
         "remove": "remove",
         "update_details": "update details"
       }
+    },
+    "proactiveReviewDialog": {
+      "title": "AI Care Plan Review",
+      "description": "Review AI suggestions for your {{plantName}}'s care plan based on its current details.",
+      "assessmentTitle": "AI Overall Assessment",
+      "noChangesSuggested": "The AI finds your current care plan suitable. No specific changes are suggested at this time.",
+      "noResult": "Could not retrieve AI review at this time."
     },
     "photoDetailsDialog": {
       "title": "Photo Details - {{date}}",
@@ -409,7 +419,8 @@
       "taskPaused": "Task \"{{taskName}}\" has been paused.",
       "taskResumed": "Task \"{{taskName}}\" has been resumed.",
       "plantDeletedTitle": "{{plantName}} Deleted",
-      "plantDeletedDesc": "{{plantName}} has been removed from your collection."
+      "plantDeletedDesc": "{{plantName}} has been removed from your collection.",
+      "errorProactiveReview": "An error occurred while reviewing the care plan."
     },
     "footer": {
       "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"
@@ -568,7 +579,6 @@
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
-      "exportErrorNoData": "No user data found to export.",
       "exportSuccessTitle": "Export Successful!",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "importFailedGeneral": "Could not parse or apply the imported data.",
@@ -611,7 +621,7 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
     "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
   },
@@ -627,3 +637,5 @@
     "errorNoUserSession": "No user session found. Please log in again."
   }
 }
+
+    

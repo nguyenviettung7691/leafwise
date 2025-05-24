@@ -6,7 +6,7 @@ import React, { useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, CalendarDays } from 'lucide-react';
+import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, CalendarDays, Sparkles } from 'lucide-react'; // Added Sparkles
 import { format, parseISO, isToday as fnsIsToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -44,7 +44,10 @@ const translateFrequencyDisplayLocal = (frequency: string, t: Function): string 
     if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
       const countMatch = frequency.match(/\d+/);
       const count = countMatch ? parseInt(countMatch[0], 10) : 0;
-      return t(directKey + '_formatted', {count});
+      const translatedKey = directKey + '_formatted';
+       if (t(translatedKey) !== translatedKey) {
+          return t(translatedKey, {count});
+      }
     }
     return t(directKey);
   }
@@ -95,6 +98,8 @@ interface PlantCareManagementProps {
   onDeleteSelectedTasks: () => void;
   isManagingCarePlan: boolean;
   onToggleManageCarePlan: () => void;
+  isLoadingProactiveReview: boolean; // New prop
+  onOpenProactiveReviewDialog: () => void; // New prop
 }
 
 
@@ -109,7 +114,9 @@ export function PlantCareManagement({
   onToggleTaskSelection,
   onDeleteSelectedTasks,
   isManagingCarePlan,
-  onToggleManageCarePlan
+  onToggleManageCarePlan,
+  isLoadingProactiveReview, // Destructure new prop
+  onOpenProactiveReviewDialog, // Destructure new prop
 }: PlantCareManagementProps) {
   const { t, dateFnsLocale } = useLanguage();
 
@@ -150,6 +157,21 @@ export function PlantCareManagement({
                 {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
               </Button>
             )}
+             {!isManagingCarePlan && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenProactiveReviewDialog}
+                disabled={isLoadingProactiveReview}
+              >
+                {isLoadingProactiveReview ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                {t('plantDetail.careManagement.reviewCarePlanButton')}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
               {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
               {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
@@ -181,6 +203,11 @@ export function PlantCareManagement({
                     isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
                     isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : ""
                   )}
+                  role={isManagingCarePlan ? "button" : undefined}
+                  tabIndex={isManagingCarePlan ? 0 : undefined}
+                  onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
+                  onKeyDown={isManagingCarePlan ? (e) => { if (e.key === 'Enter' || e.key === ' ') onToggleTaskSelection(task.id); } : undefined}
+                  aria-pressed={isManagingCarePlan ? isSelected : undefined}
                 >
                   <CardContent className="p-4 flex justify-between items-center">
                     {isManagingCarePlan && (
@@ -188,7 +215,7 @@ export function PlantCareManagement({
                         <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => onToggleTaskSelection(task.id)}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()} // Prevent card click when checkbox is clicked
                             aria-label={t('plantDetail.careManagement.selectTaskAria', { taskName: task.name })}
                         />
                       </div>
@@ -270,7 +297,7 @@ export function PlantCareManagement({
       </Card>
 
       {plant.careTasks && plant.careTasks.length > 0 && (
-        <div className={cn("mt-6", isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all")}>
+         <div className={cn("mt-6", isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all")}>
           <DynamicWeeklyCareCalendarView
             tasks={plant.careTasks}
             onEditTask={onOpenEditTaskDialog}
@@ -281,3 +308,5 @@ export function PlantCareManagement({
     </div>
   );
 }
+
+    
