@@ -42,8 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, _pass: string) => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use email as the ID for stable persistence
     const mockUserData: User = {
-      id: 'mock-user-id-' + Date.now(),
+      id: email, // CHANGED: Use email as ID
       name: email.split('@')[0] || 'Mock User',
       email: email,
       avatarUrl: 'https://placehold.co/100x100.png',
@@ -52,9 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mockUserData);
     localStorage.setItem('leafwiseUser', JSON.stringify(mockUserData));
     setIsLoading(false);
-    toast({ 
-      title: t('authContextToasts.loginSuccessTitle'), 
-      description: t('authContextToasts.loginSuccessDescription', { name: mockUserData.name }) 
+    toast({
+      title: t('authContextToasts.loginSuccessTitle'),
+      description: t('authContextToasts.loginSuccessDescription', { name: mockUserData.name })
     });
     router.push('/');
   }, [router, toast, t]);
@@ -62,8 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (name: string, email: string, _pass: string) => {
     setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use email as the ID for stable persistence
     const mockNewUserData: User = {
-      id: 'mock-user-id-' + Date.now(),
+      id: email, // CHANGED: Use email as ID
       name: name,
       email: email,
       avatarUrl: 'https://placehold.co/100x100.png',
@@ -72,9 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(mockNewUserData);
     localStorage.setItem('leafwiseUser', JSON.stringify(mockNewUserData));
     setIsLoading(false);
-    toast({ 
-      title: t('authContextToasts.registrationSuccessTitle'), 
-      description: t('authContextToasts.registrationSuccessDescription', { name: mockNewUserData.name }) 
+    toast({
+      title: t('authContextToasts.registrationSuccessTitle'),
+      description: t('authContextToasts.registrationSuccessDescription', { name: mockNewUserData.name })
     });
     router.push('/');
   }, [router, toast, t]);
@@ -82,26 +84,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('leafwiseUser');
-    toast({ 
-      title: t('authContextToasts.loggedOutTitle'), 
-      description: t('authContextToasts.loggedOutDescription') 
+    toast({
+      title: t('authContextToasts.loggedOutTitle'),
+      description: t('authContextToasts.loggedOutDescription')
     });
     router.push('/login');
   }, [router, toast, t]);
 
   const updateUser = useCallback(async (updatedData: Partial<Omit<User, 'id' | 'email'>>) => {
     if (!user) {
-      toast({ 
-        title: t('common.error'), 
-        description: t('authContextToasts.errorNoUserSession'), 
-        variant: "destructive" 
+      toast({
+        title: t('common.error'),
+        description: t('authContextToasts.errorNoUserSession'),
+        variant: "destructive"
       });
       return;
     }
     setIsLoading(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 700));
-    
+
     const newUserState: User = {
       ...user,
       ...updatedData,
@@ -110,13 +112,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...updatedData.preferences,
       },
     };
-    
+
     setUser(newUserState);
     localStorage.setItem('leafwiseUser', JSON.stringify(newUserState));
     setIsLoading(false);
-    toast({ 
-      title: t('authContextToasts.profileUpdatedTitle'), 
-      description: t('authContextToasts.profileUpdatedDescription') 
+    toast({
+      title: t('authContextToasts.profileUpdatedTitle'),
+      description: t('authContextToasts.profileUpdatedDescription')
     });
   }, [user, toast, t]);
 
