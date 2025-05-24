@@ -1,7 +1,12 @@
+
 {
   "name": "LeafWise - Plant Care Management",
   "short_name": "LeafWise",
   "description": "Your personal plant care assistant.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5F5",
+  "theme_color": "#32CD32",
   "icons": [
     {
       "src": "https://placehold.co/192x192.png",
@@ -15,10 +20,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "theme_color": "#32CD32",
-  "background_color": "#F5F5F5",
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }
