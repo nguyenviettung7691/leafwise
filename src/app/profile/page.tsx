@@ -30,7 +30,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { compressImage } from '@/lib/image-utils';
-import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; // Renamed functions
+import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 
@@ -66,9 +66,9 @@ export default function ProfilePage() {
 
   const { imageUrl: currentAvatarFromIDB } = useIndexedDbImage(
       authUser?.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')
-      ? authUser.avatarUrl 
+      ? authUser.avatarUrl
       : undefined,
-      authUser?.id // Pass userId
+      authUser?.id
   );
 
 
@@ -79,7 +79,6 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      // Prioritize direct data URL or http URL, then fall back to IDB fetched URL
       if (authUser.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
         setEditedAvatarPreviewUrl(authUser.avatarUrl);
       } else if (currentAvatarFromIDB) {
@@ -159,36 +158,49 @@ export default function ProfilePage() {
 
     const updatedUserData: Partial<Omit<User, 'id' | 'email'>> = {
       name: editedName,
+      avatarUrl: authUser.avatarUrl, // Default to existing avatar URL
     };
 
-    let newAvatarIdbKey: string | undefined = authUser.avatarUrl;
-
-    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('data:image/')) { // New image uploaded or existing data URL
+    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('data:image/')) {
       const blob = dataURLtoBlob(editedAvatarPreviewUrl);
-      if (blob) {
-        newAvatarIdbKey = `avatar-${authUser.id}-${Date.now()}`;
+      if (blob && authUser.id) {
+        const newAvatarIdbKey = `avatar-${authUser.id}-${Date.now()}`;
         try {
-          await addIDBImage(authUser.id, newAvatarIdbKey, blob); // Pass userId
-          updatedUserData.avatarUrl = newAvatarIdbKey; // Store IDB key
-        } catch (e) {
-          console.error("Error saving avatar to IDB:", e);
-          toast({ title: t('common.error'), description: "Failed to save avatar.", variant: "destructive" });
-          newAvatarIdbKey = authUser.avatarUrl; // Revert to old if save fails
+          const addImageResult = await addIDBImage(authUser.id, newAvatarIdbKey, blob);
+          if (addImageResult.error) {
+            console.error("IDB Error saving avatar:", addImageResult.error);
+            toast({ title: t('common.error'), description: "Failed to save new avatar image. Please try again.", variant: "destructive" });
+            // Keep updatedUserData.avatarUrl as authUser.avatarUrl (already set as default)
+          } else {
+            updatedUserData.avatarUrl = newAvatarIdbKey; // Store new IDB key
+          }
+        } catch (e) { 
+          console.error("Exception during avatar IDB save:", e);
+          toast({ title: t('common.error'), description: "Failed to save avatar due to an unexpected error.", variant: "destructive" });
+          // Keep updatedUserData.avatarUrl as authUser.avatarUrl
         }
+      } else if (!authUser.id) {
+         toast({ title: t('common.error'), description: "User session error. Cannot save avatar.", variant: "destructive" });
+      } else {
+         toast({ title: t('common.error'), description: "Failed to process new avatar image.", variant: "destructive" });
       }
     } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl === currentAvatarFromIDB) {
-      // Avatar is from IDB and hasn't changed from what was initially loaded
-      updatedUserData.avatarUrl = authUser.avatarUrl; // Keep existing IDB key
+      updatedUserData.avatarUrl = authUser.avatarUrl; // Keep existing IDB key, it's unchanged
     } else if (!editedAvatarPreviewUrl) {
-      // Avatar was removed
+      // Avatar was removed, old IDB key (if any) is implicitly cleared by not being in updatedUserData,
+      // or if authUser.avatarUrl was an IDB key, we might want to delete it from IDB.
+      // For now, we just set it to undefined.
       updatedUserData.avatarUrl = undefined;
       // Optionally delete old avatar from IDB if authUser.avatarUrl was an IDB key
-      if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')) {
-        // await deleteIDBImage(authUser.id, authUser.avatarUrl); // Consider if this is desired
-      }
+      // if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')) {
+      //   await deleteIDBImage(authUser.id, authUser.avatarUrl);
+      // }
+    } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('http')) {
+      // It's an external URL, just save it directly
+      updatedUserData.avatarUrl = editedAvatarPreviewUrl;
     }
-    // If editedAvatarPreviewUrl is an http link, it's used as is
-
+    // If editedAvatarPreviewUrl was an old IDB key (and not data URL, http URL, or currentAvatarFromIDB which is a blob: URL),
+    // it means the image was not changed and was an existing IDB key, so authUser.avatarUrl is already correct.
 
     try {
       await updateUser(updatedUserData);
@@ -210,7 +222,7 @@ export default function ProfilePage() {
     try {
       await updateUser({ preferences: updatedPreferences });
     } catch (error) {
-       toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', {preferenceKey}), variant: "destructive" });
+       toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', {preferenceKey: String(preferenceKey)}), variant: "destructive" });
     }
   };
 
@@ -240,25 +252,25 @@ export default function ProfilePage() {
       const plantsWithImageData = await Promise.all(contextPlants.map(async (plant) => {
         let primaryPhotoDataUrl: string | undefined = undefined;
         if (plant.primaryPhotoUrl && !plant.primaryPhotoUrl.startsWith('http') && !plant.primaryPhotoUrl.startsWith('data:')) {
-          const blob = await getIDBImage(authUser.id, plant.primaryPhotoUrl); // Pass userId
+          const blob = await getIDBImage(authUser.id, plant.primaryPhotoUrl);
           if (blob) {
             primaryPhotoDataUrl = await blobToDataURL(blob);
           }
         } else if (plant.primaryPhotoUrl?.startsWith('data:')) {
-          primaryPhotoDataUrl = plant.primaryPhotoUrl; 
+          primaryPhotoDataUrl = plant.primaryPhotoUrl;
         }
 
 
         const photosWithImageData = await Promise.all((plant.photos || []).map(async (photo) => {
           if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
-            const blob = await getIDBImage(authUser.id, photo.url); // Pass userId
+            const blob = await getIDBImage(authUser.id, photo.url);
             if (blob) {
               return { ...photo, imageDataUrl: await blobToDataURL(blob) };
             }
           } else if (photo.url?.startsWith('data:')) {
              return { ...photo, imageDataUrl: photo.url };
           }
-          return photo; 
+          return photo;
         }));
         return { ...plant, primaryPhotoDataUrl, photos: photosWithImageData };
       }));
@@ -314,12 +326,11 @@ export default function ProfilePage() {
             if (avatarBlob) {
                 const newAvatarId = `avatar-${authUser.id}-imported-${Date.now()}`;
                 await addIDBImage(authUser.id, newAvatarId, avatarBlob);
-                profileToUpdate.avatarUrl = newAvatarId; // Store IDB key
+                profileToUpdate.avatarUrl = newAvatarId;
             } else {
-                profileToUpdate.avatarUrl = undefined; // Or a default placeholder IDB key
+                profileToUpdate.avatarUrl = undefined; 
             }
         }
-        // If avatarUrl is an http link, it's kept as is. If it's an old IDB key, it might fail if that DB doesn't exist.
 
         await updateUser(profileToUpdate);
 
@@ -328,15 +339,17 @@ export default function ProfilePage() {
           const newPlant = { ...plantFromFile };
           delete newPlant.primaryPhotoDataUrl; 
           
-          if (plantFromFile.primaryPhotoDataUrl) {
+          if (plantFromFile.primaryPhotoDataUrl && authUser?.id) {
             const blob = dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
-            if (blob && authUser?.id) {
+            if (blob) {
               const newPrimaryPhotoId = `plant-${plantFromFile.id || Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
-              await addIDBImage(authUser.id, newPrimaryPhotoId, blob); // Pass userId
+              await addIDBImage(authUser.id, newPrimaryPhotoId, blob);
               newPlant.primaryPhotoUrl = newPrimaryPhotoId;
             } else {
               newPlant.primaryPhotoUrl = undefined;
             }
+          } else {
+            newPlant.primaryPhotoUrl = undefined;
           }
 
           newPlant.photos = await Promise.all(
@@ -344,17 +357,20 @@ export default function ProfilePage() {
               const newPhoto = { ...photoFromFile };
               delete newPhoto.imageDataUrl; 
 
-              if (photoFromFile.imageDataUrl) {
+              if (photoFromFile.imageDataUrl && authUser?.id) {
                 const blob = dataURLtoBlob(photoFromFile.imageDataUrl);
-                if (blob && authUser?.id) {
-                  const newPhotoId = `photo-${newPlant.id}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-                  await addIDBImage(authUser.id, newPhotoId, blob); // Pass userId
+                if (blob) {
+                  const newPhotoId = `photo-${newPlant.id || Date.now()}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                  await addIDBImage(authUser.id, newPhotoId, blob);
                   newPhoto.id = newPhotoId;
                   newPhoto.url = newPhotoId;
                 } else {
                   newPhoto.url = undefined;
-                  newPhoto.id = `error-${Date.now()}`;
+                  newPhoto.id = `error-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
                 }
+              } else {
+                  newPhoto.url = undefined;
+                  newPhoto.id = `missing-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
               }
               return newPhoto;
             })
@@ -366,7 +382,7 @@ export default function ProfilePage() {
         setContextPlants(restoredPlants);
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
-        
+        router.push('/'); // Navigate to home to refresh plant list view
 
       } catch (error: any) {
         toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
@@ -455,7 +471,7 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={handleEditToggle} disabled={authLoading || isLoggingOut || isCompressingAvatar}>
                 <X className="mr-2 h-4 w-4" /> {t('common.cancel')}
               </Button>
-              <Button onClick={handleSaveChanges} disabled={authLoading || isLoggingOut || isCompressingAvatar}>
+              <Button form="profile-form" type="submit" disabled={authLoading || isLoggingOut || isCompressingAvatar}>
                 {(authLoading || isCompressingAvatar) ? <AuthLoader className="h-4 w-4 mr-2 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                 {(authLoading || isCompressingAvatar) ? t('profilePage.savingButton') : t('profilePage.saveChangesButton')}
               </Button>
@@ -463,65 +479,67 @@ export default function ProfilePage() {
           )}
         </div>
 
-        <Card className="shadow-xl">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <Avatar
-                  className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
-                  onClick={() => isEditing && avatarInputRef.current?.click()}
-                >
-                  {isCompressingAvatar && isEditing && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full z-10">
-                      <AuthLoader className="h-6 w-6 text-white animate-spin" />
+        <form id="profile-form" onSubmit={handleSaveChanges}>
+          <Card className="shadow-xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative group">
+                  <Avatar
+                    className={`h-20 w-20 border-2 border-primary shadow-sm ${isEditing ? 'cursor-pointer' : ''}`}
+                    onClick={() => isEditing && avatarInputRef.current?.click()}
+                  >
+                    {isCompressingAvatar && isEditing && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full z-10">
+                        <AuthLoader className="h-6 w-6 text-white animate-spin" />
+                      </div>
+                    )}
+                    <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
+                    <AvatarFallback className="text-2xl bg-muted">
+                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isEditing && !isCompressingAvatar && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                        onClick={() => avatarInputRef.current?.click()}
+                    >
+                      <Camera className="h-6 w-6 text-white" />
                     </div>
                   )}
-                  <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
-                  <AvatarFallback className="text-2xl bg-muted">
-                    {user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                {isEditing && !isCompressingAvatar && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                       onClick={() => avatarInputRef.current?.click()}
-                  >
-                    <Camera className="h-6 w-6 text-white" />
-                  </div>
-                )}
+                </div>
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  className="hidden"
+                  accept="image/png, image/jpeg, image/gif, image/webp"
+                  onChange={handleAvatarFileChange}
+                  disabled={!isEditing || authLoading || isLoggingOut || isCompressingAvatar}
+                />
+                <div>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="profileName" className="sr-only">{t('profilePage.nameLabel')}</Label>
+                      <Input
+                        id="profileName"
+                        value={editedName}
+                        onChange={(e) => setEditedName(e.target.value)}
+                        className="text-2xl font-semibold p-1"
+                        disabled={authLoading || isLoggingOut || isCompressingAvatar}
+                      />
+                      <p className="text-md text-muted-foreground">{user.email} ({t('profilePage.emailCannotBeChanged')})</p>
+                    </div>
+                  ) : (
+                    <>
+                      <CardTitle className="text-2xl">{user.name}</CardTitle>
+                      <CardDescription className="text-md">{user.email}</CardDescription>
+                    </>
+                  )}
+                </div>
               </div>
-              <input
-                type="file"
-                ref={avatarInputRef}
-                className="hidden"
-                accept="image/png, image/jpeg, image/gif, image/webp"
-                onChange={handleAvatarFileChange}
-                disabled={!isEditing || authLoading || isLoggingOut || isCompressingAvatar}
-              />
-              <div>
-                {isEditing ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="profileName" className="sr-only">{t('profilePage.nameLabel')}</Label>
-                    <Input
-                      id="profileName"
-                      value={editedName}
-                      onChange={(e) => setEditedName(e.target.value)}
-                      className="text-2xl font-semibold p-1"
-                      disabled={authLoading || isLoggingOut || isCompressingAvatar}
-                    />
-                     <p className="text-md text-muted-foreground">{user.email} ({t('profilePage.emailCannotBeChanged')})</p>
-                  </div>
-                ) : (
-                  <>
-                    <CardTitle className="text-2xl">{user.name}</CardTitle>
-                    <CardDescription className="text-md">{user.email}</CardDescription>
-                  </>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="pt-4">
+            </CardContent>
+          </Card>
+        </form>
 
         <Card className="shadow-xl">
           <CardHeader>
@@ -542,7 +560,7 @@ export default function ProfilePage() {
                 disabled={authLoading || isLoggingOut}
               />
             </div>
-             <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
               <div className='flex items-center gap-3'>
                 <Smartphone className="h-5 w-5 text-primary" />
                 <Label htmlFor="pushNotifications" className="text-base">{t('profilePage.pushNotificationsLabel')}</Label>
@@ -556,7 +574,7 @@ export default function ProfilePage() {
               />
             </div>
           </CardContent>
-           <CardFooter className="pt-6 border-t">
+          <CardFooter className="pt-6 border-t">
             <p className="text-xs text-muted-foreground">{t('profilePage.preferencesDisclaimer')}</p>
           </CardFooter>
         </Card>
@@ -573,7 +591,7 @@ export default function ProfilePage() {
                 {isExporting ? t('profilePage.exportingButton') : t('profilePage.exportDataButton')}
               </Button>
               <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto" disabled={isImporting || isExporting}>
-                 {isImporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
+                {isImporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
                 {isImporting ? t('profilePage.importingButton') : t('profilePage.importDataButton')}
               </Button>
               <input
@@ -585,9 +603,9 @@ export default function ProfilePage() {
                 disabled={isImporting || isExporting}
               />
             </div>
-             <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
                 {t('profilePage.importDisclaimer')}
-             </p>
+            </p>
           </CardContent>
         </Card>
 
@@ -631,7 +649,7 @@ export default function ProfilePage() {
                     </AlertDialog>
                 </div>
                 <Separator />
-                 <div className="space-y-2">
+                <div className="space-y-2">
                     <p className="text-sm font-medium text-destructive">{t('profilePage.destroyDataSectionTitle')}</p>
                     <p className="text-xs text-muted-foreground">{t('profilePage.destroyDataSectionDescription')}</p>
                     <Button
@@ -691,3 +709,4 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+
