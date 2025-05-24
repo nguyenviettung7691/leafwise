@@ -3,7 +3,7 @@
 
 import { usePathname } from 'next/navigation';
 import type { NavItem } from '@/types';
-import { Button, buttonVariants } from '@/components/ui/button'; // Added buttonVariants
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,9 +27,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react';
+import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
@@ -100,31 +100,30 @@ export function Navbar() {
           </nav>
         </div>
 
-        <div className="md:hidden">
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
-                <span className="sr-only">{t('nav.settings')}</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0"> {/* Changed p-4 to p-0 to allow header to span full width */}
-              <SheetHeader className="p-4 border-b"> {/* Added SheetHeader */}
-                <SheetTitle asChild> {/* Use asChild if Logo contains its own h-level tag or is complex */}
-                    <SheetClose asChild>
-                         <Logo iconSize={24} textSize="text-xl" />
-                    </SheetClose>
-                </SheetTitle>
-                {/* <SheetDescription className="sr-only">Main navigation menu</SheetDescription> Optionally add a description */}
-              </SheetHeader>
-              <div className="flex flex-col gap-2 p-4"> {/* Added p-4 here for content padding */}
-                <NavLinks isMobile={true} />
-              </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-
         <div className="flex items-center gap-2">
+          <div className="md:hidden">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">{t('nav.settings')}</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64 p-0">
+                <SheetHeader className="p-4 border-b">
+                  <SheetClose asChild>
+                    <SheetTitle asChild>
+                      <Logo iconSize={24} textSize="text-xl" />
+                    </SheetTitle>
+                  </SheetClose>
+                </SheetHeader>
+                <div className="flex flex-col gap-2 p-4">
+                  <NavLinks isMobile={true} />
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
           {authIsLoading ? (
             <>
               <Skeleton className="h-9 w-9 rounded-full" />
