@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
+import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react'; // Removed UserCircle
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
@@ -111,11 +111,7 @@ export function Navbar() {
               </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
                 <SheetHeader className="p-4 border-b">
-                  <SheetClose asChild>
-                    <SheetTitle asChild>
-                      <Logo iconSize={24} textSize="text-xl" />
-                    </SheetTitle>
-                  </SheetClose>
+                  <SheetTitle>{t('nav.mobileMenuTitle')}</SheetTitle>
                 </SheetHeader>
                 <div className="flex flex-col gap-2 p-4">
                   <NavLinks isMobile={true} />
@@ -225,3 +221,5 @@ export function Navbar() {
     </header>
   );
 }
+
+    

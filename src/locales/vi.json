@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Cài đặt",
@@ -12,7 +11,8 @@
     "diagnosePlant": "Chẩn đoán cây",
     "careCalendar": "Lịch chăm sóc",
     "profile": "Hồ sơ",
-    "settings": "Cài đặt"
+    "settings": "Cài đặt",
+    "mobileMenuTitle": "Thực đơn"
   },
   "common": {
     "english": "Tiếng Anh",
@@ -219,6 +219,7 @@
     "toasts": {
       "imageTooLargeTitle": "Ảnh quá lớn",
       "imageTooLargeDesc": "Vui lòng chọn tệp ảnh nhỏ hơn 4MB.",
+      "imageCompressionError": "Lỗi nén ảnh.",
       "noImageTitle": "Chưa chọn ảnh",
       "noImageDesc": "Vui lòng chọn tệp ảnh để chẩn đoán.",
       "diagnosisCompleteTitle": "Chẩn đoán hoàn tất!",
@@ -235,7 +236,8 @@
       "saveCarePlanErrorNoPlant": "Không có cây nào được lưu gần đây để đính kèm kế hoạch chăm sóc.",
       "saveCarePlanErrorNotFound": "Không tìm thấy cây đã lưu.",
       "carePlanSavedTitle": "Đã lưu kế hoạch chăm sóc!",
-      "carePlanSavedDesc": "Các công việc trong kế hoạch chăm sóc đã được thêm vào {{plantName}}."
+      "carePlanSavedDesc": "Các công việc trong kế hoạch chăm sóc đã được thêm vào {{plantName}}.",
+      "invalidFileType": "Loại tệp không hợp lệ để chẩn đoán."
     },
     "resetPageButton": "Đặt lại trang chẩn đoán"
   },
@@ -646,3 +648,5 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
   }
 }
+
+    
