@@ -554,7 +554,9 @@
     "dataManagementCardTitle": "Quản lý dữ liệu",
     "dataManagementCardDescription": "Xuất dữ liệu cây của bạn hoặc nhập dữ liệu từ tệp sao lưu.",
     "exportDataButton": "Xuất dữ liệu của tôi",
+    "exportingButton": "Đang xuất...",
     "importDataButton": "Nhập dữ liệu",
+    "importingButton": "Đang nhập...",
     "importDisclaimer": "Nhập dữ liệu sẽ ghi đè lên cây và cài đặt hồ sơ hiện tại của bạn bằng nội dung từ tệp. Hành động này dành cho mục đích thử nghiệm.",
     "dangerZoneCardTitle": "Khu vực nguy hiểm",
     "logOutSectionTitle": "Đăng xuất",
@@ -576,18 +578,25 @@
       "avatarImageTooLargeTitle": "Ảnh quá lớn",
       "avatarImageTooLargeDesc": "Vui lòng chọn ảnh đại diện nhỏ hơn 4MB.",
       "profileUpdateError": "Không thể cập nhật hồ sơ.",
+      "imageCompressionError": "Không thể xử lý ảnh.",
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
+      "exportStartingTitle": "Đang xuất dữ liệu",
+      "exportStartingDesc": "Đang chuẩn bị dữ liệu để tải xuống...",
       "exportSuccessTitle": "Xuất thành công!",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
+      "exportFailedGeneral": "Xuất dữ liệu thất bại. Vui lòng thử lại.",
+      "importStartingTitle": "Đang nhập dữ liệu",
+      "importStartingDesc": "Đang xử lý tệp sao lưu của bạn...",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
       "importFailedReadFile": "Không thể đọc tệp đã chọn.",
       "importFailedInvalidFormat": "Định dạng tệp không hợp lệ. Thiếu dữ liệu 'userProfile' hoặc 'plants'.",
       "importSuccess": "Dữ liệu của bạn đã được nhập. Tải lại hoặc điều hướng để xem thay đổi.",
       "destroyEmailMismatch": "Xác nhận email không thành công.",
       "destroySuccessTitle": "Đã xóa dữ liệu!",
-      "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
+      "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa.",
+      "exportErrorNoData": "Không có dữ liệu người dùng để xuất."
     }
   },
   "loginPage": {
@@ -637,5 +646,3 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
   }
 }
-
-    

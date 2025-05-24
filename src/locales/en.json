@@ -554,7 +554,9 @@
     "dataManagementCardTitle": "Data Management",
     "dataManagementCardDescription": "Export your plant data or import data from a backup file.",
     "exportDataButton": "Export My Data",
+    "exportingButton": "Exporting...",
     "importDataButton": "Import Data",
+    "importingButton": "Importing...",
     "importDisclaimer": "Importing data will overwrite your current plants and profile settings with the content from the file. This action is for prototype purposes.",
     "dangerZoneCardTitle": "Danger Zone",
     "logOutSectionTitle": "Log Out",
@@ -576,18 +578,25 @@
       "avatarImageTooLargeTitle": "Image Too Large",
       "avatarImageTooLargeDesc": "Please select an image file smaller than 4MB for your avatar.",
       "profileUpdateError": "Failed to update profile.",
+      "imageCompressionError": "Failed to process image.",
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
+      "exportStartingTitle": "Exporting Data",
+      "exportStartingDesc": "Preparing your data for download...",
       "exportSuccessTitle": "Export Successful!",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
+      "exportFailedGeneral": "Data export failed. Please try again.",
+      "importStartingTitle": "Importing Data",
+      "importStartingDesc": "Processing your backup file...",
       "importFailedGeneral": "Could not parse or apply the imported data.",
       "importFailedReadFile": "Failed to read the selected file.",
       "importFailedInvalidFormat": "Invalid file format. Missing 'userProfile' or 'plants' data.",
       "importSuccess": "Your data has been imported. Refresh or navigate to see changes.",
       "destroyEmailMismatch": "Email confirmation failed.",
       "destroySuccessTitle": "Data Destroyed!",
-      "destroySuccessDesc": "All your personal data has been removed."
+      "destroySuccessDesc": "All your personal data has been removed.",
+      "exportErrorNoData": "No user data to export."
     }
   },
   "loginPage": {
@@ -637,5 +646,3 @@
     "errorNoUserSession": "No user session found. Please log in again."
   }
 }
-
-    

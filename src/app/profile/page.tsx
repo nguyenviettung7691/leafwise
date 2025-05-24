@@ -2,7 +2,7 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-import type { User, UserPreferences, Plant } from '@/types';
+import type { User, UserPreferences, Plant, PlantPhoto } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { compressImage } from '@/lib/image-utils'; // Import compressImage
+import { compressImage } from '@/lib/image-utils';
+import { getImage, addImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
+
+// Helper function to convert Blob to Data URL
+function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
@@ -40,7 +51,6 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
 
-  const [editedAvatarFile, setEditedAvatarFile] = useState<File | null>(null);
   const [editedAvatarPreviewUrl, setEditedAvatarPreviewUrl] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
@@ -50,6 +60,8 @@ export default function ProfilePage() {
   const [destroyEmailInput, setDestroyEmailInput] = useState('');
   const [isDestroyingData, setIsDestroyingData] = useState(false);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
 
   const { toast } = useToast();
@@ -59,8 +71,7 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      if (!editedAvatarPreviewUrl && authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:')) { // Check if it's not already a data URL
-         // If avatarUrl is a regular URL (e.g. placeholder), don't overwrite preview with it if user is trying to upload.
+      if (!editedAvatarPreviewUrl && authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:')) {
          // Only set if editedAvatarPreviewUrl is null.
       } else if (authUser.avatarUrl) {
          setEditedAvatarPreviewUrl(authUser.avatarUrl);
@@ -75,7 +86,6 @@ export default function ProfilePage() {
         setEditedName(authUser.name);
         setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
       }
-      setEditedAvatarFile(null);
     } else {
         if (authUser) {
             setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
@@ -87,14 +97,13 @@ export default function ProfilePage() {
   const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // Increased limit slightly for pre-compression
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           variant: 'destructive',
           title: t('profilePage.toasts.avatarImageTooLargeTitle'),
           description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
-        setEditedAvatarFile(null);
-        setEditedAvatarPreviewUrl(user?.avatarUrl || null); // Revert to original or null
+        setEditedAvatarPreviewUrl(user?.avatarUrl || null);
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         return;
       }
@@ -106,12 +115,10 @@ export default function ProfilePage() {
           const originalDataUrl = reader.result as string;
           const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.7, type: 'image/jpeg', maxWidth: 300, maxHeight: 300 });
           setEditedAvatarPreviewUrl(compressedDataUrl);
-          // We don't need to store the File object itself if we have the data URL
-          setEditedAvatarFile(null); 
         } catch (error) {
           console.error("Error compressing avatar:", error);
-          toast({ title: t('common.error'), description: "Failed to process image.", variant: "destructive" });
-          setEditedAvatarPreviewUrl(user?.avatarUrl || null); // Revert on error
+          toast({ title: t('common.error'), description: t('profilePage.toasts.imageCompressionError'), variant: "destructive" });
+          setEditedAvatarPreviewUrl(user?.avatarUrl || null);
         } finally {
           setIsCompressingAvatar(false);
         }
@@ -128,18 +135,16 @@ export default function ProfilePage() {
       name: editedName,
     };
 
-    // Only include avatarUrl if it has actually changed and is a data URL (meaning new/compressed)
     if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== authUser?.avatarUrl) {
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
     } else if (!editedAvatarPreviewUrl && authUser?.avatarUrl) {
-      updatedUserData.avatarUrl = undefined; // To clear it
+      updatedUserData.avatarUrl = undefined;
     }
 
 
     try {
       await updateUser(updatedUserData);
       setIsEditing(false);
-      // Avatar file is already handled via preview URL
     } catch (error) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
@@ -167,31 +172,71 @@ export default function ProfilePage() {
     setIsLoggingOut(false);
   };
 
-  const handleExportData = () => {
+  const handleExportData = async () => {
     if (!authUser) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.exportErrorNoData'), variant: "destructive" });
       return;
     }
-    const dataToExport = {
-      userProfile: authUser,
-      plants: contextPlants,
-    };
-    const jsonString = JSON.stringify(dataToExport, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const href = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = `leafwise_data_export_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(href);
-    toast({ title: t('profilePage.toasts.exportSuccessTitle'), description: t('profilePage.toasts.exportSuccessDesc') });
+    setIsExporting(true);
+    toast({ title: t('profilePage.toasts.exportStartingTitle'), description: t('profilePage.toasts.exportStartingDesc')});
+
+    try {
+      const plantsWithImageData = await Promise.all(contextPlants.map(async (plant) => {
+        let primaryPhotoDataUrl: string | undefined = undefined;
+        if (plant.primaryPhotoUrl && !plant.primaryPhotoUrl.startsWith('http') && !plant.primaryPhotoUrl.startsWith('data:')) {
+          const blob = await getImage(plant.primaryPhotoUrl);
+          if (blob) {
+            primaryPhotoDataUrl = await blobToDataURL(blob);
+          }
+        } else if (plant.primaryPhotoUrl?.startsWith('data:')) {
+          primaryPhotoDataUrl = plant.primaryPhotoUrl; // It's already a data URL
+        }
+
+
+        const photosWithImageData = await Promise.all(plant.photos.map(async (photo) => {
+          if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
+            const blob = await getImage(photo.url);
+            if (blob) {
+              return { ...photo, imageDataUrl: await blobToDataURL(blob) };
+            }
+          } else if (photo.url?.startsWith('data:')) {
+             return { ...photo, imageDataUrl: photo.url };
+          }
+          return photo; // Keep original photo object if no conversion needed or possible
+        }));
+        return { ...plant, primaryPhotoDataUrl, photos: photosWithImageData };
+      }));
+
+      const dataToExport = {
+        userProfile: authUser,
+        plants: plantsWithImageData,
+      };
+
+      const jsonString = JSON.stringify(dataToExport, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = `leafwise_data_export_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(href);
+      toast({ title: t('profilePage.toasts.exportSuccessTitle'), description: t('profilePage.toasts.exportSuccessDesc') });
+    } catch (error) {
+      console.error("Error during data export:", error);
+      toast({ title: t('common.error'), description: t('profilePage.toasts.exportFailedGeneral'), variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleImportFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    setIsImporting(true);
+    toast({ title: t('profilePage.toasts.importStartingTitle'), description: t('profilePage.toasts.importStartingDesc')});
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -206,13 +251,55 @@ export default function ProfilePage() {
           throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
+        // Restore User Profile
         const { id, email, ...profileToUpdate } = importedData.userProfile;
         await updateUser(profileToUpdate);
 
-        setContextPlants(importedData.plants as Plant[]);
+        // Restore Plants Data (with image processing)
+        const restoredPlantsPromises = importedData.plants.map(async (plantFromFile: any) => {
+          const newPlant = { ...plantFromFile };
+          delete newPlant.primaryPhotoDataUrl; // Remove to avoid storing in context
+          
+          if (plantFromFile.primaryPhotoDataUrl) {
+            const blob = dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
+            if (blob) {
+              const newPrimaryPhotoId = `plant-${Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
+              await addImage(newPrimaryPhotoId, blob);
+              newPlant.primaryPhotoUrl = newPrimaryPhotoId;
+            } else {
+              newPlant.primaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(newPlant.commonName || 'Plant')}`;
+            }
+          }
+
+          newPlant.photos = await Promise.all(
+            (plantFromFile.photos || []).map(async (photoFromFile: any) => {
+              const newPhoto = { ...photoFromFile };
+              delete newPhoto.imageDataUrl; // Remove to avoid storing in context
+
+              if (photoFromFile.imageDataUrl) {
+                const blob = dataURLtoBlob(photoFromFile.imageDataUrl);
+                if (blob) {
+                  const newPhotoId = `photo-${newPlant.id}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                  await addImage(newPhotoId, blob);
+                  newPhoto.id = newPhotoId;
+                  newPhoto.url = newPhotoId;
+                } else {
+                  // Could set to a placeholder or skip if blob conversion fails
+                  newPhoto.url = `https://placehold.co/200x200.png?text=${encodeURIComponent(newPlant.commonName || 'Photo')}`;
+                  newPhoto.id = newPhoto.url;
+                }
+              }
+              return newPhoto;
+            })
+          );
+          return newPlant as Plant;
+        });
+
+        const restoredPlants = await Promise.all(restoredPlantsPromises);
+        setContextPlants(restoredPlants);
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
-        router.push('/'); 
+        // router.push('/'); // Consider if immediate navigation is desired
 
       } catch (error: any) {
         toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
@@ -220,6 +307,7 @@ export default function ProfilePage() {
         if (importFileInputRef.current) {
           importFileInputRef.current.value = "";
         }
+        setIsImporting(false);
       }
     };
     reader.onerror = () => {
@@ -227,6 +315,7 @@ export default function ProfilePage() {
       if (importFileInputRef.current) {
         importFileInputRef.current.value = "";
       }
+      setIsImporting(false);
     };
     reader.readAsText(file);
   };
@@ -247,7 +336,7 @@ export default function ProfilePage() {
     setIsDestroyingData(false);
   };
 
-  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : authUser?.avatarUrl) || 'https://placehold.co/100x100.png?text=LF';
+  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : authUser?.avatarUrl) || `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`;
 
 
   if (authLoading || !user) {
@@ -412,11 +501,13 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto">
-                <Download className="mr-2 h-5 w-5" /> {t('profilePage.exportDataButton')}
+              <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto" disabled={isExporting || isImporting}>
+                {isExporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
+                {isExporting ? t('profilePage.exportingButton') : t('profilePage.exportDataButton')}
               </Button>
-              <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto">
-                <Upload className="mr-2 h-5 w-5" /> {t('profilePage.importDataButton')}
+              <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto" disabled={isImporting || isExporting}>
+                 {isImporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
+                {isImporting ? t('profilePage.importingButton') : t('profilePage.importDataButton')}
               </Button>
               <input
                 type="file"
@@ -424,6 +515,7 @@ export default function ProfilePage() {
                 className="hidden"
                 accept=".json"
                 onChange={handleImportFileChange}
+                disabled={isImporting || isExporting}
               />
             </div>
              <p className="text-xs text-muted-foreground">
@@ -501,8 +593,8 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-             <AlertDialogDescription >{t('profilePage.destroyConfirmDescription1')}</AlertDialogDescription>
-             <AlertDialogDescription >{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</AlertDialogDescription>
+            <AlertDialogDescription>{t('profilePage.destroyConfirmDescription1')}</AlertDialogDescription>
+            <AlertDialogDescription>{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
             <Label htmlFor="destroy-confirm-email" className="sr-only">{t('profilePage.destroyConfirmEmailPlaceholder')}</Label>
