@@ -5,9 +5,8 @@ import type { Plant } from '@/types';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { defaultPlants } from '@/lib/mock-data';
-import { clearPlantImages } from '@/lib/idb-helper'; // Import IDB helper
-
-const LOCAL_STORAGE_KEY = 'leafwisePlants';
+import { clearPlantImages as clearIDBPlantImages } from '@/lib/idb-helper'; 
+import { useAuth } from './AuthContext'; // Import useAuth
 
 interface PlantDataContextType {
   plants: Plant[];
@@ -17,79 +16,114 @@ interface PlantDataContextType {
   updatePlant: (plantId: string, updatedPlantData: Plant) => void;
   deletePlant: (plantId: string) => void;
   deleteMultiplePlants: (plantIds: Set<string>) => void;
-  setAllPlants: (allNewPlants: Plant[]) => void;
-  clearAllPlantData: () => Promise<void>; // Make it async
+  setAllPlants: (allNewPlants: Plant[]) => void; // For data import
+  clearAllPlantData: () => Promise<void>; 
 }
 
 const PlantContext = createContext<PlantDataContextType | undefined>(undefined);
 
 export function PlantDataProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth(); // Get user from AuthContext
   const [plants, setPlantsState] = useState<Plant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    try {
-      const storedPlants = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (storedPlants) {
-        setPlantsState(JSON.parse(storedPlants));
-      } else {
-        setPlantsState(defaultPlants);
-      }
-    } catch (error) {
-      console.error("Failed to load plants from localStorage, using default:", error);
-      setPlantsState(defaultPlants);
-    }
-    setIsLoading(false);
+  const getLocalStorageKey = useCallback((userId?: string) => {
+    return userId ? `leafwisePlants_${userId}` : null;
   }, []);
 
+  // Effect for loading plants from localStorage when user changes or on initial load
   useEffect(() => {
-    if (!isLoading) {
+    setIsLoading(true);
+    const currentUserId = user?.id;
+    const storageKey = getLocalStorageKey(currentUserId);
+
+    if (storageKey) {
       try {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(plants));
+        const storedPlants = localStorage.getItem(storageKey);
+        if (storedPlants) {
+          setPlantsState(JSON.parse(storedPlants));
+        } else {
+          // No data for this user, start with empty (defaultPlants is empty array)
+          setPlantsState([...defaultPlants]); 
+        }
       } catch (error) {
-        console.error("Failed to save plants to localStorage:", error);
+        console.error(`Failed to load plants for user ${currentUserId} from localStorage, using default:`, error);
+        setPlantsState([...defaultPlants]);
+      }
+    } else {
+      // No user logged in, reset to empty
+      setPlantsState([]);
+    }
+    setIsLoading(false);
+  }, [user, getLocalStorageKey]); // Rerun when user or getLocalStorageKey changes
+
+  // Effect for saving plants to localStorage when plants state or user changes
+  useEffect(() => {
+    if (!isLoading) { // Avoid saving initial empty/default state before loading or during user transition
+      const currentUserId = user?.id;
+      const storageKey = getLocalStorageKey(currentUserId);
+      if (storageKey && plants.length > 0) { // Only save if there's a user and plants
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(plants));
+        } catch (error) {
+          console.error(`Failed to save plants for user ${currentUserId} to localStorage:`, error);
+        }
+      } else if (storageKey && plants.length === 0) {
+        // If plants array is empty for the current user, still save it to reflect the empty state
+        localStorage.setItem(storageKey, JSON.stringify([]));
       }
     }
-  }, [plants, isLoading]);
+  }, [plants, user, isLoading, getLocalStorageKey]);
 
   const getPlantById = useCallback((id: string) => {
     return plants.find(plant => plant.id === id);
   }, [plants]);
 
   const addPlant = useCallback((newPlant: Plant) => {
+    if (!user) return; // Should not happen if UI guards this
     setPlantsState(prevPlants => [newPlant, ...prevPlants]);
-  }, []);
+  }, [user]);
 
   const updatePlant = useCallback((plantId: string, updatedPlantData: Plant) => {
+    if (!user) return;
     setPlantsState(prevPlants => 
       prevPlants.map(plant => plant.id === plantId ? updatedPlantData : plant)
     );
-  }, []);
+  }, [user]);
 
   const deletePlant = useCallback((plantId: string) => {
+    if (!user) return;
     setPlantsState(prevPlants => prevPlants.filter(plant => plant.id !== plantId));
-    // Note: Deleting associated images from IndexedDB should also happen here
-    // For now, image deletion logic will be added to the calling components
-  }, []);
+  }, [user]);
 
   const deleteMultiplePlants = useCallback((plantIds: Set<string>) => {
+    if (!user) return;
     setPlantsState(prevPlants => prevPlants.filter(plant => !plantIds.has(plant.id)));
-    // Note: Deleting associated images from IndexedDB for multiple plants
-  }, []);
+  }, [user]);
 
   const setAllPlants = useCallback((allNewPlants: Plant[]) => {
+    if (!user) return; // Ensure there's a user context for saving
     setPlantsState(allNewPlants);
-  }, []);
+  }, [user]);
   
   const clearAllPlantData = useCallback(async () => {
-    setPlantsState([]); // Clear plants from context and localStorage
-    try {
-      await clearPlantImages(); // Clear images from IndexedDB
-      console.log("All plant images cleared from IndexedDB.");
-    } catch (error) {
-      console.error("Error clearing plant images from IndexedDB:", error);
+    const currentUserId = user?.id;
+    if (currentUserId) {
+      setPlantsState([]); 
+      const storageKey = getLocalStorageKey(currentUserId);
+      if (storageKey) {
+        localStorage.removeItem(storageKey); // Clear plants from localStorage for the current user
+      }
+      try {
+        await clearIDBPlantImages(currentUserId); // Clear images from IndexedDB for the current user
+        console.log(`All plant images cleared from IndexedDB for user ${currentUserId}.`);
+      } catch (error) {
+        console.error(`Error clearing plant images from IndexedDB for user ${currentUserId}:`, error);
+      }
+    } else {
+      // No user, or user just logged out. State already cleared.
     }
-  }, []);
+  }, [user, getLocalStorageKey]);
 
   return (
     <PlantContext.Provider value={{ 

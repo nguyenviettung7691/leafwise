@@ -1,7 +1,7 @@
 
 // src/lib/idb-helper.ts
 
-const DB_NAME = 'LeafWiseDB';
+const DB_NAME_PREFIX = 'LeafWiseDB_'; // Prefix for user-specific databases
 const DB_VERSION = 1;
 const IMAGE_STORE_NAME = 'plantImages';
 
@@ -10,18 +10,24 @@ interface IDBTransactionResult<T> {
   result?: T;
 }
 
-function openDB(): Promise<IDBDatabase> {
+function openDB(userId: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (!userId) {
+      // console.error("User ID is required to open IndexedDB.");
+      reject(new Error("User ID is required"));
+      return;
+    }
     if (!('indexedDB' in window)) {
-      console.error("IndexedDB not supported by this browser.");
+      // console.error("IndexedDB not supported by this browser.");
       reject(new Error("IndexedDB not supported"));
       return;
     }
 
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const dbName = `${DB_NAME_PREFIX}${userId}`;
+    const request = indexedDB.open(dbName, DB_VERSION);
 
     request.onerror = (event) => {
-      console.error("IndexedDB error:", (event.target as IDBOpenDBRequest).error);
+      console.error(`IndexedDB error for user ${userId}:`, (event.target as IDBOpenDBRequest).error);
       reject((event.target as IDBOpenDBRequest).error);
     };
 
@@ -32,15 +38,16 @@ function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
-        db.createObjectStore(IMAGE_STORE_NAME); // Key will be the photoId (string)
+        db.createObjectStore(IMAGE_STORE_NAME); 
       }
     };
   });
 }
 
-export async function addImage(photoId: string, imageBlob: Blob): Promise<IDBTransactionResult<IDBValidKey>> {
+export async function addImage(userId: string, photoId: string, imageBlob: Blob): Promise<IDBTransactionResult<IDBValidKey>> {
+  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
   try {
-    const db = await openDB();
+    const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
     const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.put(imageBlob, photoId);
@@ -64,9 +71,13 @@ export async function addImage(photoId: string, imageBlob: Blob): Promise<IDBTra
   }
 }
 
-export async function getImage(photoId: string): Promise<Blob | undefined> {
+export async function getImage(userId: string, photoId: string): Promise<Blob | undefined> {
+  if (!userId) {
+    // console.warn("getImage called without userId");
+    return undefined;
+  }
   try {
-    const db = await openDB();
+    const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readonly');
     const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.get(photoId);
@@ -92,9 +103,10 @@ export async function getImage(photoId: string): Promise<Blob | undefined> {
   }
 }
 
-export async function deleteImage(photoId: string): Promise<IDBTransactionResult<void>> {
+export async function deleteImage(userId: string, photoId: string): Promise<IDBTransactionResult<void>> {
+  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
   try {
-    const db = await openDB();
+    const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
     const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.delete(photoId);
@@ -119,9 +131,10 @@ export async function deleteImage(photoId: string): Promise<IDBTransactionResult
 }
 
 
-export async function clearPlantImages(): Promise<IDBTransactionResult<void>> {
+export async function clearPlantImages(userId: string): Promise<IDBTransactionResult<void>> {
+  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
   try {
-    const db = await openDB();
+    const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
     const store = transaction.objectStore(IMAGE_STORE_NAME);
     const request = store.clear();

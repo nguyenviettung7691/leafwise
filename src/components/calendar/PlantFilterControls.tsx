@@ -10,11 +10,12 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // Added CardContent
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buttonVariants } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -25,11 +26,12 @@ interface PlantFilterControlsProps {
 interface PlantFilterAvatarProps {
   photoId?: string;
   plantName: string;
+  userId?: string; // Added userId
   className?: string;
 }
 
-const PlantFilterAvatar: React.FC<PlantFilterAvatarProps> = ({ photoId, plantName, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId);
+const PlantFilterAvatar: React.FC<PlantFilterAvatarProps> = ({ photoId, plantName, userId, className }) => {
+  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); // Pass userId
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {
@@ -54,6 +56,7 @@ export function PlantFilterControls({
   selectedPlantIds,
   onSelectedPlantIdsChange,
 }: PlantFilterControlsProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t } = useLanguage();
 
   const handleTogglePlant = (plantId: string) => {
@@ -148,7 +151,7 @@ export function PlantFilterControls({
             <div className="p-3">
               {allPlants.length > 0 ? (
                 <ScrollArea className="w-full rounded-md" orientation="horizontal">
-                  <div className="flex space-x-3 px-1 pt-1 pb-2"> {/* Added px-1 pt-1 */}
+                  <div className="flex space-x-3 px-1 pt-1 pb-2"> 
                     {allPlants.map(plant => (
                       <TooltipProvider key={plant.id} delayDuration={200}>
                         <Tooltip>
@@ -163,7 +166,7 @@ export function PlantFilterControls({
                               aria-pressed={selectedPlantIds.has(plant.id)}
                             >
                               <Avatar className="h-10 w-10">
-                                <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} className="h-10 w-10" />
+                                <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} userId={user?.id} className="h-10 w-10" /> 
                               </Avatar>
                             </button>
                           </TooltipTrigger>

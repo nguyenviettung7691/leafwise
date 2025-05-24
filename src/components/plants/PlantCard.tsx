@@ -13,6 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface PlantCardProps {
   plant: Plant;
@@ -78,9 +79,10 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
 };
 
 export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t, dateFnsLocale } = useLanguage();
   const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(plant.primaryPhotoUrl);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getImage } from '@/lib/idb-helper';
+import { getImage as getIDBImage } from '@/lib/idb-helper'; // Renamed to avoid conflict
 
 interface UseIndexedDbImageReturn {
   imageUrl: string | null;
@@ -10,7 +10,7 @@ interface UseIndexedDbImageReturn {
   error: Error | null;
 }
 
-export function useIndexedDbImage(photoId: string | undefined): UseIndexedDbImageReturn {
+export function useIndexedDbImage(photoId: string | undefined, userId?: string | undefined): UseIndexedDbImageReturn {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
@@ -18,14 +18,13 @@ export function useIndexedDbImage(photoId: string | undefined): UseIndexedDbImag
   useEffect(() => {
     let currentObjectUrl: string | null = null;
 
-    if (!photoId) {
-      setImageUrl(null); // Reset if photoId is undefined (e.g. plant has no primary photo)
+    if (!photoId || !userId) { // Check for userId as well
+      setImageUrl(null); 
       setIsLoading(false);
       setError(null);
       return;
     }
     
-    // Prevent fetching if photoId is a data URL or http/https URL
     if (photoId.startsWith('data:') || photoId.startsWith('http')) {
       setImageUrl(photoId);
       setIsLoading(false);
@@ -33,30 +32,26 @@ export function useIndexedDbImage(photoId: string | undefined): UseIndexedDbImag
       return;
     }
 
-
     const fetchImage = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const blob = await getImage(photoId);
+        const blob = await getIDBImage(userId, photoId); // Pass userId
         if (blob) {
           currentObjectUrl = URL.createObjectURL(blob);
           setImageUrl(currentObjectUrl);
         } else {
-          // If blob is not found, it could be an old placeholder or an error
-          // For prototype, we can try to show it as is if it looks like a URL
            if (photoId.includes('placehold.co')) {
              setImageUrl(photoId);
            } else {
-            console.warn(`Image blob not found for ID: ${photoId}, and it's not a known placeholder.`);
-            setImageUrl(null); // Or a specific "not found" image URL
-            // setError(new Error('Image not found in IndexedDB'));
+            console.warn(`Image blob not found for ID: ${photoId} for user ${userId}, and it's not a known placeholder.`);
+            setImageUrl(null); 
            }
         }
       } catch (e: any) {
-        console.error(`Failed to load image ${photoId} from IndexedDB:`, e);
+        console.error(`Failed to load image ${photoId} from IndexedDB for user ${userId}:`, e);
         setError(e);
-        setImageUrl(null); // Or a fallback error image URL
+        setImageUrl(null); 
       } finally {
         setIsLoading(false);
       }
@@ -69,7 +64,7 @@ export function useIndexedDbImage(photoId: string | undefined): UseIndexedDbImag
         URL.revokeObjectURL(currentObjectUrl);
       }
     };
-  }, [photoId]);
+  }, [photoId, userId]); // Add userId to dependencies
 
   return { imageUrl, isLoading, error };
 }

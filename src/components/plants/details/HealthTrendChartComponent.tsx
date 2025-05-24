@@ -7,19 +7,20 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import type { PlantHealthCondition } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { Skeleton } from '@/components/ui/skeleton'; 
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
-  healthy: 'hsl(var(--primary))', // Lime Green
-  needs_attention: 'hsl(var(--chart-4))', // Yellow/Orange
-  sick: 'hsl(var(--destructive))', // Red
-  unknown: 'hsl(var(--muted-foreground))', // Grey
+  healthy: 'hsl(var(--primary))', 
+  needs_attention: 'hsl(var(--chart-4))', 
+  sick: 'hsl(var(--destructive))', 
+  unknown: 'hsl(var(--muted-foreground))', 
 };
 
 interface ChartDataItem {
   id: string;
-  photoUrl?: string; // This is the IDB key
+  photoUrl?: string; 
   date: string;
   originalDate: Date;
   health: number;
@@ -55,9 +56,8 @@ const CustomChartDot = (props: any) => {
   );
 };
 
-// Helper component to display image in tooltip
-const TooltipImageDisplay = ({ photoId }: { photoId?: string }) => {
-  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId);
+const TooltipImageDisplay = ({ photoId, userId }: { photoId?: string, userId?: string }) => { // Added userId
+  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId, userId); // Pass userId
   const { t } = useLanguage();
 
   if (!photoId) return null;
@@ -73,7 +73,7 @@ const TooltipImageDisplay = ({ photoId }: { photoId?: string }) => {
   return (
     <Image
       src={imageUrl}
-      alt={t('plantDetail.growthTracker.photoGalleryTitle')} // Generic alt
+      alt={t('plantDetail.growthTracker.photoGalleryTitle')} 
       width={64}
       height={64}
       className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
@@ -89,6 +89,7 @@ export default function HealthTrendChartComponent({
   healthScoreLabels,
   onChartDotClick,
 }: HealthTrendChartComponentProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t } = useLanguage();
 
   if (!chartData || chartData.length < 1) {
@@ -117,7 +118,7 @@ export default function HealthTrendChartComponent({
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          tickFormatter={(value) => value.slice(0, 6)} // Short date format for X-axis
+          tickFormatter={(value) => value.slice(0, 6)} 
         />
         <YAxis
           dataKey="health"
@@ -134,13 +135,12 @@ export default function HealthTrendChartComponent({
           content={
             <ChartTooltipContent
               indicator="dot"
-              labelKey="date" // Use formatted date for tooltip label
-              formatter={(value, name, props: any) => { // value here is the health score (0-3)
+              labelKey="date" 
+              formatter={(value, name, props: any) => { 
                 return (
                   <div className="text-sm">
-                    {/* Use TooltipImageDisplay with the IDB key */}
-                    <TooltipImageDisplay photoId={props.payload?.photoUrl} />
-                    <p className="font-medium text-foreground">{props.payload?.date}</p> {/* Display formatted date */}
+                    <TooltipImageDisplay photoId={props.payload?.photoUrl} userId={user?.id} /> 
+                    <p className="font-medium text-foreground">{props.payload?.date}</p> 
                     <p className="text-muted-foreground">{t('common.health')}: <span className='font-semibold capitalize'>{props.payload?.healthLabel}</span></p>
                   </div>
                 );
@@ -151,7 +151,7 @@ export default function HealthTrendChartComponent({
         <Line
           dataKey="health"
           type="monotone"
-          stroke="var(--color-health)" // From chartConfig
+          stroke="var(--color-health)" 
           strokeWidth={2}
           dot={<CustomChartDot onDotClick={onChartDotClick} />}
           activeDot={{ r: 7, style: { cursor: 'pointer' } }}

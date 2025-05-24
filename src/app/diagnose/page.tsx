@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent, useRef } from 'react';
+import { useState, type FormEvent, useRef, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput, type DiagnosePlantHealthInput as DiagnoseInput } from '@/ai/flows/diagnose-plant-health';
 import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
@@ -16,12 +16,14 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; // Renamed addImage
 import { compressImage } from '@/lib/image-utils'; 
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; // Added Alert imports
-import { CheckCircle } from 'lucide-react'; // For Alert icon
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'; 
+import { CheckCircle } from 'lucide-react'; 
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 export default function DiagnosePlantPage() {
+  const { user } = useAuth(); // Get user from AuthContext
   const { addPlant, updatePlant, getPlantById } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null); 
@@ -91,7 +93,6 @@ export default function DiagnosePlantPage() {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // Clear previous results but keep description
     setDiagnosisResult(null);
     setDiagnosisError(null);
     setShowSavePlantForm(false);
@@ -124,11 +125,11 @@ export default function DiagnosePlantPage() {
       reader.onloadend = async () => {
         try {
           const originalDataUrl = reader.result as string;
-          const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/jpeg', maxWidth: 1024, maxHeight: 1024 });
+          const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/webp', maxWidth: 1024, maxHeight: 1024 });
           setPreviewUrl(compressedDataUrl);
         } catch (err) {
           console.error("Error compressing image:", err);
-          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageTooLargeDesc'), variant: "destructive" });
+          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageCompressionError'), variant: "destructive" });
           setPreviewUrl(null); 
           if (fileInputRef.current) fileInputRef.current.value = "";
         } finally {
@@ -185,6 +186,10 @@ export default function DiagnosePlantPage() {
   };
 
   const handleSavePlant = async (data: PlantFormData) => {
+    if (!user?.id) {
+      toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
+      return;
+    }
     setIsSavingPlant(true);
     
     const newPlantId = `plant-${Date.now()}`;
@@ -195,7 +200,7 @@ export default function DiagnosePlantPage() {
       if (blob) {
         finalPhotoIdForStorage = `photo-${newPlantId}-initial-${Date.now()}`;
         try {
-          await addImage(finalPhotoIdForStorage, blob);
+          await addIDBImage(user.id, finalPhotoIdForStorage, blob); // Pass userId
         } catch (e) {
           console.error("Error saving initial diagnosis image to IDB:", e);
           toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 const DynamicHealthTrendChart = dynamic(
   () => import('./HealthTrendChartComponent'),
@@ -50,14 +51,15 @@ interface GalleryPhotoItemProps {
   isSelected: boolean;
   isManagingPhotos: boolean;
   plantCommonName: string;
+  userId?: string; // Added userId
   onPhotoClick: (photo: PlantPhoto) => void;
   onToggleSelection: (photoId: string) => void;
   onOpenEditDialog: (photo: PlantPhoto) => void;
 }
 
-const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plantCommonName, onPhotoClick, onToggleSelection, onOpenEditDialog }: GalleryPhotoItemProps) => {
+const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plantCommonName, userId, onPhotoClick, onToggleSelection, onOpenEditDialog }: GalleryPhotoItemProps) => {
   const { t, dateFnsLocale } = useLanguage();
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId); // Pass userId
 
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
@@ -82,6 +84,20 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
       tabIndex={isManagingPhotos ? 0 : -1}
       onKeyDown={isManagingPhotos ? (e) => { if (e.key === 'Enter' || e.key === ' ') onToggleSelection(photo.id); } : undefined}
     >
+      {isPrimary && (
+         <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+                <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
+                    <BookmarkCheck className="h-3.5 w-3.5" />
+                </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('plantDetail.growthTracker.primaryPhotoTooltip')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       {isManagingPhotos && (
         <div className="absolute top-1.5 right-1.5 z-10 p-0.5 flex items-center gap-1">
           <Button
@@ -103,20 +119,6 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
             className="h-5 w-5 bg-card/70 rounded-sm"
           />
         </div>
-      )}
-      {isPrimary && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="absolute top-1.5 left-1.5 z-10 p-1 bg-primary/80 rounded-full text-primary-foreground">
-                <BookmarkCheck className="h-3.5 w-3.5" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('plantDetail.growthTracker.primaryPhotoTooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       )}
       {isLoadingImage ? (
         <Skeleton className="w-full h-full rounded-md" />
@@ -191,6 +193,7 @@ export function PlantGrowthTracker({
   onDeleteSelectedPhotos,
   onOpenEditPhotoDialog,
 }: PlantGrowthTrackerProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t, dateFnsLocale } = useLanguage();
 
   const healthScoreLabels: Record<number, string> = {
@@ -280,7 +283,7 @@ export function PlantGrowthTracker({
           </div>
         </CardHeader>
         <CardContent>
-          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4")}>
+          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4", isManagingPhotos ? "filter blur-sm opacity-60 transition-all" : "")}>
             {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
               sortedPhotosForGallery.map(photo => (
                 <GalleryPhotoItem
@@ -290,6 +293,7 @@ export function PlantGrowthTracker({
                   isSelected={selectedPhotoIds.has(photo.id)}
                   isManagingPhotos={isManagingPhotos}
                   plantCommonName={plant.commonName}
+                  userId={user?.id} // Pass userId
                   onPhotoClick={onOpenGridPhotoDialog}
                   onToggleSelection={onTogglePhotoSelection}
                   onOpenEditDialog={onOpenEditPhotoDialog}
@@ -302,7 +306,6 @@ export function PlantGrowthTracker({
         </CardContent>
       </Card>
 
-      {/* Health Trend Chart Section */}
       {(chartData.length > 0) && (
           <Card className={cn(
             "mt-6 transition-all",

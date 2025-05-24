@@ -36,8 +36,9 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import hook
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { Skeleton } from '@/components/ui/skeleton'; 
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
@@ -47,7 +48,7 @@ interface DisplayableTaskOccurrence {
   plantPrimaryPhotoUrl?: string;
 }
 
-const DEFAULT_HOURS_WEEKLY = Array.from({ length: 17 }, (_, i) => i + 7); // 7 AM (7) to 11 PM (23) for weekly view
+const DEFAULT_HOURS_WEEKLY = Array.from({ length: 17 }, (_, i) => i + 7); 
 
 const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
   const newDate = new Date(date);
@@ -90,11 +91,12 @@ interface CareCalendarViewProps {
 interface TaskPlantAvatarDisplayProps {
   photoId?: string;
   plantName: string;
+  userId?: string; // Added userId
   className?: string;
 }
 
-const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId);
+const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, userId, className }) => {
+  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); // Pass userId
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {
@@ -120,12 +122,13 @@ export function CareCalendarView({
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t, dateFnsLocale } = useLanguage();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
 
-  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; // Monday
+  const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; 
 
   const currentPeriodStart = useMemo(() => {
     return viewMode === 'week' ? startOfWeek(currentDate, { weekStartsOn }) : startOfMonth(currentDate);
@@ -135,7 +138,7 @@ export function CareCalendarView({
     return viewMode === 'week' ? endOfWeek(currentDate, { weekStartsOn }) : endOfMonth(currentDate);
   }, [currentDate, viewMode, weekStartsOn]);
 
-  const daysInWeekHeaders = useMemo(() => { // For weekly view header
+  const daysInWeekHeaders = useMemo(() => { 
     const start = startOfWeek(currentDate, { weekStartsOn });
     return eachDayOfInterval({ start, end: endOfWeek(start, { weekStartsOn }) });
   }, [currentDate, weekStartsOn]);
@@ -162,7 +165,7 @@ export function CareCalendarView({
   const isCurrentActualPeriod = useMemo(() => {
     if (viewMode === 'week') {
       return isSameWeek(currentDate, new Date(), { weekStartsOn });
-    } else { // month
+    } else { 
       return isSameMonth(currentDate, new Date());
     }
   }, [currentDate, viewMode, weekStartsOn]);
@@ -274,9 +277,9 @@ export function CareCalendarView({
                 return !taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day';
             }
             if (!taskTimeOfDay || taskTimeOfDay.toLowerCase() === 'all day') return false;
-            // Daytime: 7 AM (7) to 6 PM (18)
+            
             if (timeCategory === 'daytime') return hour >= 7 && hour < 19;
-            // Nighttime: 7 PM (19) to 6 AM (6)
+            
             if (timeCategory === 'nighttime') return hour >= 19 || hour < 7;
             return false;
         });
@@ -356,6 +359,7 @@ export function CareCalendarView({
                 <TaskPlantAvatarDisplay
                   photoId={occurrence.plantPrimaryPhotoUrl}
                   plantName={occurrence.plantName}
+                  userId={user?.id} // Pass userId
                   className={compact ? "h-3 w-3 text-[7px]" : "h-4 w-4 text-[8px]"}
                 />
               </Avatar>
@@ -433,7 +437,7 @@ export function CareCalendarView({
               <div className="p-1 border-r border-b text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-10">{t('calendarPage.calendarView.timeColumnHeader')}</div>
               {daysInWeekHeaders.map(day => {
                 const dayOfWeek = getDay(day);
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; 
                 const today = isToday(day);
                 return (
                   <div
@@ -562,5 +566,3 @@ export function CareCalendarView({
     </Card>
   );
 }
-
-

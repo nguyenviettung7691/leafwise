@@ -10,14 +10,16 @@ import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; // Renamed addImage
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 export default function EditPlantPage() {
+  const { user } = useAuth(); // Get user from AuthContext
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const { toast } = useToast();
-  const { t } = useLanguage(); // Import useLanguage
+  const { t } = useLanguage(); 
   const { getPlantById, updatePlant } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
@@ -51,7 +53,7 @@ export default function EditPlantPage() {
   }, [id, getPlantById]);
 
   const handleUpdatePlant = async (data: PlantFormData) => {
-    if (!plant) {
+    if (!plant || !user?.id) {
         toast({ title: t('common.error'), description: t('editPlantPage.toastErrorFindingPlant'), variant: 'destructive'});
         return;
     }
@@ -59,46 +61,39 @@ export default function EditPlantPage() {
     await new Promise(resolve => setTimeout(resolve, 1500));
 
     let finalPrimaryPhotoId: string | undefined = plant.primaryPhotoUrl;
-    let updatedPhotos = [...plant.photos];
+    let updatedPhotos = [...plant.photos]; // Make a mutable copy
 
     if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      // New image uploaded via form
+      // New image uploaded via form, data.diagnosedPhotoDataUrl is a data URL from compressImage
       const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
       if (blob) {
         const newPhotoId = `photo-${plant.id}-edited-${Date.now()}`;
         try {
-          await addImage(newPhotoId, blob);
-          finalPrimaryPhotoId = newPhotoId;
+          await addIDBImage(user.id, newPhotoId, blob); // Pass userId
+          finalPrimaryPhotoId = newPhotoId; // This is the new IDB key
           // Add new photo to gallery if it's truly new (not just re-selection of same image data)
-          const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPhotoId);
-          if (existingPhotoIndex === -1) {
-            updatedPhotos.unshift({ 
-              id: newPhotoId,
-              url: newPhotoId, // Store IDB key
-              dateTaken: new Date().toISOString(),
-              healthCondition: data.healthCondition, // Use form's health condition
-              diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') // Use translated note
-            });
-          }
+          // Since it's a new upload, it's always new to IDB.
+          updatedPhotos.unshift({ 
+            id: newPhotoId, // IDB key
+            url: newPhotoId, // Store IDB key
+            dateTaken: new Date().toISOString(),
+            healthCondition: data.healthCondition, 
+            diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') 
+          });
         } catch (e) {
           console.error("Error saving edited primary photo to IDB:", e);
           toast({ title: t('common.error'), description: "Failed to save updated image.", variant: "destructive" });
-          // Keep existing finalPrimaryPhotoId
+          // Keep existing finalPrimaryPhotoId if save fails
         }
       } else {
         toast({ title: t('common.error'), description: "Failed to process updated image.", variant: "destructive" });
       }
     } else if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl !== plant.primaryPhotoUrl) {
-      // Existing gallery photo selected or placeholder selected
+      // Existing gallery photo selected (data.diagnosedPhotoDataUrl is an IDB key) or placeholder selected
       finalPrimaryPhotoId = data.diagnosedPhotoDataUrl;
     }
     // If data.diagnosedPhotoDataUrl is same as plant.primaryPhotoUrl, no change to finalPrimaryPhotoId needed
-    // If data.diagnosedPhotoDataUrl is null/empty (meaning photo was removed without replacement),
-    // finalPrimaryPhotoId will keep its current value (the old primary photo id).
-    // If you want to allow removing the primary photo to set it to a generic placeholder:
-    // if (!data.diagnosedPhotoDataUrl) {
-    //   finalPrimaryPhotoId = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
-    // }
+    // If data.diagnosedPhotoDataUrl is null/empty (photo was removed without replacement), it will try to save null.
     
     const updatedPlantData: Plant = {
       ...plant,
@@ -110,8 +105,8 @@ export default function EditPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPrimaryPhotoId, 
-      photos: updatedPhotos,
+      primaryPhotoUrl: finalPrimaryPhotoId, // This is now an IDB key or null/undefined
+      photos: updatedPhotos, // This contains photos with their 'url' as IDB keys
     };
   
     updatePlant(plant.id, updatedPlantData);

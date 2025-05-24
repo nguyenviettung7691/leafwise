@@ -30,9 +30,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { compressImage } from '@/lib/image-utils';
-import { getImage, addImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
+import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; // Renamed functions
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
-// Helper function to convert Blob to Data URL
+
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -63,6 +64,13 @@ export default function ProfilePage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
+  const { imageUrl: currentAvatarFromIDB } = useIndexedDbImage(
+      authUser?.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')
+      ? authUser.avatarUrl 
+      : undefined,
+      authUser?.id // Pass userId
+  );
+
 
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -71,25 +79,30 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser);
       setEditedName(authUser.name);
-      if (!editedAvatarPreviewUrl && authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:')) {
-         // Only set if editedAvatarPreviewUrl is null.
-      } else if (authUser.avatarUrl) {
-         setEditedAvatarPreviewUrl(authUser.avatarUrl);
+      // Prioritize direct data URL or http URL, then fall back to IDB fetched URL
+      if (authUser.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
+        setEditedAvatarPreviewUrl(authUser.avatarUrl);
+      } else if (currentAvatarFromIDB) {
+        setEditedAvatarPreviewUrl(currentAvatarFromIDB);
+      } else {
+        setEditedAvatarPreviewUrl(null);
       }
     }
-  }, [authUser, editedAvatarPreviewUrl]);
+  }, [authUser, currentAvatarFromIDB]);
 
 
   const handleEditToggle = () => {
     if (isEditing) {
       if (authUser) {
         setEditedName(authUser.name);
-        setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
-      }
-    } else {
-        if (authUser) {
-            setEditedAvatarPreviewUrl(authUser.avatarUrl || null);
+        if (authUser.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
+          setEditedAvatarPreviewUrl(authUser.avatarUrl);
+        } else if (currentAvatarFromIDB) {
+          setEditedAvatarPreviewUrl(currentAvatarFromIDB);
+        } else {
+          setEditedAvatarPreviewUrl(null);
         }
+      }
     }
     setIsEditing(!isEditing);
   };
@@ -103,7 +116,14 @@ export default function ProfilePage() {
           title: t('profilePage.toasts.avatarImageTooLargeTitle'),
           description: t('profilePage.toasts.avatarImageTooLargeDesc'),
         });
-        setEditedAvatarPreviewUrl(user?.avatarUrl || null);
+        
+        if (authUser?.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
+          setEditedAvatarPreviewUrl(authUser.avatarUrl);
+        } else if (currentAvatarFromIDB) {
+          setEditedAvatarPreviewUrl(currentAvatarFromIDB);
+        } else {
+          setEditedAvatarPreviewUrl(null);
+        }
         if (avatarInputRef.current) avatarInputRef.current.value = "";
         return;
       }
@@ -118,7 +138,13 @@ export default function ProfilePage() {
         } catch (error) {
           console.error("Error compressing avatar:", error);
           toast({ title: t('common.error'), description: t('profilePage.toasts.imageCompressionError'), variant: "destructive" });
-          setEditedAvatarPreviewUrl(user?.avatarUrl || null);
+          if (authUser?.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
+            setEditedAvatarPreviewUrl(authUser.avatarUrl);
+          } else if (currentAvatarFromIDB) {
+            setEditedAvatarPreviewUrl(currentAvatarFromIDB);
+          } else {
+            setEditedAvatarPreviewUrl(null);
+          }
         } finally {
           setIsCompressingAvatar(false);
         }
@@ -129,17 +155,39 @@ export default function ProfilePage() {
 
   const handleSaveChanges = async (event: FormEvent) => {
     event.preventDefault();
-    if (!user) return;
+    if (!user || !authUser) return;
 
     const updatedUserData: Partial<Omit<User, 'id' | 'email'>> = {
       name: editedName,
     };
 
-    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl !== authUser?.avatarUrl) {
-      updatedUserData.avatarUrl = editedAvatarPreviewUrl;
-    } else if (!editedAvatarPreviewUrl && authUser?.avatarUrl) {
+    let newAvatarIdbKey: string | undefined = authUser.avatarUrl;
+
+    if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('data:image/')) { // New image uploaded or existing data URL
+      const blob = dataURLtoBlob(editedAvatarPreviewUrl);
+      if (blob) {
+        newAvatarIdbKey = `avatar-${authUser.id}-${Date.now()}`;
+        try {
+          await addIDBImage(authUser.id, newAvatarIdbKey, blob); // Pass userId
+          updatedUserData.avatarUrl = newAvatarIdbKey; // Store IDB key
+        } catch (e) {
+          console.error("Error saving avatar to IDB:", e);
+          toast({ title: t('common.error'), description: "Failed to save avatar.", variant: "destructive" });
+          newAvatarIdbKey = authUser.avatarUrl; // Revert to old if save fails
+        }
+      }
+    } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl === currentAvatarFromIDB) {
+      // Avatar is from IDB and hasn't changed from what was initially loaded
+      updatedUserData.avatarUrl = authUser.avatarUrl; // Keep existing IDB key
+    } else if (!editedAvatarPreviewUrl) {
+      // Avatar was removed
       updatedUserData.avatarUrl = undefined;
+      // Optionally delete old avatar from IDB if authUser.avatarUrl was an IDB key
+      if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')) {
+        // await deleteIDBImage(authUser.id, authUser.avatarUrl); // Consider if this is desired
+      }
     }
+    // If editedAvatarPreviewUrl is an http link, it's used as is
 
 
     try {
@@ -173,7 +221,7 @@ export default function ProfilePage() {
   };
 
   const handleExportData = async () => {
-    if (!authUser) {
+    if (!authUser?.id) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.exportErrorNoData'), variant: "destructive" });
       return;
     }
@@ -181,34 +229,42 @@ export default function ProfilePage() {
     toast({ title: t('profilePage.toasts.exportStartingTitle'), description: t('profilePage.toasts.exportStartingDesc')});
 
     try {
+      let userProfileToExport = { ...authUser };
+      if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('http') && !authUser.avatarUrl.startsWith('data:')) {
+        const avatarBlob = await getIDBImage(authUser.id, authUser.avatarUrl);
+        if (avatarBlob) {
+          userProfileToExport.avatarUrl = await blobToDataURL(avatarBlob);
+        }
+      }
+
       const plantsWithImageData = await Promise.all(contextPlants.map(async (plant) => {
         let primaryPhotoDataUrl: string | undefined = undefined;
         if (plant.primaryPhotoUrl && !plant.primaryPhotoUrl.startsWith('http') && !plant.primaryPhotoUrl.startsWith('data:')) {
-          const blob = await getImage(plant.primaryPhotoUrl);
+          const blob = await getIDBImage(authUser.id, plant.primaryPhotoUrl); // Pass userId
           if (blob) {
             primaryPhotoDataUrl = await blobToDataURL(blob);
           }
         } else if (plant.primaryPhotoUrl?.startsWith('data:')) {
-          primaryPhotoDataUrl = plant.primaryPhotoUrl; // It's already a data URL
+          primaryPhotoDataUrl = plant.primaryPhotoUrl; 
         }
 
 
-        const photosWithImageData = await Promise.all(plant.photos.map(async (photo) => {
+        const photosWithImageData = await Promise.all((plant.photos || []).map(async (photo) => {
           if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
-            const blob = await getImage(photo.url);
+            const blob = await getIDBImage(authUser.id, photo.url); // Pass userId
             if (blob) {
               return { ...photo, imageDataUrl: await blobToDataURL(blob) };
             }
           } else if (photo.url?.startsWith('data:')) {
              return { ...photo, imageDataUrl: photo.url };
           }
-          return photo; // Keep original photo object if no conversion needed or possible
+          return photo; 
         }));
         return { ...plant, primaryPhotoDataUrl, photos: photosWithImageData };
       }));
 
       const dataToExport = {
-        userProfile: authUser,
+        userProfile: userProfileToExport,
         plants: plantsWithImageData,
       };
 
@@ -233,7 +289,7 @@ export default function ProfilePage() {
 
   const handleImportFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !authUser?.id) return;
 
     setIsImporting(true);
     toast({ title: t('profilePage.toasts.importStartingTitle'), description: t('profilePage.toasts.importStartingDesc')});
@@ -251,42 +307,53 @@ export default function ProfilePage() {
           throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
-        // Restore User Profile
-        const { id, email, ...profileToUpdate } = importedData.userProfile;
+        let { id, email, ...profileToUpdate } = importedData.userProfile;
+        
+        if (profileToUpdate.avatarUrl && profileToUpdate.avatarUrl.startsWith('data:image/')) {
+            const avatarBlob = dataURLtoBlob(profileToUpdate.avatarUrl);
+            if (avatarBlob) {
+                const newAvatarId = `avatar-${authUser.id}-imported-${Date.now()}`;
+                await addIDBImage(authUser.id, newAvatarId, avatarBlob);
+                profileToUpdate.avatarUrl = newAvatarId; // Store IDB key
+            } else {
+                profileToUpdate.avatarUrl = undefined; // Or a default placeholder IDB key
+            }
+        }
+        // If avatarUrl is an http link, it's kept as is. If it's an old IDB key, it might fail if that DB doesn't exist.
+
         await updateUser(profileToUpdate);
 
-        // Restore Plants Data (with image processing)
+
         const restoredPlantsPromises = importedData.plants.map(async (plantFromFile: any) => {
           const newPlant = { ...plantFromFile };
-          delete newPlant.primaryPhotoDataUrl; // Remove to avoid storing in context
+          delete newPlant.primaryPhotoDataUrl; 
           
           if (plantFromFile.primaryPhotoDataUrl) {
             const blob = dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
-            if (blob) {
-              const newPrimaryPhotoId = `plant-${Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
-              await addImage(newPrimaryPhotoId, blob);
+            if (blob && authUser?.id) {
+              const newPrimaryPhotoId = `plant-${plantFromFile.id || Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
+              await addIDBImage(authUser.id, newPrimaryPhotoId, blob); // Pass userId
               newPlant.primaryPhotoUrl = newPrimaryPhotoId;
             } else {
-              newPlant.primaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(newPlant.commonName || 'Plant')}`;
+              newPlant.primaryPhotoUrl = undefined;
             }
           }
 
           newPlant.photos = await Promise.all(
             (plantFromFile.photos || []).map(async (photoFromFile: any) => {
               const newPhoto = { ...photoFromFile };
-              delete newPhoto.imageDataUrl; // Remove to avoid storing in context
+              delete newPhoto.imageDataUrl; 
 
               if (photoFromFile.imageDataUrl) {
                 const blob = dataURLtoBlob(photoFromFile.imageDataUrl);
-                if (blob) {
+                if (blob && authUser?.id) {
                   const newPhotoId = `photo-${newPlant.id}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-                  await addImage(newPhotoId, blob);
+                  await addIDBImage(authUser.id, newPhotoId, blob); // Pass userId
                   newPhoto.id = newPhotoId;
                   newPhoto.url = newPhotoId;
                 } else {
-                  // Could set to a placeholder or skip if blob conversion fails
-                  newPhoto.url = `https://placehold.co/200x200.png?text=${encodeURIComponent(newPlant.commonName || 'Photo')}`;
-                  newPhoto.id = newPhoto.url;
+                  newPhoto.url = undefined;
+                  newPhoto.id = `error-${Date.now()}`;
                 }
               }
               return newPhoto;
@@ -299,7 +366,7 @@ export default function ProfilePage() {
         setContextPlants(restoredPlants);
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
-        // router.push('/'); // Consider if immediate navigation is desired
+        
 
       } catch (error: any) {
         toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
@@ -336,7 +403,7 @@ export default function ProfilePage() {
     setIsDestroyingData(false);
   };
 
-  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : authUser?.avatarUrl) || `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`;
+  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : (currentAvatarFromIDB || authUser?.avatarUrl)) || `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`;
 
 
   if (authLoading || !user) {

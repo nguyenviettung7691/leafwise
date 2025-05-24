@@ -10,9 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage, dataURLtoBlob } from '@/lib/idb-helper'; // Import IDB helpers
+import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; 
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+
 
 export default function NewPlantPage() {
+  const { user } = useAuth(); // Get user from AuthContext
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -20,35 +23,39 @@ export default function NewPlantPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: PlantFormData) => {
+    if (!user?.id) {
+      toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
+      return;
+    }
     setIsSaving(true);
 
     const newPlantId = `plant-${Date.now()}`;
-    let finalPhotoIdForStorage: string | undefined = undefined;
-    let generatedPrimaryPhotoUrl: string | undefined = undefined;
+    let idbPhotoId: string | undefined = undefined;
 
     if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
       const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
       if (blob) {
-        finalPhotoIdForStorage = `photo-${newPlantId}-${Date.now()}`;
+        idbPhotoId = `photo-${newPlantId}-${Date.now()}`;
         try {
-          await addImage(finalPhotoIdForStorage, blob);
-          generatedPrimaryPhotoUrl = finalPhotoIdForStorage; // Store IDB key
+          await addIDBImage(user.id, idbPhotoId, blob); // Pass userId
         } catch (e) {
           console.error("Error during IndexedDB image save:", e);
           toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
-          generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`; // Fallback
+          idbPhotoId = undefined; // Fallback to no specific image if IDB save fails
         }
       } else {
          toast({ title: t('common.error'), description: "Failed to process image for local storage.", variant: "destructive" });
-         generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+         idbPhotoId = undefined;
       }
     } else if (data.diagnosedPhotoDataUrl) {
-      // This case implies an existing URL (e.g. placeholder, or already an IDB key if editing was done this way)
-      // For a new plant, this shouldn't typically happen if SavePlantForm provides a data URL for new uploads.
-      generatedPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
-    } else {
-      generatedPrimaryPhotoUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(data.commonName || 'Plant')}`;
+      // If it's not a data URL, it might be an existing IDB key (e.g., if form was pre-filled, though less likely for 'new')
+      // or a placeholder. We'll assume for 'new' it should mostly be a data URL or null.
+      // If it's an existing IDB key, we just use it.
+      if (!data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+        idbPhotoId = data.diagnosedPhotoDataUrl;
+      }
     }
+    // If idbPhotoId is still undefined, a generic placeholder will be used implicitly by display components.
     
     const newPlant: Plant = {
       id: newPlantId,
@@ -60,11 +67,11 @@ export default function NewPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: generatedPrimaryPhotoUrl,
-      photos: generatedPrimaryPhotoUrl && finalPhotoIdForStorage
+      primaryPhotoUrl: idbPhotoId, // Stores IDB key or undefined
+      photos: idbPhotoId
         ? [{
-            id: finalPhotoIdForStorage,
-            url: finalPhotoIdForStorage, // Store IDB key
+            id: idbPhotoId, // Use the same ID as the key and for the photo object
+            url: idbPhotoId, // Store IDB key
             dateTaken: new Date().toISOString(),
             healthCondition: data.healthCondition,
             diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),

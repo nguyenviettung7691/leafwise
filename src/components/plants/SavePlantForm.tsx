@@ -20,7 +20,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
-import { compressImage } from '@/lib/image-utils'; // Import compressImage
+import { compressImage } from '@/lib/image-utils'; 
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 const primaryPhotoSchema = typeof window !== 'undefined'
   ? z.instanceof(FileList).optional().nullable()
@@ -37,7 +38,7 @@ const plantFormSchema = z.object({
   location: z.string().optional(),
   customNotes: z.string().optional(),
   primaryPhoto: primaryPhotoSchema,
-  diagnosedPhotoDataUrl: z.string().optional().nullable(), // Will hold compressed data URL or IDB key
+  diagnosedPhotoDataUrl: z.string().optional().nullable(), 
 });
 
 type SavePlantFormValues = z.infer<typeof plantFormSchema>;
@@ -57,11 +58,12 @@ interface SavePlantFormProps {
 interface GalleryPhotoThumbnailProps {
   photo: PlantPhoto;
   isSelected: boolean;
+  userId?: string; // Added userId
   onClick: () => void;
 }
 
-const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, onClick }) => {
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url);
+const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, userId, onClick }) => {
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId); // Pass userId
 
   return (
     <button
@@ -104,6 +106,7 @@ export function SavePlantForm({
   submitButtonText,
   hideInternalHeader = false,
 }: SavePlantFormProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t } = useLanguage();
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
@@ -120,16 +123,16 @@ export function SavePlantForm({
     },
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null); // For newly uploaded file's data URL
-  const [selectedGalleryPhotoId, setSelectedGalleryPhotoId] = useState<string | null>(null); // For IDB key from gallery
+  const [imagePreview, setImagePreview] = useState<string | null>(null); 
+  const [selectedGalleryPhotoId, setSelectedGalleryPhotoId] = useState<string | null>(null); 
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // This hook is to display the initial image if it's from IDB (for edit mode)
   const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(
     initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')
       ? initialData.diagnosedPhotoDataUrl
-      : undefined
+      : undefined,
+    user?.id // Pass userId
   );
 
   useEffect(() => {
@@ -147,11 +150,9 @@ export function SavePlantForm({
 
     if (initialData?.diagnosedPhotoDataUrl) {
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-        // This is likely a data URL from diagnosis preview, set it directly for the preview
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoId(null);
       } else {
-        // This is likely an IDB key (from existing plant), set it for gallery selection
         setSelectedGalleryPhotoId(initialData.diagnosedPhotoDataUrl);
         setImagePreview(null); 
       }
@@ -166,7 +167,6 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        // diagnosedPhotoDataUrl should already hold the compressed data URL or the selected gallery IDB key
         diagnosedPhotoDataUrl: imagePreview || selectedGalleryPhotoId, 
     };
     await onSave(formDataToSave);
@@ -179,22 +179,21 @@ export function SavePlantForm({
 
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
-    setImagePreview(null); // Clear any uploaded file preview
-    setSelectedGalleryPhotoId(photo.url); // Set IDB key from gallery
+    setImagePreview(null); 
+    setSelectedGalleryPhotoId(photo.url); 
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null); // Clear FileList from form state
+    form.setValue('primaryPhoto', null); 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Clear the file input element
+      fileInputRef.current.value = ""; 
     }
   };
   
   let displayUrlForPreview: string | null = null;
-  if (imagePreview) { // Prioritize newly uploaded & compressed image
+  if (imagePreview) { 
     displayUrlForPreview = imagePreview;
-  } else if (selectedGalleryPhotoId) { // Then gallery selection (which hook will resolve)
-    displayUrlForPreview = initialImageFromDb; // Use the URL from the hook
+  } else if (selectedGalleryPhotoId) { 
+    displayUrlForPreview = initialImageFromDb; 
   } else if (initialData?.diagnosedPhotoDataUrl && initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-    // Initial data was a data URL (e.g. from diagnose page before saving)
     displayUrlForPreview = initialData.diagnosedPhotoDataUrl;
   }
 
@@ -235,9 +234,9 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onBlur, name, ref: formRefSetter } }) => ( // Removed field.onChange
+              render={({ field: { onBlur, name, ref: formRefSetter } }) => ( 
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
+                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')}</FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -263,11 +262,11 @@ export function SavePlantForm({
                                   if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
                                 }}
                                 onBlur={onBlur}
-                                onChange={async (e) => { // Made async
+                                onChange={async (e) => { 
                                     const files = e.target.files;
-                                    form.setValue('primaryPhoto', files, { shouldValidate: true, shouldDirty: true }); // Update RHF state first
+                                    form.setValue('primaryPhoto', files, { shouldValidate: true, shouldDirty: true }); 
                                     if (files && files[0]) {
-                                        if (files[0].size > 5 * 1024 * 1024) { // Increased limit for pre-compression
+                                        if (files[0].size > 5 * 1024 * 1024) { 
                                             form.setError("primaryPhoto", { type: "manual", message: t('diagnosePage.toasts.imageTooLargeDesc')});
                                             setImagePreview(null);
                                             if (selectedGalleryPhotoId) {
@@ -286,7 +285,7 @@ export function SavePlantForm({
                                         reader.onloadend = async () => {
                                           try {
                                             const originalDataUrl = reader.result as string;
-                                            const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/jpeg', maxWidth: 1024, maxHeight: 1024 });
+                                            const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/webp', maxWidth: 1024, maxHeight: 1024 });
                                             setImagePreview(compressedDataUrl);
                                             form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true});
                                             setSelectedGalleryPhotoId(null); 
@@ -329,6 +328,7 @@ export function SavePlantForm({
                         key={photo.id}
                         photo={photo}
                         isSelected={selectedGalleryPhotoId === photo.url && !imagePreview}
+                        userId={user?.id} // Pass userId
                         onClick={() => handleGalleryPhotoSelect(photo)}
                       />
                     ))}

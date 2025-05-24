@@ -18,6 +18,7 @@ import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isVa
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -66,10 +67,11 @@ export function PlantHeaderCard({
   onConfirmDelete,
   isDeleting,
 }: PlantHeaderCardProps) {
+  const { user } = useAuth(); // Get user from AuthContext
   const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const caredForDuration = getCaredForDuration(plant.plantingDate, t);
-  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useIndexedDbImage(plant.primaryPhotoUrl);
+  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const displayPrimaryImageUrl = primaryImageUrl || `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName)}`;
@@ -98,7 +100,7 @@ export function PlantHeaderCard({
                   onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
                 />
               )}
-              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent pointer-events-none">
+              <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none">
                 <div className="flex items-center gap-2 mb-1">
                     <h1 className="text-3xl font-bold text-white drop-shadow-lg">{plant.commonName}</h1>
                     <Badge
