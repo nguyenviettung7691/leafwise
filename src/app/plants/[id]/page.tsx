@@ -104,11 +104,11 @@ export default function PlantDetailPage() {
     getPlantById,
     updatePlant,
     deletePlant,
-    isLoading: isLoadingContextPlants // Destructured here
+    isLoading: isLoadingContextPlants
   } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
-  const [isPageLoading, setIsPageLoading] = useState(true); // Renamed to avoid conflict
+  const [isPageLoading, setIsPageLoading] = useState(true);
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
   const [isDeletingPlant, setIsDeletingPlant] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
@@ -163,7 +163,7 @@ export default function PlantDetailPage() {
       name: task.name,
       description: task.description || '',
       level: task.level,
-      startDate: task.nextDueDate || new Date().toISOString(), // Use nextDueDate as the start date for editing
+      startDate: task.nextDueDate || new Date().toISOString(),
     };
 
     const freqLower = task.frequency.toLowerCase();
@@ -174,22 +174,23 @@ export default function PlantDetailPage() {
     else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
     else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
     else {
-      const everyXDaysMatch = freqLower.match(/every (\d+) days|mỗi (\d+) ngày/i);
+      const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
       if (everyXDaysMatch) {
         formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
         formData.frequencyMode = 'every_x_days';
       } else {
-        const everyXWeeksMatch = freqLower.match(/every (\d+) weeks|mỗi (\d+) tuần/i);
+        const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
         if (everyXWeeksMatch) {
           formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
           formData.frequencyMode = 'every_x_weeks';
         } else {
-          const everyXMonthsMatch = freqLower.match(/every (\d+) months|mỗi (\d+) tháng/i);
+          const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
           if (everyXMonthsMatch) {
             formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
             formData.frequencyMode = 'every_x_months';
           } else {
             formData.frequencyMode = 'adhoc'; // Fallback
+            console.warn("Could not parse frequency for form:", task.frequency);
           }
         }
       }
@@ -209,20 +210,17 @@ export default function PlantDetailPage() {
     return formData as CarePlanTaskFormData;
   }, [t]);
 
-
- useEffect(() => {
-    if (!isLoadingContextPlants) { // Use the isLoading from context
+  useEffect(() => {
+    if (!isLoadingContextPlants) {
       const currentPlant = getPlantById(id);
       if (currentPlant) {
-        setPlant(JSON.parse(JSON.stringify(currentPlant)));
-      } else if (contextPlants.length > 0 && !currentPlant) {
-        notFound();
-      } else if (contextPlants.length === 0 && !currentPlant) {
+        setPlant(currentPlant); // Store a mutable copy if needed for local changes before context update
+      } else if (!currentPlant && contextPlants.length > 0){
         notFound();
       }
       setIsPageLoading(false);
     }
-  }, [id, getPlantById, contextPlants, isLoadingContextPlants, notFound, setIsLoadingPage, setPlant]);
+  }, [id, getPlantById, contextPlants, isLoadingContextPlants, notFound, setPlant, setIsPageLoading]);
 
 
   const handleToggleTaskPause = useCallback(async (taskId: string) => {
@@ -243,6 +241,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); // Update local state for immediate UI feedback
     setLoadingTaskId(null);
 
     if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
@@ -282,7 +281,7 @@ export default function PlantDetailPage() {
     const file = event.target.files?.[0];
     if (!file || !plant || !user?.id) return;
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 5 * 1024 * 1024) { 
         toast({ variant: 'destructive', title: t('plantDetail.toasts.imageTooLarge'), description: t('plantDetail.toasts.imageTooLargeDesc') });
         if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         return;
@@ -382,6 +381,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, healthCondition: newHealth };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); 
     toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
     setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}))
   };
@@ -422,6 +422,7 @@ export default function PlantDetailPage() {
     const updatedPhotos = [newPhoto, ...(plant.photos || [])];
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant); 
     toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
     setNewPhotoJournaled(true);
   };
@@ -433,21 +434,22 @@ export default function PlantDetailPage() {
     if (!frequency) return undefined;
     const freqLower = frequency.toLowerCase();
 
-    if (freqLower === 'ad-hoc' || freqLower === 'as needed') return undefined;
-    if (freqLower === 'daily') return addDays(now, 1).toISOString();
-    if (freqLower === 'weekly') return addWeeks(now, 1).toISOString();
-    if (freqLower === 'monthly') return addMonths(now, 1).toISOString();
-    if (freqLower === 'yearly') return addYears(now, 1).toISOString();
+    if (freqLower === 'ad-hoc' || freqLower === 'as needed' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) return undefined;
+    if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) return addDays(now, 1).toISOString();
+    if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) return addWeeks(now, 1).toISOString();
+    if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) return addMonths(now, 1).toISOString();
+    if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) return addYears(now, 1).toISOString();
 
-    const everyXDaysMatch = freqLower.match(/every (\d+) days?/i);
-    if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1], 10)).toISOString();
+    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
+    if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10)).toISOString();
 
-    const everyXWeeksMatch = freqLower.match(/every (\d+) weeks?/i);
-    if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1], 10)).toISOString();
+    const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
+    if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10)).toISOString();
 
-    const everyXMonthsMatch = freqLower.match(/every (\d+) months?/i);
-    if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1], 10)).toISOString();
-
+    const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
+    if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10)).toISOString();
+    
+    console.warn("Could not parse frequency for next due date:", frequency);
     return undefined;
   };
 
@@ -519,6 +521,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
@@ -542,6 +545,7 @@ export default function PlantDetailPage() {
     if (!plant) return;
     const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
     toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
     closeGridPhotoDialog();
   };
@@ -562,10 +566,9 @@ export default function PlantDetailPage() {
           frequency: taskData.frequency,
           timeOfDay: taskData.timeOfDay,
           level: taskData.level,
-          nextDueDate: taskData.startDate,
+          nextDueDate: taskData.startDate, // Use startDate from form as the new nextDueDate
         } : t
       );
-      updatedPlant = { ...plant, careTasks: updatedTasks };
       toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
     } else {
       const newTask: CareTask = {
@@ -578,14 +581,14 @@ export default function PlantDetailPage() {
         level: taskData.level,
         isPaused: false,
         resumeDate: null,
-        nextDueDate: taskData.startDate,
+        nextDueDate: taskData.startDate, // Use startDate from form as the nextDueDate
       };
       updatedTasks = [...(plant.careTasks || []), newTask];
-      updatedPlant = { ...plant, careTasks: updatedTasks };
       toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
     }
-
+    updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     setIsSavingTask(false);
     setIsTaskFormDialogOpen(false);
@@ -620,7 +623,7 @@ export default function PlantDetailPage() {
       }
       return newSelected;
     });
-  }, []);
+  }, [setSelectedTaskIds]);
 
   const handleDeleteSelectedTasksConfirmed = () => {
     if (!plant || selectedTaskIds.size === 0) return;
@@ -633,6 +636,7 @@ export default function PlantDetailPage() {
     const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
     const updatedPlant = { ...plant, careTasks: updatedTasks };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
     setShowDeleteSelectedTasksDialog(false);
@@ -644,7 +648,6 @@ export default function PlantDetailPage() {
     setIsManagingCarePlan(prev => !prev);
   }, [setIsManagingCarePlan]);
 
-
   useEffect(() => {
     if (!isManagingCarePlan) {
       setSelectedTaskIds(new Set());
@@ -653,13 +656,14 @@ export default function PlantDetailPage() {
 
 
   const toggleManagePhotosMode = useCallback(() => {
-    setIsManagingPhotos(prev => {
-      if (prev) {
-        setSelectedPhotoIds(new Set());
-      }
-      return !prev;
-    });
-  }, []);
+    setIsManagingPhotos(prev => !prev);
+  }, [setIsManagingPhotos]);
+
+  useEffect(() => {
+    if (!isManagingPhotos) {
+      setSelectedPhotoIds(new Set());
+    }
+  }, [isManagingPhotos]);
 
   const handleTogglePhotoSelection = useCallback((photoId: string) => {
     setSelectedPhotoIds(prevSelected => {
@@ -671,8 +675,7 @@ export default function PlantDetailPage() {
       }
       return newSelected;
     });
-  }, []);
-
+  }, [setSelectedPhotoIds]);
 
   const handleDeleteSelectedPhotosConfirm = async () => {
     if (!plant || selectedPhotoIds.size === 0 || !user?.id) return;
@@ -698,6 +701,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
     setSelectedPhotoIds(new Set());
@@ -752,6 +756,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = { ...plant, photos: updatedPhotos };
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
     setIsEditPhotoDialogVisible(false);
@@ -827,7 +832,8 @@ export default function PlantDetailPage() {
       };
       const result = await proactiveCarePlanReview(input);
       setProactiveReviewResult(result);
-    } catch (e: any)      const errorMsg = e instanceof Error ? e.message : t('plantDetail.toasts.errorProactiveReview');
+    } catch (e: any) {
+      const errorMsg = e instanceof Error ? e.message : t('plantDetail.toasts.errorProactiveReview');
       toast({ title: t('common.error'), description: errorMsg, variant: "destructive" });
       setProactiveReviewResult(null);
     } finally {
@@ -885,6 +891,7 @@ export default function PlantDetailPage() {
 
     const updatedPlant = {...plant, careTasks: updatedCareTasks};
     updatePlant(plant.id, updatedPlant);
+    // setPlant(updatedPlant);
 
     toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
     setIsProactiveReviewDialogOpen(false);
