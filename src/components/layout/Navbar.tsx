@@ -18,16 +18,16 @@ import {
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
+  DialogTitle as DialogTitlePrimitive,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages, UserCircle as UserIcon } from 'lucide-react';
+import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
 
@@ -108,11 +108,16 @@ export function Navbar() {
                 <span className="sr-only">{t('nav.settings')}</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-4">
-              <div className="flex flex-col gap-2">
-                <SheetClose asChild>
-                  <Logo iconSize={24} textSize="text-xl" className="mb-4"/>
-                </SheetClose>
+            <SheetContent side="left" className="w-64 p-0"> {/* Changed p-4 to p-0 to allow header to span full width */}
+              <SheetHeader className="p-4 border-b"> {/* Added SheetHeader */}
+                <SheetTitle asChild> {/* Use asChild if Logo contains its own h-level tag or is complex */}
+                    <SheetClose asChild>
+                         <Logo iconSize={24} textSize="text-xl" />
+                    </SheetClose>
+                </SheetTitle>
+                {/* <SheetDescription className="sr-only">Main navigation menu</SheetDescription> Optionally add a description */}
+              </SheetHeader>
+              <div className="flex flex-col gap-2 p-4"> {/* Added p-4 here for content padding */}
                 <NavLinks isMobile={true} />
               </div>
             </SheetContent>
@@ -152,10 +157,10 @@ export function Navbar() {
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
+                    <DialogTitlePrimitive className="flex items-center gap-2">
                       <Settings className="h-6 w-6 text-primary" />
                       {t('settings.title')}
-                    </DialogTitle>
+                    </DialogTitlePrimitive>
                     <DialogDescription>
                       {t('settings.description')}
                     </DialogDescription>
