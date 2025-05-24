@@ -4,17 +4,17 @@
 import type { Plant } from '@/types';
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // Card used as wrapper
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { Skeleton } from '@/components/ui/skeleton';
+import { buttonVariants } from "@/components/ui/button"; // Import buttonVariants
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -67,6 +67,7 @@ export function PlantFilterControls({
   };
 
   const handleToggleSelectAll = () => {
+    if (allPlants.length === 0) return;
     if (selectedPlantIds.size === allPlants.length) {
       onSelectedPlantIdsChange(new Set());
     } else {
@@ -96,19 +97,36 @@ export function PlantFilterControls({
                 <Filter className="h-5 w-5 text-primary" />
                 {t('calendarPage.filterControls.title')}
               </CardTitle>
-              <div className="relative">
+              <div className="relative"> {/* Wrapper for Tooltip and Badge */}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => { e.stopPropagation(); handleToggleSelectAll(); }} // Stop propagation to prevent accordion toggle
-                        disabled={allPlants.length === 0}
-                        className="h-8 w-8"
+                      <div // Changed from Button to div
+                        onClick={(e) => {
+                          if (allPlants.length === 0) return;
+                          e.stopPropagation(); // Prevent accordion toggle
+                          handleToggleSelectAll();
+                        }}
+                        className={cn(
+                          buttonVariants({ variant: "outline", size: "icon" }),
+                          "h-8 w-8", // Ensure consistent sizing
+                          allPlants.length === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                        )}
+                        role="button"
+                        tabIndex={allPlants.length === 0 ? -1 : 0}
+                        onKeyDown={(e) => {
+                          if (allPlants.length === 0) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation(); // Prevent accordion toggle
+                            handleToggleSelectAll();
+                          }
+                        }}
+                        aria-pressed={isAllSelected}
+                        aria-label={tooltipText}
                       >
                         {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
-                      </Button>
+                      </div>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{tooltipText}</p>
@@ -126,10 +144,10 @@ export function PlantFilterControls({
               </div>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="border-t">
+          <AccordionContent className="border-t p-0">
             <div className="p-3">
               {allPlants.length > 0 ? (
-                <ScrollArea className="w-full rounded-md">
+                <ScrollArea className="w-full rounded-md" orientation="horizontal">
                   <div className="flex space-x-3 pb-2">
                     {allPlants.map(plant => (
                       <TooltipProvider key={plant.id} delayDuration={200}>
