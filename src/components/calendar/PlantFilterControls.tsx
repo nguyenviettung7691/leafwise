@@ -10,11 +10,11 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; // Added CardContent
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { Skeleton } from '@/components/ui/skeleton';
-import { buttonVariants } from "@/components/ui/button"; // Import buttonVariants
+import { buttonVariants } from "@/components/ui/button";
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -91,64 +91,64 @@ export function PlantFilterControls({
     <Card className="shadow-md">
       <Accordion type="single" collapsible className="w-full" defaultValue="plant-filter-accordion">
         <AccordionItem value="plant-filter-accordion" className="border-b-0">
-          <AccordionTrigger className="hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-t-lg">
-            <div className="flex flex-row items-center justify-between py-3 px-4 w-full">
-              <CardTitle className="text-lg flex items-center gap-2 font-medium">
-                <Filter className="h-5 w-5 text-primary" />
-                {t('calendarPage.filterControls.title')}
-              </CardTitle>
-              <div className="relative"> {/* Wrapper for Tooltip and Badge */}
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div // Changed from Button to div
-                        onClick={(e) => {
-                          if (allPlants.length === 0) return;
-                          e.stopPropagation(); // Prevent accordion toggle
+          <CardHeader className="flex flex-row items-center justify-between py-3 px-4 w-full hover:bg-muted/50 rounded-t-lg transition-colors">
+            <AccordionTrigger className="hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 flex-1 p-0">
+                <CardTitle className="text-lg flex items-center gap-2 font-medium">
+                  <Filter className="h-5 w-5 text-primary" />
+                  {t('calendarPage.filterControls.title')}
+                </CardTitle>
+            </AccordionTrigger>
+            <div className="relative ml-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      onClick={(e) => {
+                        if (allPlants.length === 0) return;
+                        e.stopPropagation();
+                        handleToggleSelectAll();
+                      }}
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "icon" }),
+                        "h-8 w-8",
+                        allPlants.length === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                      )}
+                      role="button"
+                      tabIndex={allPlants.length === 0 ? -1 : 0}
+                      onKeyDown={(e) => {
+                        if (allPlants.length === 0) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
                           handleToggleSelectAll();
-                        }}
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "icon" }),
-                          "h-8 w-8", // Ensure consistent sizing
-                          allPlants.length === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                        )}
-                        role="button"
-                        tabIndex={allPlants.length === 0 ? -1 : 0}
-                        onKeyDown={(e) => {
-                          if (allPlants.length === 0) return;
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation(); // Prevent accordion toggle
-                            handleToggleSelectAll();
-                          }
-                        }}
-                        aria-pressed={isAllSelected}
-                        aria-label={tooltipText}
-                      >
-                        {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{tooltipText}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                {selectedCount > 0 && (
-                  <Badge
-                    variant="default"
-                    className="absolute -top-1.5 -right-1.5 h-5 w-5 min-w-[1.25rem] p-0 flex items-center justify-center rounded-full text-xs pointer-events-none"
-                  >
-                    {selectedCount}
-                  </Badge>
-                )}
-              </div>
+                        }
+                      }}
+                      aria-pressed={isAllSelected}
+                      aria-label={tooltipText}
+                    >
+                      {isAllSelected ? <ListX className="h-4 w-4" /> : <ListChecks className="h-4 w-4" />}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{tooltipText}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              {selectedCount > 0 && (
+                <Badge
+                  variant="default"
+                  className="absolute -top-1.5 -right-1.5 h-5 w-5 min-w-[1.25rem] p-0 flex items-center justify-center rounded-full text-xs pointer-events-none"
+                >
+                  {selectedCount}
+                </Badge>
+              )}
             </div>
-          </AccordionTrigger>
+          </CardHeader>
           <AccordionContent className="border-t p-0">
             <div className="p-3">
               {allPlants.length > 0 ? (
                 <ScrollArea className="w-full rounded-md" orientation="horizontal">
-                  <div className="flex space-x-3 pb-2">
+                  <div className="flex space-x-3 px-1 pt-1 pb-2"> {/* Added px-1 pt-1 */}
                     {allPlants.map(plant => (
                       <TooltipProvider key={plant.id} delayDuration={200}>
                         <Tooltip>
