@@ -1,10 +1,10 @@
 
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import type { NavItem } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Logo } from './Logo'; // Updated to use the new Logo
+import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,23 +27,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages, UserCircle as UserIcon } from 'lucide-react'; // Added UserIcon as fallback
+import { Settings, LogIn, Menu, Palette, Languages, UserCircle as UserIcon } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
+import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; // Import the hook
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
+    // Highlight "My Plants" if on root or any /plants/... page (except /plants/new if it had its own nav item)
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
 };
 
 export function Navbar() {
-  const { user, isLoading: authIsLoading, logout } = useAuth(); // Added logout for potential future use here if needed
+  const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = React.useState(false);
+
+  // Get the displayable avatar URL using the hook
+  const { imageUrl: userDisplayAvatarUrl, isLoading: isAvatarLoading } = useIndexedDbImage(
+    user?.avatarUrl && !user.avatarUrl.startsWith('data:') && !user.avatarUrl.startsWith('http')
+      ? user.avatarUrl
+      : undefined,
+    user?.id
+  );
+  
+  // Determine the final src for the avatar, prioritizing IDB fetched URL, then direct URL, then placeholder
+  const avatarSrc = userDisplayAvatarUrl || (user?.avatarUrl?.startsWith('data:') || user?.avatarUrl?.startsWith('http') ? user.avatarUrl : 'https://placehold.co/100x100.png');
+
 
   const navItems: NavItem[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
@@ -80,7 +94,6 @@ export function Navbar() {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-x-6">
-          {/* Using the new Logo component */}
           <Logo iconSize={28} textSize="text-2xl" iconColorClassName="text-primary" textColorClassName="text-foreground"/>
           <nav className="hidden md:flex items-center gap-1">
             <NavLinks />
@@ -92,7 +105,7 @@ export function Navbar() {
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
-                <span className="sr-only">Open menu</span>
+                <span className="sr-only">{t('nav.settings')}</span> {/* Fallback accessible name */}
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-4">
@@ -120,7 +133,11 @@ export function Navbar() {
                     isProfileActive ? "border-primary" : "border-transparent"
                   )}
                 >
-                  <AvatarImage src={user.avatarUrl || 'https://placehold.co/100x100.png'} alt={user.name || "User"} data-ai-hint="person avatar" />
+                  {isAvatarLoading ? (
+                    <Skeleton className="h-full w-full rounded-full" />
+                  ) : (
+                    <AvatarImage src={avatarSrc} alt={user.name || "User"} data-ai-hint="person avatar" />
+                  )}
                   <AvatarFallback className="text-sm bg-muted">
                     {(user.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
@@ -194,7 +211,7 @@ export function Navbar() {
               </Dialog>
             </>
           ) : (
-            <ProgressBarLink href="/login" className={cn(Button.name, "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50", "bg-primary text-primary-foreground hover:bg-primary/90", "h-9 px-3")}>
+            <ProgressBarLink href="/login" className={cn(buttonVariants({variant: "default", size: "sm"}), "h-9 px-3")}>
               <LogIn className="h-5 w-5 mr-2" />
               {t('loginPage.signInButton')}
             </ProgressBarLink>
