@@ -2,8 +2,10 @@
 // src/lib/idb-helper.ts
 
 const DB_NAME_PREFIX = 'LeafWiseDB_'; // Prefix for user-specific databases
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented version due to new object store
 const IMAGE_STORE_NAME = 'plantImages';
+const USER_PROFILE_STORE_NAME = 'userProfileStore';
+const USER_PROFILE_KEY = 'profile'; // Constant key for the single profile object per user
 
 interface IDBTransactionResult<T> {
   error?: DOMException | null;
@@ -13,13 +15,11 @@ interface IDBTransactionResult<T> {
 function openDB(userId: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (!userId) {
-      // console.error("User ID is required to open IndexedDB.");
-      reject(new Error("User ID is required"));
+      reject(new Error("User ID is required for IndexedDB operations"));
       return;
     }
     if (!('indexedDB' in window)) {
-      // console.error("IndexedDB not supported by this browser.");
-      reject(new Error("IndexedDB not supported"));
+      reject(new Error("IndexedDB not supported by this browser"));
       return;
     }
 
@@ -27,7 +27,7 @@ function openDB(userId: string): Promise<IDBDatabase> {
     const request = indexedDB.open(dbName, DB_VERSION);
 
     request.onerror = (event) => {
-      console.error(`IndexedDB error for user ${userId}:`, (event.target as IDBOpenDBRequest).error);
+      console.error(`IndexedDB error opening database ${dbName}:`, (event.target as IDBOpenDBRequest).error);
       reject((event.target as IDBOpenDBRequest).error);
     };
 
@@ -38,12 +38,108 @@ function openDB(userId: string): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(IMAGE_STORE_NAME)) {
-        db.createObjectStore(IMAGE_STORE_NAME); 
+        db.createObjectStore(IMAGE_STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains(USER_PROFILE_STORE_NAME)) {
+        db.createObjectStore(USER_PROFILE_STORE_NAME); // No keyPath, will use explicit key
       }
     };
   });
 }
 
+// --- User Profile Store Functions ---
+interface UserProfileData {
+  name: string;
+  avatarUrl?: string; // This will be the IDB key for the avatar image in plantImages store
+  preferences?: {
+    emailNotifications?: boolean;
+    pushNotifications?: boolean;
+  };
+}
+
+export async function saveUserProfile(userId: string, profileData: UserProfileData): Promise<IDBTransactionResult<IDBValidKey>> {
+  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
+  try {
+    const db = await openDB(userId);
+    const transaction = db.transaction(USER_PROFILE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(USER_PROFILE_STORE_NAME);
+    const request = store.put(profileData, USER_PROFILE_KEY);
+
+    return new Promise((resolve) => {
+      request.onsuccess = () => resolve({ result: request.result });
+      request.onerror = (dbEvent) => {
+        console.error('Error saving user profile to IndexedDB:', (dbEvent.target as IDBRequest).error);
+        resolve({ error: (dbEvent.target as IDBRequest).error });
+      };
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error saving user profile:', (transEvent.target as IDBTransaction).error);
+        resolve({ error: (transEvent.target as IDBTransaction).error });
+        db.close();
+      };
+    });
+  } catch (error: any) {
+    console.error('Failed to open DB for saving user profile:', error);
+    return { error };
+  }
+}
+
+export async function getUserProfile(userId: string): Promise<UserProfileData | undefined> {
+  if (!userId) return undefined;
+  try {
+    const db = await openDB(userId);
+    const transaction = db.transaction(USER_PROFILE_STORE_NAME, 'readonly');
+    const store = transaction.objectStore(USER_PROFILE_STORE_NAME);
+    const request = store.get(USER_PROFILE_KEY);
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result as UserProfileData | undefined);
+      request.onerror = (dbEvent) => {
+        console.error('Error fetching user profile from IndexedDB:', (dbEvent.target as IDBRequest).error);
+        reject((dbEvent.target as IDBRequest).error);
+      };
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error fetching user profile:', (transEvent.target as IDBTransaction).error);
+        reject((transEvent.target as IDBTransaction).error);
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Failed to open DB for getting user profile:', error);
+    return undefined;
+  }
+}
+
+export async function deleteUserProfile(userId: string): Promise<IDBTransactionResult<void>> {
+  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
+  try {
+    const db = await openDB(userId);
+    const transaction = db.transaction(USER_PROFILE_STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(USER_PROFILE_STORE_NAME);
+    const request = store.delete(USER_PROFILE_KEY);
+
+    return new Promise((resolve) => {
+      request.onsuccess = () => resolve({});
+      request.onerror = (dbEvent) => {
+        console.error('Error deleting user profile from IndexedDB:', (dbEvent.target as IDBRequest).error);
+        resolve({ error: (dbEvent.target as IDBRequest).error });
+      };
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error deleting user profile:', (transEvent.target as IDBTransaction).error);
+        resolve({ error: (transEvent.target as IDBTransaction).error });
+        db.close();
+      };
+    });
+  } catch (error: any) {
+    console.error('Failed to open DB for deleting user profile:', error);
+    return { error };
+  }
+}
+
+
+// --- Image Store Functions (plantImages) ---
 export async function addImage(userId: string, photoId: string, imageBlob: Blob): Promise<IDBTransactionResult<IDBValidKey>> {
   if (!userId) return { error: new DOMException("User ID is required", "DataError") };
   try {
@@ -59,10 +155,10 @@ export async function addImage(userId: string, photoId: string, imageBlob: Blob)
         resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
-      transaction.onerror = () => {
-        console.error('Transaction error adding image to IndexedDB:', transaction.error);
-        resolve({ error: transaction.error });
-         db.close();
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error adding image:', (transEvent.target as IDBTransaction).error);
+        resolve({ error: (transEvent.target as IDBTransaction).error });
+        db.close();
       };
     });
   } catch (error: any) {
@@ -72,10 +168,7 @@ export async function addImage(userId: string, photoId: string, imageBlob: Blob)
 }
 
 export async function getImage(userId: string, photoId: string): Promise<Blob | undefined> {
-  if (!userId) {
-    // console.warn("getImage called without userId");
-    return undefined;
-  }
+  if (!userId || !photoId) return undefined;
   try {
     const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readonly');
@@ -91,9 +184,9 @@ export async function getImage(userId: string, photoId: string): Promise<Blob | 
         reject((dbEvent.target as IDBRequest).error);
       };
       transaction.oncomplete = () => db.close();
-      transaction.onerror = () => {
-         console.error('Transaction error fetching image from IndexedDB:', transaction.error);
-         reject(transaction.error);
+      transaction.onerror = (transEvent) => {
+         console.error('Transaction error fetching image:', (transEvent.target as IDBTransaction).error);
+         reject((transEvent.target as IDBTransaction).error);
          db.close();
       };
     });
@@ -104,7 +197,7 @@ export async function getImage(userId: string, photoId: string): Promise<Blob | 
 }
 
 export async function deleteImage(userId: string, photoId: string): Promise<IDBTransactionResult<void>> {
-  if (!userId) return { error: new DOMException("User ID is required", "DataError") };
+  if (!userId || !photoId) return { error: new DOMException("User ID or Photo ID is required", "DataError") };
   try {
     const db = await openDB(userId);
     const transaction = db.transaction(IMAGE_STORE_NAME, 'readwrite');
@@ -118,9 +211,9 @@ export async function deleteImage(userId: string, photoId: string): Promise<IDBT
         resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
-      transaction.onerror = () => {
-        console.error('Transaction error deleting image:', transaction.error);
-        resolve({ error: transaction.error });
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error deleting image:', (transEvent.target as IDBTransaction).error);
+        resolve({ error: (transEvent.target as IDBTransaction).error });
         db.close();
       };
     });
@@ -146,9 +239,9 @@ export async function clearPlantImages(userId: string): Promise<IDBTransactionRe
         resolve({ error: (dbEvent.target as IDBRequest).error });
       };
       transaction.oncomplete = () => db.close();
-      transaction.onerror = () => {
-        console.error('Transaction error clearing images:', transaction.error);
-        resolve({error: transaction.error});
+      transaction.onerror = (transEvent) => {
+        console.error('Transaction error clearing images:', (transEvent.target as IDBTransaction).error);
+        resolve({error: (transEvent.target as IDBTransaction).error});
         db.close();
       };
     });
@@ -184,3 +277,5 @@ export function dataURLtoBlob(dataurl: string): Blob | null {
     return null;
   }
 }
+
+    
