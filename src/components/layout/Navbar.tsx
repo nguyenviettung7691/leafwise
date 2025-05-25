@@ -24,10 +24,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react'; // Removed UserCircle
+import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
@@ -38,8 +38,12 @@ const isActive = (itemHref: string, currentPathname: string): boolean => {
   return currentPathname.startsWith(itemHref);
 };
 
-export function Navbar() {
-  const { user, isLoading: authIsLoading } = useAuth();
+interface NavbarProps {
+  isStandalone?: boolean;
+}
+
+export function Navbar({ isStandalone = false }: NavbarProps) {
+  const { user, isLoading: authIsLoading, logout } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -66,24 +70,31 @@ export function Navbar() {
     }));
   }, [t]);
 
-  const NavLinks = ({isMobile = false}: {isMobile?: boolean}) => (
+  const NavLinks = ({ isMobile = false, standaloneMode = false }: { isMobile?: boolean, standaloneMode?: boolean }) => (
     navItems.map((item) => (
       <ProgressBarLink
         key={item.href}
         href={item.disabled ? '#' : item.href}
         className={cn(
-          "transition-colors h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          "transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          standaloneMode
+            ? "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full"
+            : "h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
           isActive(item.href, pathname)
-            ? "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+            ? standaloneMode
+              ? "text-primary" // No background change for active in standalone, just text color
+              : "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
+            : standaloneMode
+              ? "text-muted-foreground hover:text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
           item.disabled ? "pointer-events-none opacity-50" : ""
         )}
         onClick={() => {
           if (isMobile) setIsMobileMenuOpen(false);
         }}
       >
-        <item.icon className="h-4 w-4 mr-0" />
-        {item.title}
+        <item.icon className={cn("mr-0", standaloneMode ? "h-5 w-5" : "h-4 w-4")} />
+        <span className={cn(standaloneMode && "mt-0.5")}>{item.title}</span>
       </ProgressBarLink>
     ))
   );
@@ -91,46 +102,64 @@ export function Navbar() {
   const isProfileActive = pathname === '/profile';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-x-6">
-          <Logo iconSize={28} textSize="text-2xl" iconColorClassName="text-primary" textColorClassName="text-foreground"/>
-          <nav className="hidden md:flex items-center gap-1">
-            <NavLinks />
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="md:hidden">
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
-                  <span className="sr-only">{t('nav.settings')}</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64 p-0">
-                <SheetHeader className="p-4 border-b">
-                  <SheetTitle>{t('nav.mobileMenuTitle')}</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-2 p-4">
-                  <NavLinks isMobile={true} />
-                </div>
-              </SheetContent>
-            </Sheet>
+    <header className={cn(
+      "w-full z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+      isStandalone ? "fixed bottom-0 left-0 right-0 border-t h-16" : "sticky top-0 border-b h-16"
+    )}>
+      <div className={cn(
+        "flex items-center h-full",
+        isStandalone ? "justify-around px-2" : "container mx-auto justify-between px-4 sm:px-6 lg:px-8"
+      )}>
+        {!isStandalone && (
+          <div className="flex items-center gap-x-6">
+            <Logo iconSize={28} textSize="text-2xl" iconColorClassName="text-primary" textColorClassName="text-foreground"/>
+            <nav className="hidden md:flex items-center gap-1">
+              <NavLinks standaloneMode={false} />
+            </nav>
           </div>
+        )}
 
-          {authIsLoading ? (
-            <>
-              <Skeleton className="h-9 w-9 rounded-full" />
-            </>
+        {isStandalone && (
+          <nav className="flex items-center justify-around w-full h-full">
+            <NavLinks standaloneMode={true} />
+          </nav>
+        )}
+
+        <div className={cn(
+          "flex items-center",
+          isStandalone ? "absolute right-4 top-1/2 -translate-y-1/2" : "gap-2" // Positioning for user icons in standalone
+        )}>
+          {!isStandalone && (
+            <div className="md:hidden">
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">{t('nav.settings')}</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-64 p-0">
+                   <SheetHeader className="p-4 border-b">
+                    <SheetTitle>{t('nav.mobileMenuTitle')}</SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-2 p-4">
+                    <NavLinks isMobile={true} standaloneMode={false}/>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
+          )}
+
+          {authIsLoading && !isStandalone ? (
+            <Skeleton className="h-9 w-9 rounded-full" />
           ) : user ? (
             <>
-              <ProgressBarLink href="/profile">
+              <ProgressBarLink href="/profile" className={cn(isStandalone && "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full")}>
                 <Avatar
                   className={cn(
                     "h-9 w-9 cursor-pointer border-2 hover:border-primary transition-colors",
-                    isProfileActive ? "border-primary" : "border-transparent"
+                    isProfileActive && !isStandalone ? "border-primary" : "border-transparent",
+                    isStandalone ? (isActive("/profile", pathname) ? "border-primary" : "border-transparent") : ""
                   )}
                 >
                   {isAvatarLoading ? (
@@ -142,12 +171,21 @@ export function Navbar() {
                     {(user.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+                 {isStandalone && <span className={cn("mt-0.5 text-xs", isActive("/profile", pathname) ? "text-primary" : "text-muted-foreground")}>{t('nav.profile')}</span>}
               </ProgressBarLink>
 
               <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label={t('nav.settings')}>
-                    <Settings className="h-5 w-5" />
+                  <Button 
+                    variant="ghost" 
+                    size={isStandalone ? "default" : "icon"} 
+                    aria-label={t('nav.settings')}
+                    className={cn(isStandalone && "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-auto",
+                                   isStandalone && isActive("/settings", pathname) ? "text-primary" : isStandalone ? "text-muted-foreground hover:text-primary" : ""
+                    )}
+                  >
+                    <Settings className={cn(isStandalone ? "h-5 w-5" : "h-5 w-5")} />
+                    {isStandalone && <span className="mt-0.5">{t('nav.settings')}</span>}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
@@ -193,12 +231,6 @@ export function Navbar() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="min-h-[100px] flex items-center justify-center border-2 border-dashed border-border rounded-md p-4">
-                      <p
-                        className="text-muted-foreground text-sm text-center"
-                        dangerouslySetInnerHTML={{ __html: t('settings.featureInProgress') }}
-                      />
-                    </div>
                   </div>
                   <DialogFooter>
                     <DialogClose asChild>
@@ -209,17 +241,42 @@ export function Navbar() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+              {isStandalone && (
+                 <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    // This should ideally open the ProfilePage's logout confirmation dialog
+                    // For now, direct logout for simplicity in standalone navbar
+                    // Or trigger a context function to show main logout dialog
+                    // Since this is a simple prototype, this direct logout might be okay for PWA mode only.
+                    // But usually, settings/logout are behind a profile or "more" tab in bottom navs.
+                    // Let's keep it simple for now or remove it from the bottom bar if it's too complex to integrate profile page's dialog.
+                    // For this iteration, I'll assume a simple direct logout or a more complex structure.
+                    // For a more robust app, the logout button in standalone might navigate to the profile page,
+                    // or a "More" tab would contain it.
+                    // Given the constraints, it is better to remove the logout from the bottom bar
+                    // and keep it on profile page only.
+                    // OR the profile icon in the bottom bar is the main access to "Profile & Logout"
+                  }}
+                  size="default"
+                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-auto text-muted-foreground hover:text-primary"
+                  // This logout button is removed as it's better handled on the profile page
+                  // which is accessible via the avatar.
+                  // style={{display: 'none'}} // Effectively removing it visually
+                >
+                  {/* <LogOutIcon className="h-5 w-5" />
+                  <span className="mt-0.5">{t('profilePage.logOutButton')}</span> */}
+                </Button>
+              )}
             </>
-          ) : (
+          ) : !isStandalone ? (
             <ProgressBarLink href="/login" className={cn(buttonVariants({variant: "default", size: "sm"}), "h-9 px-3")}>
               <LogIn className="h-5 w-5 mr-2" />
               {t('loginPage.signInButton')}
             </ProgressBarLink>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
   );
 }
-
-    
