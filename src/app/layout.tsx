@@ -34,12 +34,20 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    // LanguageProvider is a Client Component, so it's fine here
-    // It will provide context to ClientLayoutProvidersAndContent
-    <LanguageProvider>
-      <ClientLayoutProvidersAndContent>
-        {children}
-      </ClientLayoutProvidersAndContent>
-    </LanguageProvider>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* PWA theme colors for light/dark mode */}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#32CD32" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1A202C" />
+      </head>
+      <body className="antialiased h-full">
+        {/* LanguageProvider needs to wrap ClientLayoutProvidersAndContent for client-side lang updates */}
+        <LanguageProvider>
+          <ClientLayoutProvidersAndContent>
+            {children}
+          </ClientLayoutProvidersAndContent>
+        </LanguageProvider>
+      </body>
+    </html>
   );
 }

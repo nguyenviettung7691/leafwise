@@ -10,7 +10,7 @@ import { PlantDataProvider } from '@/contexts/PlantDataContext';
 import { ProgressProvider } from '@/contexts/ProgressContext';
 import { ProgressBar } from '@/components/layout/ProgressBar';
 import { Toaster } from '@/components/ui/toaster';
-import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator'; // Added import
+import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator';
 
 export function ClientLayoutProvidersAndContent({ children }: { children: ReactNode }) {
   const { language } = useLanguage();
@@ -35,7 +35,7 @@ export function ClientLayoutProvidersAndContent({ children }: { children: ReactN
             <ProgressBar />
             {children}
             <Toaster />
-            <NetworkStatusIndicator /> {/* Added component */}
+            <NetworkStatusIndicator />
           </ProgressProvider>
         </PlantDataProvider>
       </AuthProvider>
