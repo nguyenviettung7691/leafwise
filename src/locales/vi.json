@@ -578,20 +578,20 @@
     "destroyConfirmEmailPlaceholder": "Nhập email của bạn để xác nhận",
     "destroyConfirmAction": "HỦY",
     "notifications": {
-        "browserNotSupported": "Trình duyệt này không hỗ trợ thông báo trên máy tính.",
-        "permissionPreviouslyDeniedTitle": "Quyền bị từ chối",
-        "permissionPreviouslyDeniedBody": "Quyền thông báo đã bị từ chối trước đó. Vui lòng bật trong cài đặt trình duyệt của bạn để nhận lời nhắc.",
-        "permissionDeniedTitle": "Quyền chưa được cấp",
-        "permissionDeniedBody": "Bạn sẽ không nhận được thông báo đẩy.",
-        "welcomeTitle": "Đã bật thông báo!",
-        "welcomeBody": "Bây giờ bạn sẽ nhận được lời nhắc cho các công việc chăm sóc cây của mình.",
-        "serviceWorkerNotActive": "Service worker chưa hoạt động. Không thể gửi thông báo.",
-        "permissionNotGranted": "Quyền thông báo chưa được cấp.",
-        "testSentTitle": "Đã gửi thông báo thử",
-        "testSentBody": "Nếu quyền chính xác, bạn sẽ thấy một thông báo.",
-        "testSentBodySample": "Đây là thông báo thử nghiệm từ LeafWise!",
-        "sendTestButton": "Gửi thông báo thử",
-        "permissionBlocked": "Thông báo đẩy bị trình duyệt của bạn chặn. Vui lòng bật chúng trong cài đặt trình duyệt."
+      "browserNotSupported": "Trình duyệt này không hỗ trợ thông báo trên máy tính.",
+      "permissionPreviouslyDeniedTitle": "Quyền bị từ chối",
+      "permissionPreviouslyDeniedBody": "Quyền thông báo đã bị từ chối trước đó. Vui lòng bật trong cài đặt trình duyệt của bạn để nhận lời nhắc.",
+      "permissionDeniedTitle": "Quyền chưa được cấp",
+      "permissionDeniedBody": "Bạn sẽ không nhận được thông báo đẩy.",
+      "welcomeTitle": "Đã bật thông báo!",
+      "welcomeBody": "Bây giờ bạn sẽ nhận được lời nhắc cho các công việc chăm sóc cây của mình.",
+      "serviceWorkerNotActive": "Service worker chưa hoạt động. Không thể gửi thông báo.",
+      "permissionNotGranted": "Quyền thông báo chưa được cấp.",
+      "testSentTitle": "Đã gửi thông báo thử",
+      "testSentBody": "Nếu quyền chính xác, bạn sẽ thấy một thông báo.",
+      "testSentBodySample": "Đây là thông báo thử nghiệm từ LeafWise!",
+      "sendTestButton": "Gửi thông báo thử",
+      "permissionBlocked": "Thông báo đẩy bị trình duyệt của bạn chặn. Vui lòng bật chúng trong cài đặt trình duyệt."
     },
     "toasts": {
       "avatarImageTooLargeTitle": "Ảnh quá lớn",
@@ -664,5 +664,12 @@
     "profileUpdatedTitle": "Hồ sơ Đã cập nhật!",
     "profileUpdatedDescription": "Hồ sơ của bạn đã được cập nhật thành công.",
     "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
+  },
+  "networkIndicator": {
+    "online": "Đã kết nối internet",
+    "offline": "Ngoại tuyến - Không có kết nối internet",
+    "lastConnected": "Kết nối lần cuối: {{time}}",
+    "neverConnected": "Chưa kết nối",
+    "checking": "Đang kiểm tra kết nối..."
   }
 }

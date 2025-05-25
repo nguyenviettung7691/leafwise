@@ -578,20 +578,20 @@
     "destroyConfirmEmailPlaceholder": "Enter your email to confirm",
     "destroyConfirmAction": "DESTROY",
     "notifications": {
-        "browserNotSupported": "This browser does not support desktop notifications.",
-        "permissionPreviouslyDeniedTitle": "Permission Denied",
-        "permissionPreviouslyDeniedBody": "Notification permission was previously denied. Please enable it in your browser settings to receive reminders.",
-        "permissionDeniedTitle": "Permission Not Granted",
-        "permissionDeniedBody": "You will not receive push notifications.",
-        "welcomeTitle": "Notifications Enabled!",
-        "welcomeBody": "You'll now receive reminders for your plant care tasks.",
-        "serviceWorkerNotActive": "Service worker not active. Cannot send notification.",
-        "permissionNotGranted": "Notification permission not granted.",
-        "testSentTitle": "Test Notification Sent",
-        "testSentBody": "If permissions are correct, you should see a notification.",
-        "testSentBodySample": "This is a test notification from LeafWise!",
-        "sendTestButton": "Send Test Notification",
-        "permissionBlocked": "Push notifications are blocked by your browser. Please enable them in your browser settings."
+      "browserNotSupported": "This browser does not support desktop notifications.",
+      "permissionPreviouslyDeniedTitle": "Permission Denied",
+      "permissionPreviouslyDeniedBody": "Notification permission was previously denied. Please enable it in your browser settings to receive reminders.",
+      "permissionDeniedTitle": "Permission Not Granted",
+      "permissionDeniedBody": "You will not receive push notifications.",
+      "welcomeTitle": "Notifications Enabled!",
+      "welcomeBody": "You'll now receive reminders for your plant care tasks.",
+      "serviceWorkerNotActive": "Service worker not active. Cannot send notification.",
+      "permissionNotGranted": "Notification permission not granted.",
+      "testSentTitle": "Test Notification Sent",
+      "testSentBody": "If permissions are correct, you should see a notification.",
+      "testSentBodySample": "This is a test notification from LeafWise!",
+      "sendTestButton": "Send Test Notification",
+      "permissionBlocked": "Push notifications are blocked by your browser. Please enable them in your browser settings."
     },
     "toasts": {
       "avatarImageTooLargeTitle": "Image Too Large",
@@ -650,7 +650,7 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
     "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
   },
@@ -664,5 +664,12 @@
     "profileUpdatedTitle": "Profile Updated!",
     "profileUpdatedDescription": "Your profile has been successfully updated.",
     "errorNoUserSession": "No user session found. Please log in again."
+  },
+  "networkIndicator": {
+    "online": "Connected to the internet",
+    "offline": "Offline - No internet connection",
+    "lastConnected": "Last connected: {{time}}",
+    "neverConnected": "Not yet connected",
+    "checking": "Checking connection..."
   }
 }
