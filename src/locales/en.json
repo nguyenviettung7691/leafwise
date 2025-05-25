@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Settings",
@@ -577,6 +576,15 @@
     "destroyConfirmDescription2": "To confirm, please type your email address ({{email}}) in the box below.",
     "destroyConfirmEmailPlaceholder": "Enter your email to confirm",
     "destroyConfirmAction": "DESTROY",
+    "pwaFeaturesCardTitle": "PWA Features",
+    "pwaFeaturesCardDescription": "Test Progressive Web App functionalities.",
+    "setAppBadgeButton": "Set Test Badge (3)",
+    "clearAppBadgeButton": "Clear App Badge",
+    "badgeNotSupported": "App Badging API is not supported in this browser.",
+    "badgeSetSuccess": "Test badge set successfully!",
+    "badgeSetError": "Failed to set app badge.",
+    "badgeClearedSuccess": "App badge cleared successfully!",
+    "badgeClearedError": "Failed to clear app badge.",
     "notifications": {
       "browserNotSupported": "This browser does not support desktop notifications.",
       "permissionPreviouslyDeniedTitle": "Permission Denied",
@@ -650,7 +658,7 @@
     "formDescription": "Update the details for {{plantName}}.",
     "submitButtonText": "Update Plant",
     "toastPlantUpdatedTitle": "Plant Updated!",
-    "toastPlantUpdatedDescription": "{{plantName}} has been (simulated) updated.",
+    "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
     "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
   },
@@ -673,3 +681,5 @@
     "checking": "Checking connection..."
   }
 }
+
+    
