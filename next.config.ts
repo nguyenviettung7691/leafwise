@@ -10,6 +10,23 @@ const withPWA = withPWAInit({
   swSrc: 'public/sw.js', // Specify your custom service worker
   // buildExcludes: ["app-build-manifest.json"], // Already default for app router
   // disable: process.env.NODE_ENV === "development", // Keep enabled for testing
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/placehold\.co\/.*/i,
+      handler: "CacheFirst", // Strategy: try cache first, then network.
+      options: {
+        cacheName: "placeholder-images",
+        expiration: {
+          maxEntries: 50, // Max number of images to cache
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        },
+        cacheableResponse: {
+          statuses: [0, 200], // Cache opaque responses and successful responses
+        },
+      },
+    },
+    // You can add more runtimeCaching rules here for other origins or strategies
+  ],
 });
 
 const nextConfig: NextConfig = {
@@ -33,3 +50,4 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA(nextConfig);
+
