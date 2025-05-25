@@ -10,12 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; 
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-
+import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewPlantPage() {
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -25,6 +24,7 @@ export default function NewPlantPage() {
   const handleSaveNewPlant = async (data: PlantFormData) => {
     if (!user?.id) {
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
+      router.push('/login');
       return;
     }
     setIsSaving(true);
@@ -35,28 +35,24 @@ export default function NewPlantPage() {
     if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
       const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
       if (blob) {
-        idbPhotoId = `photo-${newPlantId}-${Date.now()}`;
+        idbPhotoId = `photo-${user.id}-${newPlantId}-${Date.now()}`; // Scoped photo ID
         try {
-          await addIDBImage(user.id, idbPhotoId, blob); // Pass userId
+          await addIDBImage(user.id, idbPhotoId, blob);
         } catch (e) {
           console.error("Error during IndexedDB image save:", e);
-          toast({ title: t('common.error'), description: "Failed to save plant image locally.", variant: "destructive" });
-          idbPhotoId = undefined; // Fallback to no specific image if IDB save fails
+          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
+          idbPhotoId = undefined;
         }
       } else {
-         toast({ title: t('common.error'), description: "Failed to process image for local storage.", variant: "destructive" });
+         toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageProcessError'), variant: "destructive" });
          idbPhotoId = undefined;
       }
     } else if (data.diagnosedPhotoDataUrl) {
-      // If it's not a data URL, it might be an existing IDB key (e.g., if form was pre-filled, though less likely for 'new')
-      // or a placeholder. We'll assume for 'new' it should mostly be a data URL or null.
-      // If it's an existing IDB key, we just use it.
       if (!data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
         idbPhotoId = data.diagnosedPhotoDataUrl;
       }
     }
-    // If idbPhotoId is still undefined, a generic placeholder will be used implicitly by display components.
-    
+
     const newPlant: Plant = {
       id: newPlantId,
       commonName: data.commonName,
@@ -67,11 +63,11 @@ export default function NewPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: idbPhotoId, // Stores IDB key or undefined
+      primaryPhotoUrl: idbPhotoId,
       photos: idbPhotoId
         ? [{
-            id: idbPhotoId, // Use the same ID as the key and for the photo object
-            url: idbPhotoId, // Store IDB key
+            id: idbPhotoId,
+            url: idbPhotoId,
             dateTaken: new Date().toISOString(),
             healthCondition: data.healthCondition,
             diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),
