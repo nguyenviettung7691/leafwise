@@ -30,7 +30,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { compressImage } from '@/lib/image-utils';
-import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob, deleteUserProfile } from '@/lib/idb-helper';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 
@@ -47,7 +47,7 @@ export default function ProfilePage() {
   const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
   const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  // Removed local 'user' state, will directly use 'authUser' from context.
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -64,7 +64,7 @@ export default function ProfilePage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
-  const { imageUrl: currentAvatarFromIDB } = useIndexedDbImage(
+  const { imageUrl: currentAvatarFromIDB, isLoading: isAvatarLoading } = useIndexedDbImage(
       authUser?.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')
       ? authUser.avatarUrl
       : undefined,
@@ -76,8 +76,13 @@ export default function ProfilePage() {
   const { t } = useLanguage();
 
   useEffect(() => {
+    if (!authLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authLoading, authUser, router]);
+
+  useEffect(() => {
     if (authUser) {
-      setUser(authUser);
       setEditedName(authUser.name);
       if (authUser.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
         setEditedAvatarPreviewUrl(authUser.avatarUrl);
@@ -154,30 +159,24 @@ export default function ProfilePage() {
 
   const handleSaveChanges = async (event: FormEvent) => {
     event.preventDefault();
-    if (!user || !authUser) return;
+    if (!authUser) return;
 
     const updatedUserData: Partial<Omit<User, 'id' | 'email'>> = {
       name: editedName,
-      avatarUrl: authUser.avatarUrl, // Default to existing avatar URL
+      avatarUrl: authUser.avatarUrl, 
+      preferences: authUser.preferences,
     };
 
     if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('data:image/')) {
       const blob = dataURLtoBlob(editedAvatarPreviewUrl);
       if (blob && authUser.id) {
         const newAvatarIdbKey = `avatar-${authUser.id}-${Date.now()}`;
-        try {
-          const addImageResult = await addIDBImage(authUser.id, newAvatarIdbKey, blob);
-          if (addImageResult.error) {
-            console.error("IDB Error saving avatar:", addImageResult.error);
-            toast({ title: t('common.error'), description: "Failed to save new avatar image. Please try again.", variant: "destructive" });
-            // Keep updatedUserData.avatarUrl as authUser.avatarUrl (already set as default)
-          } else {
-            updatedUserData.avatarUrl = newAvatarIdbKey; // Store new IDB key
-          }
-        } catch (e) { 
-          console.error("Exception during avatar IDB save:", e);
-          toast({ title: t('common.error'), description: "Failed to save avatar due to an unexpected error.", variant: "destructive" });
-          // Keep updatedUserData.avatarUrl as authUser.avatarUrl
+        const addImageResult = await addIDBImage(authUser.id, newAvatarIdbKey, blob);
+        if (addImageResult.error) {
+          console.error("IDB Error saving avatar:", addImageResult.error);
+          toast({ title: t('common.error'), description: "Failed to save new avatar image. Please try again.", variant: "destructive" });
+        } else {
+          updatedUserData.avatarUrl = newAvatarIdbKey; 
         }
       } else if (!authUser.id) {
          toast({ title: t('common.error'), description: "User session error. Cannot save avatar.", variant: "destructive" });
@@ -185,22 +184,12 @@ export default function ProfilePage() {
          toast({ title: t('common.error'), description: "Failed to process new avatar image.", variant: "destructive" });
       }
     } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl === currentAvatarFromIDB) {
-      updatedUserData.avatarUrl = authUser.avatarUrl; // Keep existing IDB key, it's unchanged
+      // No change, keep current authUser.avatarUrl (which is the IDB key)
     } else if (!editedAvatarPreviewUrl) {
-      // Avatar was removed, old IDB key (if any) is implicitly cleared by not being in updatedUserData,
-      // or if authUser.avatarUrl was an IDB key, we might want to delete it from IDB.
-      // For now, we just set it to undefined.
       updatedUserData.avatarUrl = undefined;
-      // Optionally delete old avatar from IDB if authUser.avatarUrl was an IDB key
-      // if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')) {
-      //   await deleteIDBImage(authUser.id, authUser.avatarUrl);
-      // }
     } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('http')) {
-      // It's an external URL, just save it directly
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
     }
-    // If editedAvatarPreviewUrl was an old IDB key (and not data URL, http URL, or currentAvatarFromIDB which is a blob: URL),
-    // it means the image was not changed and was an existing IDB key, so authUser.avatarUrl is already correct.
 
     try {
       await updateUser(updatedUserData);
@@ -211,9 +200,9 @@ export default function ProfilePage() {
   };
 
   const handlePreferenceChange = async (preferenceKey: keyof UserPreferences, value: boolean) => {
-    if (!user) return;
+    if (!authUser) return;
 
-    const currentPreferences = user.preferences || {};
+    const currentPreferences = authUser.preferences || {};
     const updatedPreferences: UserPreferences = {
       ...currentPreferences,
       [preferenceKey]: value,
@@ -229,7 +218,8 @@ export default function ProfilePage() {
   const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
-    setIsLoggingOut(false);
+    // Navigation to /login is handled by logout()
+    setIsLoggingOut(false); // May not be reached if navigation happens too fast
   };
 
   const handleExportData = async () => {
@@ -262,15 +252,16 @@ export default function ProfilePage() {
 
 
         const photosWithImageData = await Promise.all((plant.photos || []).map(async (photo) => {
+          const newPhoto: PlantPhoto & { imageDataUrl?: string } = { ...photo };
           if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
             const blob = await getIDBImage(authUser.id, photo.url);
             if (blob) {
-              return { ...photo, imageDataUrl: await blobToDataURL(blob) };
+              newPhoto.imageDataUrl = await blobToDataURL(blob);
             }
           } else if (photo.url?.startsWith('data:')) {
-             return { ...photo, imageDataUrl: photo.url };
+             newPhoto.imageDataUrl = photo.url;
           }
-          return photo;
+          return newPhoto;
         }));
         return { ...plant, primaryPhotoDataUrl, photos: photosWithImageData };
       }));
@@ -336,8 +327,7 @@ export default function ProfilePage() {
 
 
         const restoredPlantsPromises = importedData.plants.map(async (plantFromFile: any) => {
-          const newPlant = { ...plantFromFile };
-          delete newPlant.primaryPhotoDataUrl; 
+          const newPlant: Plant & { primaryPhotoDataUrl?: string, photos: (PlantPhoto & {imageDataUrl?: string})[]} = { ...plantFromFile };
           
           if (plantFromFile.primaryPhotoDataUrl && authUser?.id) {
             const blob = dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
@@ -351,28 +341,29 @@ export default function ProfilePage() {
           } else {
             newPlant.primaryPhotoUrl = undefined;
           }
+          delete newPlant.primaryPhotoDataUrl; 
 
           newPlant.photos = await Promise.all(
-            (plantFromFile.photos || []).map(async (photoFromFile: any) => {
-              const newPhoto = { ...photoFromFile };
-              delete newPhoto.imageDataUrl; 
-
+            (plantFromFile.photos || []).map(async (photoFromFile: PlantPhoto & {imageDataUrl?: string}) => {
+              const newPhotoEntry = { ...photoFromFile };
+              
               if (photoFromFile.imageDataUrl && authUser?.id) {
                 const blob = dataURLtoBlob(photoFromFile.imageDataUrl);
                 if (blob) {
                   const newPhotoId = `photo-${newPlant.id || Date.now()}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                   await addIDBImage(authUser.id, newPhotoId, blob);
-                  newPhoto.id = newPhotoId;
-                  newPhoto.url = newPhotoId;
+                  newPhotoEntry.id = newPhotoId;
+                  newPhotoEntry.url = newPhotoId;
                 } else {
-                  newPhoto.url = undefined;
-                  newPhoto.id = `error-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
+                  newPhotoEntry.url = undefined; // Or some placeholder for error
+                  newPhotoEntry.id = `error-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
                 }
               } else {
-                  newPhoto.url = undefined;
-                  newPhoto.id = `missing-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
+                  newPhotoEntry.url = undefined;
+                  newPhotoEntry.id = `missing-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
               }
-              return newPhoto;
+              delete newPhotoEntry.imageDataUrl; 
+              return newPhotoEntry as PlantPhoto;
             })
           );
           return newPlant as Plant;
@@ -382,7 +373,7 @@ export default function ProfilePage() {
         setContextPlants(restoredPlants);
 
         toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccess') });
-        router.push('/'); // Navigate to home to refresh plant list view
+        router.push('/'); 
 
       } catch (error: any) {
         toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
@@ -404,13 +395,14 @@ export default function ProfilePage() {
   };
 
   const handleDestroyDataConfirmed = async () => {
-    if (!user || destroyEmailInput !== user.email) {
+    if (!authUser || destroyEmailInput !== authUser.email) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.destroyEmailMismatch'), variant: "destructive" });
       return;
     }
     setIsDestroyingData(true);
     
     await clearAllPlantData(); 
+    await deleteUserProfile(authUser.id);
     await logout(); 
     
     toast({ title: t('profilePage.toasts.destroySuccessTitle'), description: t('profilePage.toasts.destroySuccessDesc'), variant: "destructive" });
@@ -419,39 +411,25 @@ export default function ProfilePage() {
     setIsDestroyingData(false);
   };
 
-  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : (currentAvatarFromIDB || authUser?.avatarUrl)) || `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`;
+  const avatarSrcToDisplay = (isEditing ? editedAvatarPreviewUrl : (currentAvatarFromIDB || authUser?.avatarUrl)) || `https://placehold.co/100x100.png?text=${(authUser?.name?.charAt(0) || 'U').toUpperCase()}`;
 
 
-  if (authLoading || !user) {
+  if (authLoading || (!authUser && !authLoading)) {
     return (
       <AppLayout>
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div className="flex justify-between items-center">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-10 w-36" />
-          </div>
-          <Card className="shadow-xl">
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <div>
-                  <Skeleton className="h-7 w-48 mb-2" />
-                  <Skeleton className="h-5 w-64" />
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-          <Card className="shadow-xl">
-            <CardHeader>
-              <Skeleton className="h-7 w-40 mb-2" />
-              <Skeleton className="h-5 w-56" />
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </CardContent>
-          </Card>
+        <div className="flex justify-center items-center h-full min-h-[calc(100vh-200px)]">
+          <AuthLoader className="h-16 w-16 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
+  
+  // Fallback for a brief moment if authUser is still null but authLoading is false (should be handled by redirect)
+  if (!authUser) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-full min-h-[calc(100vh-200px)]">
+          <AuthLoader className="h-16 w-16 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
@@ -493,9 +471,14 @@ export default function ProfilePage() {
                         <AuthLoader className="h-6 w-6 text-white animate-spin" />
                       </div>
                     )}
-                    <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: user.name})} data-ai-hint="person avatar"/>
+                    {isAvatarLoading && !isCompressingAvatar && (
+                      <Skeleton className="h-full w-full rounded-full" />
+                    )}
+                    {!isAvatarLoading && !isCompressingAvatar && (
+                      <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: authUser.name})} data-ai-hint="person avatar"/>
+                    )}
                     <AvatarFallback className="text-2xl bg-muted">
-                      {user.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                      {authUser.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   {isEditing && !isCompressingAvatar && (
@@ -525,12 +508,12 @@ export default function ProfilePage() {
                         className="text-2xl font-semibold p-1"
                         disabled={authLoading || isLoggingOut || isCompressingAvatar}
                       />
-                      <p className="text-md text-muted-foreground">{user.email} ({t('profilePage.emailCannotBeChanged')})</p>
+                      <p className="text-md text-muted-foreground">{authUser.email} ({t('profilePage.emailCannotBeChanged')})</p>
                     </div>
                   ) : (
                     <>
-                      <CardTitle className="text-2xl">{user.name}</CardTitle>
-                      <CardDescription className="text-md">{user.email}</CardDescription>
+                      <CardTitle className="text-2xl">{authUser.name}</CardTitle>
+                      <CardDescription className="text-md">{authUser.email}</CardDescription>
                     </>
                   )}
                 </div>
@@ -554,7 +537,7 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="emailNotifications"
-                checked={user.preferences?.emailNotifications || false}
+                checked={authUser.preferences?.emailNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('emailNotifications', checked)}
                 aria-label={t('profilePage.emailNotificationsLabel')}
                 disabled={authLoading || isLoggingOut}
@@ -567,7 +550,7 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="pushNotifications"
-                checked={user.preferences?.pushNotifications || false}
+                checked={authUser.preferences?.pushNotifications || false}
                 onCheckedChange={(checked) => handlePreferenceChange('pushNotifications', checked)}
                 aria-label={t('profilePage.pushNotificationsLabel')}
                 disabled={authLoading || isLoggingOut}
@@ -678,8 +661,10 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-            <AlertDialogDescription>{t('profilePage.destroyConfirmDescription1')}</AlertDialogDescription>
-            <AlertDialogDescription>{t('profilePage.destroyConfirmDescription2', {email: user?.email || ''})}</AlertDialogDescription>
+             <AlertDialogDescription className="space-y-3">
+              <div>{t('profilePage.destroyConfirmDescription1')}</div>
+              <div>{t('profilePage.destroyConfirmDescription2', {email: authUser?.email || ''})}</div>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
             <Label htmlFor="destroy-confirm-email" className="sr-only">{t('profilePage.destroyConfirmEmailPlaceholder')}</Label>
@@ -696,7 +681,7 @@ export default function ProfilePage() {
             <AlertDialogCancel onClick={() => setIsDestroyConfirmOpen(false)} disabled={isDestroyingData}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDestroyDataConfirmed}
-              disabled={destroyEmailInput !== user?.email || isDestroyingData}
+              disabled={destroyEmailInput !== authUser?.email || isDestroyingData}
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground focus-visible:ring-destructive"
             >
               {isDestroyingData ? <AuthLoader className="h-4 w-4 animate-spin" /> : null}
