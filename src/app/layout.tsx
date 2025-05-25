@@ -1,5 +1,6 @@
 
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next'; // Import Metadata type
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { LanguageProvider } from '@/contexts/LanguageContext';
@@ -15,30 +16,30 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// RootLayout is now a Server Component by default (no 'use client')
+// Add metadata export for SEO and PWA discoverability
+export const metadata: Metadata = {
+  title: 'LeafWise - Plant Care Management',
+  description: 'Your personal plant care assistant, helping you identify, diagnose, and care for your plants with AI-powered insights.',
+  manifest: '/manifest.json',
+  icons: {
+    apple: 'https://placehold.co/192x192.png', // Ensure this points to your actual apple-touch-icon
+    icon: '/favicon.ico', // Or your main favicon
+  },
+};
+
+// RootLayout is a Server Component
 export default function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
   return (
-    // Initial lang and font variables set here for SSR
-    // ClientLayoutProvidersAndContent will update lang dynamically on the client
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`} suppressHydrationWarning>
-      <head>
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#32CD32" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1A202C" />
-        <link rel="apple-touch-icon" href="https://placehold.co/192x192.png" data-ai-hint="logo appicon"/>
-        {/* manifest.json should be linked automatically by PWA plugin or added here if not */}
-        {/* <link rel="manifest" href="/manifest.json" /> */}
-      </head>
-      <body className="antialiased h-full">
-        <LanguageProvider>
-          <ClientLayoutProvidersAndContent>
-            {children}
-          </ClientLayoutProvidersAndContent>
-        </LanguageProvider>
-      </body>
-    </html>
+    // LanguageProvider is a Client Component, so it's fine here
+    // It will provide context to ClientLayoutProvidersAndContent
+    <LanguageProvider>
+      <ClientLayoutProvidersAndContent>
+        {children}
+      </ClientLayoutProvidersAndContent>
+    </LanguageProvider>
   );
 }
