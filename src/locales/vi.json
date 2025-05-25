@@ -1,9 +1,10 @@
+
 {
   "settings": {
     "title": "Cài đặt",
     "description": "Quản lý các tùy chọn ứng dụng của bạn.",
     "language": "Ngôn ngữ",
-    "featureInProgress": "Nhiều cài đặt hơn sắp ra mắt!",
+    "featureInProgress": "Nhiều cài đặt hơn sắp ra mắt! <br/> Hãy kiểm tra lại để biết các cập nhật.",
     "darkMode": "Chế độ tối"
   },
   "nav": {
@@ -132,15 +133,15 @@
     "submitButtonText": "Lưu cây",
     "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
     "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
-    "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 4MB)",
+    "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 1MB)",
     "gallerySelectLabel": "Hoặc chọn từ Thư viện",
     "commonNameLabel": "Tên thường gọi",
     "commonNamePlaceholder": "VD: Trầu Bà Lá Xẻ",
-    "scientificNameLabel": "Tên khoa học (Tùy chọn)",
+    "scientificNameLabel": "Tên khoa học",
     "scientificNamePlaceholder": "VD: Monstera deliciosa",
     "familyCategoryLabel": "Họ thực vật",
     "familyCategoryPlaceholder": "VD: Araceae",
-    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính) (Tùy chọn)",
+    "ageEstimateYearsLabel": "Tuổi (Năm, Ước tính)",
     "ageEstimateYearsPlaceholder": "VD: 2",
     "healthConditionLabel": "Tình trạng sức khỏe",
     "healthConditionPlaceholder": "Chọn tình trạng sức khỏe",
@@ -150,9 +151,9 @@
       "sick": "Bị bệnh",
       "unknown": "Không rõ"
     },
-    "locationLabel": "Vị trí (Tùy chọn)",
+    "locationLabel": "Vị trí",
     "locationPlaceholder": "VD: Cửa sổ phòng khách",
-    "customNotesLabel": "Ghi chú tùy chỉnh (Tùy chọn)",
+    "customNotesLabel": "Ghi chú tùy chỉnh",
     "customNotesPlaceholder": "VD: Tưới khi lớp đất mặt khô.",
     "savingButton": "Đang lưu..."
   },
@@ -160,7 +161,7 @@
     "uploadForm": {
       "title": "Chẩn đoán cây",
       "description": "Tải lên ảnh cây của bạn và thêm bất kỳ quan sát nào. AI của chúng tôi sẽ phân tích và cung cấp đánh giá sức khỏe cũng như mẹo chăm sóc.",
-      "imageLabel": "Ảnh cây (Tối đa 4MB)",
+      "imageLabel": "Ảnh cây (Tối đa 1MB)",
       "descriptionLabel": "Mô tả (Tùy chọn)",
       "descriptionPlaceholder": "Ví dụ: Lá vàng, đốm nâu, héo úa...",
       "submitButton": "Chẩn đoán cây",
@@ -213,12 +214,11 @@
       "activityTrackingPlaceholder": "Theo dõi hoàn thành hoạt động cho các công việc chăm sóc của bạn sẽ được triển khai trong phiên bản tương lai.",
       "saveCarePlanButton": "Lưu kế hoạch chăm sóc cho {{plantName}}",
       "viewPlantDetailsLink": "Xem chi tiết {{plantName}}",
-      "aiDisclaimer": "Kế hoạch chăm sóc này do AI tạo. Hãy điều chỉnh cho phù hợp với cây và môi trường cụ thể của bạn.",
       "footerDisclaimer": "Kế hoạch chăm sóc này do AI tạo. Hãy điều chỉnh cho phù hợp với cây và môi trường cụ thể của bạn."
     },
     "toasts": {
       "imageTooLargeTitle": "Ảnh quá lớn",
-      "imageTooLargeDesc": "Vui lòng chọn tệp ảnh nhỏ hơn 4MB.",
+      "imageTooLargeDesc": "Vui lòng chọn tệp ảnh nhỏ hơn 1MB.",
       "imageCompressionError": "Lỗi nén ảnh.",
       "noImageTitle": "Chưa chọn ảnh",
       "noImageDesc": "Vui lòng chọn tệp ảnh để chẩn đoán.",
@@ -412,7 +412,7 @@
       "photoDetailsSaved": "Đã cập nhật chi tiết ảnh",
       "photoDetailsSavedDesc": "Thông tin của ảnh đã được lưu.",
       "imageTooLarge": "Ảnh quá lớn",
-      "imageTooLargeDesc": "Vui lòng chọn ảnh nhỏ hơn 4MB.",
+      "imageTooLargeDesc": "Vui lòng chọn ảnh nhỏ hơn 1MB.",
       "invalidFileType": "Loại tệp không hợp lệ",
       "invalidFileTypeDesc": "Vui lòng tải lên một hình ảnh.",
       "notAPlant": "Không phải cây?",
@@ -548,18 +548,19 @@
     "nameLabel": "Tên",
     "emailCannotBeChanged": "Không thể thay đổi email",
     "avatarAlt": "Ảnh đại diện của {{name}}",
+    "avatarSaveError": "Không thể lưu ảnh đại diện mới. Vui lòng thử lại.",
     "preferencesCardTitle": "Tùy chọn",
     "preferencesCardDescription": "Quản lý cài đặt ứng dụng của bạn.",
     "emailNotificationsLabel": "Thông báo qua Email",
     "pushNotificationsLabel": "Thông báo đẩy",
-    "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu (mô phỏng) vào bộ nhớ cục bộ.",
+    "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu vào bộ nhớ cục bộ của trình duyệt.",
     "dataManagementCardTitle": "Quản lý dữ liệu",
     "dataManagementCardDescription": "Xuất dữ liệu cây của bạn hoặc nhập dữ liệu từ tệp sao lưu.",
     "exportDataButton": "Xuất dữ liệu của tôi",
     "exportingButton": "Đang xuất...",
     "importDataButton": "Nhập dữ liệu",
     "importingButton": "Đang nhập...",
-    "importDisclaimer": "Nhập dữ liệu sẽ ghi đè lên cây và cài đặt hồ sơ hiện tại của bạn bằng nội dung từ tệp. Hành động này dành cho mục đích thử nghiệm.",
+    "importDisclaimer": "Nhập dữ liệu sẽ ghi đè lên cây và cài đặt hồ sơ hiện tại của bạn bằng nội dung từ tệp.",
     "dangerZoneCardTitle": "Khu vực nguy hiểm",
     "logOutSectionTitle": "Đăng xuất",
     "logOutSectionDescription": "Kết thúc phiên làm việc hiện tại của bạn.",
@@ -576,11 +577,28 @@
     "destroyConfirmDescription2": "Để xác nhận, vui lòng nhập địa chỉ email của bạn ({{email}}) vào ô bên dưới.",
     "destroyConfirmEmailPlaceholder": "Nhập email của bạn để xác nhận",
     "destroyConfirmAction": "HỦY",
+    "notifications": {
+        "browserNotSupported": "Trình duyệt này không hỗ trợ thông báo trên máy tính.",
+        "permissionPreviouslyDeniedTitle": "Quyền bị từ chối",
+        "permissionPreviouslyDeniedBody": "Quyền thông báo đã bị từ chối trước đó. Vui lòng bật trong cài đặt trình duyệt của bạn để nhận lời nhắc.",
+        "permissionDeniedTitle": "Quyền chưa được cấp",
+        "permissionDeniedBody": "Bạn sẽ không nhận được thông báo đẩy.",
+        "welcomeTitle": "Đã bật thông báo!",
+        "welcomeBody": "Bây giờ bạn sẽ nhận được lời nhắc cho các công việc chăm sóc cây của mình.",
+        "serviceWorkerNotActive": "Service worker chưa hoạt động. Không thể gửi thông báo.",
+        "permissionNotGranted": "Quyền thông báo chưa được cấp.",
+        "testSentTitle": "Đã gửi thông báo thử",
+        "testSentBody": "Nếu quyền chính xác, bạn sẽ thấy một thông báo.",
+        "testSentBodySample": "Đây là thông báo thử nghiệm từ LeafWise!",
+        "sendTestButton": "Gửi thông báo thử",
+        "permissionBlocked": "Thông báo đẩy bị trình duyệt của bạn chặn. Vui lòng bật chúng trong cài đặt trình duyệt."
+    },
     "toasts": {
       "avatarImageTooLargeTitle": "Ảnh quá lớn",
-      "avatarImageTooLargeDesc": "Vui lòng chọn ảnh đại diện nhỏ hơn 4MB.",
+      "avatarImageTooLargeDesc": "Vui lòng chọn ảnh đại diện nhỏ hơn {{maxSize}}.",
       "profileUpdateError": "Không thể cập nhật hồ sơ.",
       "imageCompressionError": "Không thể xử lý ảnh.",
+      "imageProcessError": "Không thể xử lý ảnh đại diện mới.",
       "preferenceUpdateError": "Không thể cập nhật {{preferenceKey}}.",
       "profileUpdatedSuccess": "Hồ sơ của bạn đã được cập nhật thành công.",
       "loggedOutSuccess": "Bạn đã đăng xuất thành công.",
@@ -648,5 +666,3 @@
     "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
   }
 }
-
-    

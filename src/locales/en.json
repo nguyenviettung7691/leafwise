@@ -1,9 +1,10 @@
+
 {
   "settings": {
     "title": "Settings",
     "description": "Manage your application preferences.",
     "language": "Language",
-    "featureInProgress": "More settings coming soon!",
+    "featureInProgress": "More settings coming soon! <br/> Check back for updates.",
     "darkMode": "Dark Mode"
   },
   "nav": {
@@ -132,15 +133,15 @@
     "submitButtonText": "Save Plant",
     "primaryPhotoLabel": "Primary Photo (Optional)",
     "uploadAreaText": "Click to upload or drag and drop",
-    "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 4MB)",
+    "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 1MB)",
     "gallerySelectLabel": "Or Select from Gallery",
     "commonNameLabel": "Common Name",
     "commonNamePlaceholder": "e.g., Swiss Cheese Plant",
-    "scientificNameLabel": "Scientific Name (Optional)",
+    "scientificNameLabel": "Scientific Name",
     "scientificNamePlaceholder": "e.g., Monstera deliciosa",
     "familyCategoryLabel": "Family Category",
     "familyCategoryPlaceholder": "e.g., Araceae",
-    "ageEstimateYearsLabel": "Age (Years, Est.) (Optional)",
+    "ageEstimateYearsLabel": "Age (Years, Est.)",
     "ageEstimateYearsPlaceholder": "e.g., 2",
     "healthConditionLabel": "Health Condition",
     "healthConditionPlaceholder": "Select health status",
@@ -150,9 +151,9 @@
       "sick": "Sick",
       "unknown": "Unknown"
     },
-    "locationLabel": "Location (Optional)",
+    "locationLabel": "Location",
     "locationPlaceholder": "e.g., Living Room Window",
-    "customNotesLabel": "Custom Notes (Optional)",
+    "customNotesLabel": "Custom Notes",
     "customNotesPlaceholder": "e.g., Water when top inch is dry.",
     "savingButton": "Saving..."
   },
@@ -160,7 +161,7 @@
     "uploadForm": {
       "title": "Diagnose Plant",
       "description": "Upload a photo of your plant and add any observations. Our AI will analyze it and provide a health assessment and care tips.",
-      "imageLabel": "Plant Image (Max 4MB)",
+      "imageLabel": "Plant Image (Max 1MB)",
       "descriptionLabel": "Optional Description",
       "descriptionPlaceholder": "e.g., Yellowing leaves, brown spots, wilting...",
       "submitButton": "Diagnose Plant",
@@ -213,12 +214,11 @@
       "activityTrackingPlaceholder": "Activity completion tracking for your care tasks will be implemented in a future version.",
       "saveCarePlanButton": "Save Care Plan for {{plantName}}",
       "viewPlantDetailsLink": "View {{plantName}}'s Details",
-      "aiDisclaimer": "This care plan is AI-generated. Adapt to your specific plant and environment.",
       "footerDisclaimer": "This care plan is AI-generated. Adapt to your specific plant and environment."
     },
     "toasts": {
       "imageTooLargeTitle": "Image Too Large",
-      "imageTooLargeDesc": "Please select an image file smaller than 4MB.",
+      "imageTooLargeDesc": "Please select an image file smaller than 1MB.",
       "imageCompressionError": "Error compressing image.",
       "noImageTitle": "No Image Selected",
       "noImageDesc": "Please select an image file for diagnosis.",
@@ -412,7 +412,7 @@
       "photoDetailsSaved": "Photo Details Updated",
       "photoDetailsSavedDesc": "The photo's information has been saved.",
       "imageTooLarge": "Image Too Large",
-      "imageTooLargeDesc": "Please select an image file smaller than 4MB.",
+      "imageTooLargeDesc": "Please select an image file smaller than 1MB.",
       "invalidFileType": "Invalid File Type",
       "invalidFileTypeDesc": "Please upload an image.",
       "notAPlant": "Not a Plant?",
@@ -548,18 +548,19 @@
     "nameLabel": "Name",
     "emailCannotBeChanged": "Email cannot be changed",
     "avatarAlt": "{{name}}'s avatar",
+    "avatarSaveError": "Failed to save new avatar image. Please try again.",
     "preferencesCardTitle": "Preferences",
     "preferencesCardDescription": "Manage your application settings.",
     "emailNotificationsLabel": "Email Notifications",
     "pushNotificationsLabel": "Push Notifications",
-    "preferencesDisclaimer": "Profile changes and preferences are mock-saved to local storage.",
+    "preferencesDisclaimer": "Profile changes and preferences are saved to your browser's local storage.",
     "dataManagementCardTitle": "Data Management",
     "dataManagementCardDescription": "Export your plant data or import data from a backup file.",
     "exportDataButton": "Export My Data",
     "exportingButton": "Exporting...",
     "importDataButton": "Import Data",
     "importingButton": "Importing...",
-    "importDisclaimer": "Importing data will overwrite your current plants and profile settings with the content from the file. This action is for prototype purposes.",
+    "importDisclaimer": "Importing data will overwrite your current plants and profile settings with the content from the file.",
     "dangerZoneCardTitle": "Danger Zone",
     "logOutSectionTitle": "Log Out",
     "logOutSectionDescription": "End your current session.",
@@ -576,11 +577,28 @@
     "destroyConfirmDescription2": "To confirm, please type your email address ({{email}}) in the box below.",
     "destroyConfirmEmailPlaceholder": "Enter your email to confirm",
     "destroyConfirmAction": "DESTROY",
+    "notifications": {
+        "browserNotSupported": "This browser does not support desktop notifications.",
+        "permissionPreviouslyDeniedTitle": "Permission Denied",
+        "permissionPreviouslyDeniedBody": "Notification permission was previously denied. Please enable it in your browser settings to receive reminders.",
+        "permissionDeniedTitle": "Permission Not Granted",
+        "permissionDeniedBody": "You will not receive push notifications.",
+        "welcomeTitle": "Notifications Enabled!",
+        "welcomeBody": "You'll now receive reminders for your plant care tasks.",
+        "serviceWorkerNotActive": "Service worker not active. Cannot send notification.",
+        "permissionNotGranted": "Notification permission not granted.",
+        "testSentTitle": "Test Notification Sent",
+        "testSentBody": "If permissions are correct, you should see a notification.",
+        "testSentBodySample": "This is a test notification from LeafWise!",
+        "sendTestButton": "Send Test Notification",
+        "permissionBlocked": "Push notifications are blocked by your browser. Please enable them in your browser settings."
+    },
     "toasts": {
       "avatarImageTooLargeTitle": "Image Too Large",
-      "avatarImageTooLargeDesc": "Please select an image file smaller than 4MB for your avatar.",
+      "avatarImageTooLargeDesc": "Please select an image file smaller than {{maxSize}} for your avatar.",
       "profileUpdateError": "Failed to update profile.",
       "imageCompressionError": "Failed to process image.",
+      "imageProcessError": "Failed to process new avatar image.",
       "preferenceUpdateError": "Failed to update {{preferenceKey}}.",
       "profileUpdatedSuccess": "Your profile has been successfully updated.",
       "loggedOutSuccess": "You have been successfully logged out.",
@@ -648,5 +666,3 @@
     "errorNoUserSession": "No user session found. Please log in again."
   }
 }
-
-    

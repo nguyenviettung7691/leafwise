@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle } from 'lucide-react';
+import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle, Send } from 'lucide-react';
 import { useState, useEffect, type FormEvent, useRef, type ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,7 +30,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { compressImage } from '@/lib/image-utils';
-import { getImage as getIDBImage, addImage as addIDBImage, dataURLtoBlob, deleteUserProfile } from '@/lib/idb-helper';
+import * as idbHelper from '@/lib/idb-helper'; // Changed to namespace import
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 
@@ -44,25 +44,26 @@ function blobToDataURL(blob: Blob): Promise<string> {
 }
 
 export default function ProfilePage() {
-  const { user: authUser, updateUser, isLoading: authLoading, logout } = useAuth();
+  const { user: authUser, updateUser: updateAuthUser, isLoading: authLoading, logout } = useAuth();
   const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData();
   const router = useRouter();
-  // Removed local 'user' state, will directly use 'authUser' from context.
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
-
   const [editedAvatarPreviewUrl, setEditedAvatarPreviewUrl] = useState<string | null>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-
   const [isDestroyConfirmOpen, setIsDestroyConfirmOpen] = useState(false);
   const [destroyEmailInput, setDestroyEmailInput] = useState('');
   const [isDestroyingData, setIsDestroyingData] = useState(false);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' ? Notification.permission : 'default'
+  );
+
 
   const { imageUrl: currentAvatarFromIDB, isLoading: isAvatarLoading } = useIndexedDbImage(
       authUser?.avatarUrl && !authUser.avatarUrl.startsWith('data:') && !authUser.avatarUrl.startsWith('http')
@@ -74,6 +75,13 @@ export default function ProfilePage() {
 
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
 
   useEffect(() => {
     if (!authLoading && !authUser) {
@@ -93,6 +101,54 @@ export default function ProfilePage() {
       }
     }
   }, [authUser, currentAvatarFromIDB]);
+
+  const requestNotificationPermission = async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast({ title: t('common.error'), description: t('profilePage.notifications.browserNotSupported'), variant: "destructive" });
+      return false;
+    }
+    if (Notification.permission === 'granted') {
+      setNotificationPermission('granted');
+      return true;
+    }
+    if (Notification.permission === 'denied') {
+      setNotificationPermission('denied');
+      toast({ title: t('profilePage.notifications.permissionPreviouslyDeniedTitle'), description: t('profilePage.notifications.permissionPreviouslyDeniedBody'), variant: "default" });
+      return false;
+    }
+
+    try {
+      const permission = await Notification.requestPermission();
+      setNotificationPermission(permission);
+      if (permission === 'granted') {
+        sendTestNotification(t('profilePage.notifications.welcomeTitle'), t('profilePage.notifications.welcomeBody'));
+        return true;
+      } else {
+        toast({ title: t('profilePage.notifications.permissionDeniedTitle'), description: t('profilePage.notifications.permissionDeniedBody'), variant: "default" });
+        return false;
+      }
+    } catch (error) {
+        console.error("Error requesting notification permission:", error);
+        toast({ title: t('common.error'), description: "Failed to request notification permission.", variant: "destructive"});
+        return false;
+    }
+  };
+
+  const sendTestNotification = (title: string, body: string) => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+      toast({ title: t('common.error'), description: t('profilePage.notifications.serviceWorkerNotActive'), variant: "destructive" });
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+       toast({ title: t('common.error'), description: t('profilePage.notifications.permissionNotGranted'), variant: "destructive" });
+      return;
+    }
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      payload: { title, body, icon: '/icons/icon-192x192.png', tag: 'test-notification' }
+    });
+    toast({ title: t('profilePage.notifications.testSentTitle'), description: t('profilePage.notifications.testSentBody') });
+  };
 
 
   const handleEditToggle = () => {
@@ -114,11 +170,11 @@ export default function ProfilePage() {
   const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
+      if (file.size > 1 * 1024 * 1024) { // Reduced max avatar size to 1MB for faster compression/upload
         toast({
           variant: 'destructive',
           title: t('profilePage.toasts.avatarImageTooLargeTitle'),
-          description: t('profilePage.toasts.avatarImageTooLargeDesc'),
+          description: t('profilePage.toasts.avatarImageTooLargeDesc', {maxSize: "1MB"}),
         });
         
         if (authUser?.avatarUrl && (authUser.avatarUrl.startsWith('data:') || authUser.avatarUrl.startsWith('http'))) {
@@ -163,38 +219,42 @@ export default function ProfilePage() {
 
     const updatedUserData: Partial<Omit<User, 'id' | 'email'>> = {
       name: editedName,
-      avatarUrl: authUser.avatarUrl, 
+      avatarUrl: authUser.avatarUrl,
       preferences: authUser.preferences,
     };
 
     if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('data:image/')) {
-      const blob = dataURLtoBlob(editedAvatarPreviewUrl);
+      const blob = idbHelper.dataURLtoBlob(editedAvatarPreviewUrl);
       if (blob && authUser.id) {
         const newAvatarIdbKey = `avatar-${authUser.id}-${Date.now()}`;
-        const addImageResult = await addIDBImage(authUser.id, newAvatarIdbKey, blob);
+        const addImageResult = await idbHelper.addImage(authUser.id, newAvatarIdbKey, blob);
         if (addImageResult.error) {
           console.error("IDB Error saving avatar:", addImageResult.error);
-          toast({ title: t('common.error'), description: "Failed to save new avatar image. Please try again.", variant: "destructive" });
+          toast({ title: t('common.error'), description: t('profilePage.toasts.avatarSaveError'), variant: "destructive" });
+          // Do not update avatarUrl if IDB save fails
         } else {
-          updatedUserData.avatarUrl = newAvatarIdbKey; 
+          updatedUserData.avatarUrl = newAvatarIdbKey;
         }
       } else if (!authUser.id) {
-         toast({ title: t('common.error'), description: "User session error. Cannot save avatar.", variant: "destructive" });
+         toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: "destructive" });
       } else {
-         toast({ title: t('common.error'), description: "Failed to process new avatar image.", variant: "destructive" });
+         toast({ title: t('common.error'), description: t('profilePage.toasts.imageProcessError'), variant: "destructive" });
       }
     } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl === currentAvatarFromIDB) {
       // No change, keep current authUser.avatarUrl (which is the IDB key)
     } else if (!editedAvatarPreviewUrl) {
       updatedUserData.avatarUrl = undefined;
-    } else if (editedAvatarPreviewUrl && editedAvatarPreviewUrl.startsWith('http')) {
+    } else if (editedAvatarPreviewUrl && !editedAvatarPreviewUrl.startsWith('data:')) {
+      // This means an existing IDB key was kept (e.g. if the preview was from IDB initially and not changed)
       updatedUserData.avatarUrl = editedAvatarPreviewUrl;
     }
 
     try {
-      await updateUser(updatedUserData);
+      await updateAuthUser(updatedUserData); // This calls AuthContext's updateUser
       setIsEditing(false);
+      // Toast is now handled within AuthContext.updateUser
     } catch (error) {
+      // This catch might be redundant if AuthContext handles its own errors, but good for safety.
       toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
     }
   };
@@ -202,24 +262,47 @@ export default function ProfilePage() {
   const handlePreferenceChange = async (preferenceKey: keyof UserPreferences, value: boolean) => {
     if (!authUser) return;
 
-    const currentPreferences = authUser.preferences || {};
+    let permissionGranted = notificationPermission === 'granted';
+
+    if (preferenceKey === 'pushNotifications' && value) { // Trying to enable push notifications
+      if (notificationPermission !== 'granted') {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          // Permission not granted, revert the switch visually if your Switch component is controlled
+          // For ShadCN switch, it might update visually, so we need to ensure the preference isn't saved as true.
+          return; // Exit, do not save preference as true.
+        }
+        permissionGranted = true; // Update for this scope
+      }
+    }
+
+    const currentPreferences = authUser.preferences || { emailNotifications: false, pushNotifications: false };
+    let finalPushNotificationValue = currentPreferences.pushNotifications;
+
+    if (preferenceKey === 'pushNotifications') {
+        finalPushNotificationValue = value ? permissionGranted : false;
+    }
+
     const updatedPreferences: UserPreferences = {
       ...currentPreferences,
-      [preferenceKey]: value,
+      emailNotifications: preferenceKey === 'emailNotifications' ? value : currentPreferences.emailNotifications,
+      pushNotifications: finalPushNotificationValue,
     };
-
+    
     try {
-      await updateUser({ preferences: updatedPreferences });
+      // updateAuthUser already calls idbHelper.saveUserProfile
+      await updateAuthUser({ preferences: updatedPreferences });
+      // Toast is handled in updateAuthUser
     } catch (error) {
        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', {preferenceKey: String(preferenceKey)}), variant: "destructive" });
     }
   };
 
+
   const handleLogoutConfirmed = async () => {
     setIsLoggingOut(true);
     await logout();
-    // Navigation to /login is handled by logout()
-    setIsLoggingOut(false); // May not be reached if navigation happens too fast
+    setIsLoggingOut(false);
   };
 
   const handleExportData = async () => {
@@ -231,9 +314,11 @@ export default function ProfilePage() {
     toast({ title: t('profilePage.toasts.exportStartingTitle'), description: t('profilePage.toasts.exportStartingDesc')});
 
     try {
-      let userProfileToExport = { ...authUser };
-      if (authUser.avatarUrl && !authUser.avatarUrl.startsWith('http') && !authUser.avatarUrl.startsWith('data:')) {
-        const avatarBlob = await getIDBImage(authUser.id, authUser.avatarUrl);
+      const userProfileFromIDB = await idbHelper.getUserProfile(authUser.id);
+      let userProfileToExport = { ...authUser, ...userProfileFromIDB }; // Combine context user with IDB profile
+
+      if (userProfileToExport.avatarUrl && !userProfileToExport.avatarUrl.startsWith('http') && !userProfileToExport.avatarUrl.startsWith('data:')) {
+        const avatarBlob = await idbHelper.getImage(authUser.id, userProfileToExport.avatarUrl);
         if (avatarBlob) {
           userProfileToExport.avatarUrl = await blobToDataURL(avatarBlob);
         }
@@ -242,7 +327,7 @@ export default function ProfilePage() {
       const plantsWithImageData = await Promise.all(contextPlants.map(async (plant) => {
         let primaryPhotoDataUrl: string | undefined = undefined;
         if (plant.primaryPhotoUrl && !plant.primaryPhotoUrl.startsWith('http') && !plant.primaryPhotoUrl.startsWith('data:')) {
-          const blob = await getIDBImage(authUser.id, plant.primaryPhotoUrl);
+          const blob = await idbHelper.getImage(authUser.id, plant.primaryPhotoUrl);
           if (blob) {
             primaryPhotoDataUrl = await blobToDataURL(blob);
           }
@@ -254,7 +339,7 @@ export default function ProfilePage() {
         const photosWithImageData = await Promise.all((plant.photos || []).map(async (photo) => {
           const newPhoto: PlantPhoto & { imageDataUrl?: string } = { ...photo };
           if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
-            const blob = await getIDBImage(authUser.id, photo.url);
+            const blob = await idbHelper.getImage(authUser.id, photo.url);
             if (blob) {
               newPhoto.imageDataUrl = await blobToDataURL(blob);
             }
@@ -276,7 +361,7 @@ export default function ProfilePage() {
       const href = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = href;
-      link.download = `leafwise_data_export_${new Date().toISOString().split('T')[0]}.json`;
+      link.download = `leafwise_data_export_${authUser.id}_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -310,36 +395,50 @@ export default function ProfilePage() {
           throw new Error(t('profilePage.toasts.importFailedInvalidFormat'));
         }
         
-        let { id, email, ...profileToUpdate } = importedData.userProfile;
+        const { id: importedUserId, email: importedEmail, ...profileDetailsToUpdate } = importedData.userProfile;
         
-        if (profileToUpdate.avatarUrl && profileToUpdate.avatarUrl.startsWith('data:image/')) {
-            const avatarBlob = dataURLtoBlob(profileToUpdate.avatarUrl);
-            if (avatarBlob) {
-                const newAvatarId = `avatar-${authUser.id}-imported-${Date.now()}`;
-                await addIDBImage(authUser.id, newAvatarId, avatarBlob);
-                profileToUpdate.avatarUrl = newAvatarId;
-            } else {
-                profileToUpdate.avatarUrl = undefined; 
-            }
+        // Ensure we're updating the currently logged-in user's profile
+        if (importedUserId !== authUser.id && importedEmail !== authUser.email) {
+            console.warn("Imported user ID/email does not match current user. Applying to current user.");
         }
 
-        await updateUser(profileToUpdate);
+        const finalProfileUpdate: Partial<User> = {
+            name: profileDetailsToUpdate.name,
+            preferences: profileDetailsToUpdate.preferences,
+        };
+        
+        if (profileDetailsToUpdate.avatarUrl && profileDetailsToUpdate.avatarUrl.startsWith('data:image/')) {
+            const avatarBlob = idbHelper.dataURLtoBlob(profileDetailsToUpdate.avatarUrl);
+            if (avatarBlob) {
+                const newAvatarId = `avatar-${authUser.id}-imported-${Date.now()}`;
+                await idbHelper.addImage(authUser.id, newAvatarId, avatarBlob);
+                finalProfileUpdate.avatarUrl = newAvatarId;
+            } else {
+                finalProfileUpdate.avatarUrl = undefined; 
+            }
+        } else if (profileDetailsToUpdate.avatarUrl) {
+            // Assume it's an old key, might not be valid anymore but we'll keep it for now
+            finalProfileUpdate.avatarUrl = profileDetailsToUpdate.avatarUrl;
+        }
+
+
+        await updateAuthUser(finalProfileUpdate);
 
 
         const restoredPlantsPromises = importedData.plants.map(async (plantFromFile: any) => {
           const newPlant: Plant & { primaryPhotoDataUrl?: string, photos: (PlantPhoto & {imageDataUrl?: string})[]} = { ...plantFromFile };
           
           if (plantFromFile.primaryPhotoDataUrl && authUser?.id) {
-            const blob = dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
+            const blob = idbHelper.dataURLtoBlob(plantFromFile.primaryPhotoDataUrl);
             if (blob) {
-              const newPrimaryPhotoId = `plant-${plantFromFile.id || Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
-              await addIDBImage(authUser.id, newPrimaryPhotoId, blob);
+              const newPrimaryPhotoId = `photo-${authUser.id}-${plantFromFile.id || Date.now()}-imported-primary-${Math.random().toString(36).substring(2, 9)}`;
+              await idbHelper.addImage(authUser.id, newPrimaryPhotoId, blob);
               newPlant.primaryPhotoUrl = newPrimaryPhotoId;
             } else {
               newPlant.primaryPhotoUrl = undefined;
             }
           } else {
-            newPlant.primaryPhotoUrl = undefined;
+            newPlant.primaryPhotoUrl = plantFromFile.primaryPhotoUrl; // Keep if it was an IDB key
           }
           delete newPlant.primaryPhotoDataUrl; 
 
@@ -348,19 +447,19 @@ export default function ProfilePage() {
               const newPhotoEntry = { ...photoFromFile };
               
               if (photoFromFile.imageDataUrl && authUser?.id) {
-                const blob = dataURLtoBlob(photoFromFile.imageDataUrl);
+                const blob = idbHelper.dataURLtoBlob(photoFromFile.imageDataUrl);
                 if (blob) {
-                  const newPhotoId = `photo-${newPlant.id || Date.now()}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-                  await addIDBImage(authUser.id, newPhotoId, blob);
+                  const newPhotoId = `photo-${authUser.id}-${newPlant.id || Date.now()}-imported-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                  await idbHelper.addImage(authUser.id, newPhotoId, blob);
                   newPhotoEntry.id = newPhotoId;
                   newPhotoEntry.url = newPhotoId;
                 } else {
-                  newPhotoEntry.url = undefined; // Or some placeholder for error
+                  newPhotoEntry.url = undefined; 
                   newPhotoEntry.id = `error-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
                 }
               } else {
-                  newPhotoEntry.url = undefined;
-                  newPhotoEntry.id = `missing-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
+                  newPhotoEntry.url = photoFromFile.url; // Keep if it was an IDB key
+                  newPhotoEntry.id = photoFromFile.id;
               }
               delete newPhotoEntry.imageDataUrl; 
               return newPhotoEntry as PlantPhoto;
@@ -376,6 +475,7 @@ export default function ProfilePage() {
         router.push('/'); 
 
       } catch (error: any) {
+        console.error("Error during data import:", error);
         toast({ title: t('common.error'), description: error.message || t('profilePage.toasts.importFailedGeneral'), variant: "destructive" });
       } finally {
         if (importFileInputRef.current) {
@@ -402,7 +502,7 @@ export default function ProfilePage() {
     setIsDestroyingData(true);
     
     await clearAllPlantData(); 
-    await deleteUserProfile(authUser.id);
+    await idbHelper.deleteUserProfile(authUser.id);
     await logout(); 
     
     toast({ title: t('profilePage.toasts.destroySuccessTitle'), description: t('profilePage.toasts.destroySuccessDesc'), variant: "destructive" });
@@ -424,12 +524,11 @@ export default function ProfilePage() {
     );
   }
   
-  // Fallback for a brief moment if authUser is still null but authLoading is false (should be handled by redirect)
-  if (!authUser) {
+  if (!authUser) { // Should be caught by the redirect effect, but as a fallback
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-full min-h-[calc(100vh-200px)]">
-          <AuthLoader className="h-16 w-16 animate-spin text-primary" />
+          <p>{t('authContextToasts.errorNoUserSession')}</p>
         </div>
       </AppLayout>
     );
@@ -550,12 +649,20 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="pushNotifications"
-                checked={authUser.preferences?.pushNotifications || false}
+                checked={authUser.preferences?.pushNotifications && notificationPermission === 'granted'}
                 onCheckedChange={(checked) => handlePreferenceChange('pushNotifications', checked)}
                 aria-label={t('profilePage.pushNotificationsLabel')}
-                disabled={authLoading || isLoggingOut}
+                disabled={authLoading || isLoggingOut || notificationPermission === 'denied'}
               />
             </div>
+            {notificationPermission === 'granted' && authUser.preferences?.pushNotifications && (
+                 <Button onClick={() => sendTestNotification(t('profilePage.notifications.testSentTitle'), t('profilePage.notifications.testSentBodySample'))} variant="outline" size="sm" className="w-full sm:w-auto">
+                    <Send className="mr-2 h-4 w-4" /> {t('profilePage.notifications.sendTestButton')}
+                </Button>
+            )}
+            {notificationPermission === 'denied' && (
+                <p className="text-sm text-destructive">{t('profilePage.notifications.permissionBlocked')}</p>
+            )}
           </CardContent>
           <CardFooter className="pt-6 border-t">
             <p className="text-xs text-muted-foreground">{t('profilePage.preferencesDisclaimer')}</p>
@@ -569,11 +676,11 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto" disabled={isExporting || isImporting}>
+              <Button onClick={handleExportData} variant="outline" className="w-full sm:w-auto" disabled={isExporting || isImporting || authLoading}>
                 {isExporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
                 {isExporting ? t('profilePage.exportingButton') : t('profilePage.exportDataButton')}
               </Button>
-              <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto" disabled={isImporting || isExporting}>
+              <Button onClick={() => importFileInputRef.current?.click()} variant="outline" className="w-full sm:w-auto" disabled={isImporting || isExporting || authLoading}>
                 {isImporting ? <AuthLoader className="mr-2 h-5 w-5 animate-spin" /> : <Upload className="mr-2 h-5 w-5" />}
                 {isImporting ? t('profilePage.importingButton') : t('profilePage.importDataButton')}
               </Button>
@@ -583,7 +690,7 @@ export default function ProfilePage() {
                 className="hidden"
                 accept=".json"
                 onChange={handleImportFileChange}
-                disabled={isImporting || isExporting}
+                disabled={isImporting || isExporting || authLoading}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -661,9 +768,9 @@ export default function ProfilePage() {
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
-             <AlertDialogDescription className="space-y-3">
-              <div>{t('profilePage.destroyConfirmDescription1')}</div>
-              <div>{t('profilePage.destroyConfirmDescription2', {email: authUser?.email || ''})}</div>
+            <AlertDialogDescription>
+                <div>{t('profilePage.destroyConfirmDescription1')}</div>
+                <div className="mt-2">{t('profilePage.destroyConfirmDescription2', {email: authUser?.email || ''})}</div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">
@@ -694,4 +801,3 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
-
