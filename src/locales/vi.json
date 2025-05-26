@@ -10,7 +10,9 @@
   "nav": {
     "myPlants": "Cây của tôi",
     "diagnosePlant": "Chẩn đoán cây",
+    "diagnoseShort": "Chẩn đoán",
     "careCalendar": "Lịch chăm sóc",
+    "calendarShort": "Lịch",
     "profile": "Hồ sơ",
     "settings": "Cài đặt",
     "mobileMenuTitle": "Thực đơn"

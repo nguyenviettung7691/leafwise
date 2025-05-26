@@ -30,6 +30,7 @@ import { useTheme } from 'next-themes';
 import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added import
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
@@ -39,10 +40,11 @@ const isActive = (itemHref: string, currentPathname: string): boolean => {
 };
 
 interface NavbarProps {
-  isStandalone?: boolean;
+  // isStandalone prop is now handled internally by usePWAStandalone
 }
 
-export function Navbar({ isStandalone = false }: NavbarProps) {
+export function Navbar({ }: NavbarProps) {
+  const isStandalone = usePWAStandalone(); // Use the hook internally
   const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
@@ -58,9 +60,9 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
   );
 
   const avatarSrc = userDisplayAvatarUrl ||
-                    (user?.avatarUrl && (user.avatarUrl.startsWith('data:') || user.avatarUrl.startsWith('http'))
-                      ? user.avatarUrl
-                      : `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`);
+    (user?.avatarUrl && (user.avatarUrl.startsWith('data:') || user.avatarUrl.startsWith('http'))
+      ? user.avatarUrl
+      : `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`);
 
 
   const navItems: NavItemConfig[] = React.useMemo(() => {
@@ -71,32 +73,42 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
   }, [t]);
 
   const NavLinks = ({ isMobile = false, standaloneModeInternal = false }: { isMobile?: boolean, standaloneModeInternal?: boolean }) => (
-    navItems.map((item) => (
-      <ProgressBarLink
-        key={item.href}
-        href={item.disabled ? '#' : item.href}
-        className={cn(
-          "transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          standaloneModeInternal
-            ? "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full"
-            : "h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
-          isActive(item.href, pathname)
-            ? standaloneModeInternal
-              ? "text-primary"
-              : "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
-            : standaloneModeInternal
-              ? "text-muted-foreground hover:text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-          item.disabled ? "pointer-events-none opacity-50" : ""
-        )}
-        onClick={() => {
-          if (isMobile) setIsMobileMenuOpen(false);
-        }}
-      >
-        <item.icon className={cn("mr-0", standaloneModeInternal ? "h-6 w-6" : "h-4 w-4")} />
-        <span className={cn(standaloneModeInternal && "mt-0.5 text-center")}>{item.title}</span>
-      </ProgressBarLink>
-    ))
+    navItems.map((item) => {
+      let title = item.title;
+      if (standaloneModeInternal) {
+        if (item.titleKey === 'nav.diagnosePlant') {
+          title = t('nav.diagnoseShort');
+        } else if (item.titleKey === 'nav.careCalendar') {
+          title = t('nav.calendarShort');
+        }
+      }
+      return (
+        <ProgressBarLink
+          key={item.href}
+          href={item.disabled ? '#' : item.href}
+          className={cn(
+            "transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+            standaloneModeInternal
+              ? "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full"
+              : "h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
+            isActive(item.href, pathname)
+              ? standaloneModeInternal
+                ? "text-primary"
+                : "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
+              : standaloneModeInternal
+                ? "text-muted-foreground hover:text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+            item.disabled ? "pointer-events-none opacity-50" : ""
+          )}
+          onClick={() => {
+            if (isMobile) setIsMobileMenuOpen(false);
+          }}
+        >
+          <item.icon className={cn("mr-0", standaloneModeInternal ? "h-6 w-6" : "h-4 w-4")} />
+          <span className={cn(standaloneModeInternal && "mt-0.5 text-center")}>{title}</span>
+        </ProgressBarLink>
+      );
+    })
   );
 
   const isProfileActive = pathname === '/profile';
@@ -133,7 +145,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                        <SheetTitle>{t('nav.mobileMenuTitle')}</SheetTitle>
                     </SheetHeader>
                     <div className="flex flex-col gap-2 p-4">
-                      <NavLinks isMobile={true} standaloneModeInternal={false}/>
+                      <NavLinks isMobile={true} standaloneModeInternal={false} />
                     </div>
                   </SheetContent>
                 </Sheet>
@@ -172,7 +184,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md">
-                       <DialogHeader>
+                      <DialogHeader>
                         <DialogTitlePrimitive className="flex items-center gap-2">
                           <Settings className="h-6 w-6 text-primary" />
                           {t('settings.title')}
@@ -184,17 +196,17 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                       <div className="space-y-6 py-4">
                         <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
                           <div className='flex items-center gap-3'>
-                              <Palette className="h-5 w-5 text-primary" />
-                              <Label htmlFor="themePreference-dialog-top" className="text-base font-medium">
+                            <Palette className="h-5 w-5 text-primary" />
+                            <Label htmlFor="themePreference-dialog-top" className="text-base font-medium">
                               {t('settings.darkMode')}
-                              </Label>
+                            </Label>
                           </div>
                           <Switch
-                              id="themePreference-dialog-top"
-                              checked={theme === 'dark'}
-                              onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                              aria-label={t('settings.darkMode')}
-                              disabled={authIsLoading}
+                            id="themePreference-dialog-top"
+                            checked={theme === 'dark'}
+                            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                            aria-label={t('settings.darkMode')}
+                            disabled={authIsLoading}
                           />
                         </div>
                         <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
@@ -226,7 +238,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                   </Dialog>
                 </>
               ) : (
-                <ProgressBarLink href="/login" className={cn(buttonVariants({variant: "default", size: "sm"}), "h-9 px-3")}>
+                <ProgressBarLink href="/login" className={cn(buttonVariants({ variant: "default", size: "sm" }), "h-9 px-3")}>
                   <LogIn className="h-5 w-5 mr-2" />
                   {t('loginPage.signInButton')}
                 </ProgressBarLink>
@@ -236,14 +248,14 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
         )}
 
         {/* Bottom Navbar for PWA Standalone Mode */}
-        {isStandalone && ( 
+        {isStandalone && (
           <nav className="flex items-center justify-around w-full h-full">
             <NavLinks standaloneModeInternal={true} />
-             {user ? (
+            {user ? (
               <ProgressBarLink href="/profile" className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full", isActive("/profile", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Avatar
                   className={cn(
-                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", 
+                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors",
                     isActive("/profile", pathname) ? "border-primary" : "border-transparent"
                   )}
                 >
@@ -252,7 +264,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                   ) : (
                     <AvatarImage src={avatarSrc} alt={user.name || "User"} data-ai-hint="person avatar" />
                   )}
-                  <AvatarFallback className="text-xs bg-muted"> 
+                  <AvatarFallback className="text-xs bg-muted">
                     {(user.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -264,77 +276,75 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                 <span className="mt-0.5 text-center">{t('loginPage.signInButton')}</span>
               </ProgressBarLink>
             )}
-               <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    aria-label={t('nav.settings')}
-                    className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full",
-                                   isSettingsDialogOpen ? "text-primary" : "text-muted-foreground hover:text-primary" 
-                    )}
-                  >
-                    <Settings className="h-6 w-6" />
-                    <span className="mt-0.5 text-center">{t('nav.settings')}</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                   <DialogHeader>
-                    <DialogTitlePrimitive className="flex items-center gap-2">
-                      <Settings className="h-6 w-6 text-primary" />
-                      {t('settings.title')}
-                    </DialogTitlePrimitive>
-                    <DialogDescription>
-                      {t('settings.description')}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-6 py-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
-                      <div className='flex items-center gap-3'>
-                          <Palette className="h-5 w-5 text-primary" />
-                          <Label htmlFor="themePreference-dialog-standalone" className="text-base font-medium">
-                          {t('settings.darkMode')}
-                          </Label>
-                      </div>
-                      <Switch
-                          id="themePreference-dialog-standalone"
-                          checked={theme === 'dark'}
-                          onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                          aria-label={t('settings.darkMode')}
-                          disabled={authIsLoading}
-                      />
+            <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  aria-label={t('nav.settings')}
+                  className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full",
+                    isSettingsDialogOpen ? "text-primary" : "text-muted-foreground hover:text-primary"
+                  )}
+                >
+                  <Settings className="h-6 w-6" />
+                  <span className="mt-0.5 text-center">{t('nav.settings')}</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitlePrimitive className="flex items-center gap-2">
+                    <Settings className="h-6 w-6 text-primary" />
+                    {t('settings.title')}
+                  </DialogTitlePrimitive>
+                  <DialogDescription>
+                    {t('settings.description')}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
+                    <div className='flex items-center gap-3'>
+                      <Palette className="h-5 w-5 text-primary" />
+                      <Label htmlFor="themePreference-dialog-standalone" className="text-base font-medium">
+                        {t('settings.darkMode')}
+                      </Label>
                     </div>
-                    <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Languages className="h-5 w-5 text-primary" />
-                        <Label htmlFor="language-select-dialog-standalone" className="text-base font-medium">
-                          {t('settings.language')}
-                        </Label>
-                      </div>
-                      <Select value={language} onValueChange={(value) => setLanguage(value as 'en' | 'vi')}>
-                        <SelectTrigger id="language-select-dialog-standalone" className="w-full">
-                          <SelectValue placeholder={t('settings.language')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en">{t('common.english')}</SelectItem>
-                          <SelectItem value="vi">{t('common.vietnamese')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <Switch
+                      id="themePreference-dialog-standalone"
+                      checked={theme === 'dark'}
+                      onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                      aria-label={t('settings.darkMode')}
+                      disabled={authIsLoading}
+                    />
                   </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button type="button" variant="outline">
-                        {t('common.close')}
-                      </Button>
-                    </DialogClose>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Languages className="h-5 w-5 text-primary" />
+                      <Label htmlFor="language-select-dialog-standalone" className="text-base font-medium">
+                        {t('settings.language')}
+                      </Label>
+                    </div>
+                    <Select value={language} onValueChange={(value) => setLanguage(value as 'en' | 'vi')}>
+                      <SelectTrigger id="language-select-dialog-standalone" className="w-full">
+                        <SelectValue placeholder={t('settings.language')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">{t('common.english')}</SelectItem>
+                        <SelectItem value="vi">{t('common.vietnamese')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      {t('common.close')}
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </nav>
         )}
       </div>
     </header>
   );
 }
-
-    

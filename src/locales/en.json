@@ -10,7 +10,9 @@
   "nav": {
     "myPlants": "My Plants",
     "diagnosePlant": "Diagnose Plant",
+    "diagnoseShort": "Diagnose",
     "careCalendar": "Care Calendar",
+    "calendarShort": "Calendar",
     "profile": "Profile",
     "settings": "Settings",
     "mobileMenuTitle": "Menu"
