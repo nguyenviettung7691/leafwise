@@ -137,8 +137,9 @@
     "formTitle": "Save to My Plants",
     "formDescription": "Confirm or update the details for this plant.",
     "submitButtonText": "Save Plant",
-    "primaryPhotoLabel": "Primary Photo (Optional)",
+    "primaryPhotoLabel": "Primary Photo",
     "uploadAreaText": "Click to upload or drag and drop",
+    "uploadAreaTextPWA": "Tap to select or take photo",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 1MB)",
     "gallerySelectLabel": "Or Select from Gallery",
     "commonNameLabel": "Common Name",
@@ -567,7 +568,7 @@
     "preferencesCardDescription": "Manage your application settings.",
     "emailNotificationsLabel": "Email Notifications",
     "pushNotificationsLabel": "Push Notifications",
-    "preferencesDisclaimer": "Profile changes and preferences are saved to your browser's local storage.",
+    "preferencesDisclaimer": "Profile changes and preferences are saved to your browser's local storage and IndexedDB.",
     "dataManagementCardTitle": "Data Management",
     "dataManagementCardDescription": "Export your plant data or import data from a backup file.",
     "exportDataButton": "Export My Data",
@@ -587,7 +588,7 @@
     "destroyDataButton": "DESTROY All My Data",
     "destroyingDataButton": "DESTROYING...",
     "destroyConfirmTitle": "Are you absolutely sure?",
-    "destroyConfirmDescription1": "This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings.",
+    "destroyConfirmDescription1": "This action is irreversible and will permanently delete all your personal data associated with LeafWise, including all plants, care plans, photos, and profile settings from this browser.",
     "destroyConfirmDescription2": "To confirm, please type your email address ({{email}}) in the box below.",
     "destroyConfirmEmailPlaceholder": "Enter your email to confirm",
     "destroyConfirmAction": "DESTROY",
@@ -636,7 +637,7 @@
       "importFailedGeneral": "Could not parse or apply the imported data.",
       "importFailedReadFile": "Failed to read the selected file.",
       "importFailedInvalidFormat": "Invalid file format. Missing 'userProfile' or 'plants' data.",
-      "importSuccess": "Your data has been imported. Refresh or navigate to see changes.",
+      "importSuccess": "Your data has been imported. You might need to refresh or re-login to see all changes.",
       "destroyEmailMismatch": "Email confirmation failed.",
       "destroySuccessTitle": "Data Destroyed!",
       "destroySuccessDesc": "All your personal data has been removed."
@@ -698,3 +699,5 @@
     "version": "Version: {{versionName}}"
   }
 }
+
+    

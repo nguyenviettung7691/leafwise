@@ -137,8 +137,9 @@
     "formTitle": "Lưu vào Cây của tôi",
     "formDescription": "Xác nhận hoặc cập nhật chi tiết cho cây này.",
     "submitButtonText": "Lưu cây",
-    "primaryPhotoLabel": "Ảnh chính (Tùy chọn)",
+    "primaryPhotoLabel": "Ảnh chính",
     "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
+    "uploadAreaTextPWA": "Chạm để chọn hoặc chụp ảnh",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 1MB)",
     "gallerySelectLabel": "Hoặc chọn từ Thư viện",
     "commonNameLabel": "Tên thường gọi",
@@ -567,7 +568,7 @@
     "preferencesCardDescription": "Quản lý cài đặt ứng dụng của bạn.",
     "emailNotificationsLabel": "Thông báo qua Email",
     "pushNotificationsLabel": "Thông báo đẩy",
-    "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu vào bộ nhớ cục bộ của trình duyệt.",
+    "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu vào bộ nhớ cục bộ của trình duyệt và IndexedDB.",
     "dataManagementCardTitle": "Quản lý dữ liệu",
     "dataManagementCardDescription": "Xuất dữ liệu cây của bạn hoặc nhập dữ liệu từ tệp sao lưu.",
     "exportDataButton": "Xuất dữ liệu của tôi",
@@ -587,7 +588,7 @@
     "destroyDataButton": "HỦY TẤT CẢ DỮ LIỆU CỦA TÔI",
     "destroyingDataButton": "ĐANG HỦY...",
     "destroyConfirmTitle": "Bạn có hoàn toàn chắc chắn không?",
-    "destroyConfirmDescription1": "Hành động này không thể đảo ngược và sẽ xóa vĩnh viễn tất cả dữ liệu cá nhân của bạn liên quan đến LeafWise, bao gồm tất cả cây trồng, kế hoạch chăm sóc, ảnh và cài đặt hồ sơ.",
+    "destroyConfirmDescription1": "Hành động này không thể đảo ngược và sẽ xóa vĩnh viễn tất cả dữ liệu cá nhân của bạn liên quan đến LeafWise, bao gồm tất cả cây trồng, kế hoạch chăm sóc, ảnh và cài đặt hồ sơ khỏi trình duyệt này.",
     "destroyConfirmDescription2": "Để xác nhận, vui lòng nhập địa chỉ email của bạn ({{email}}) vào ô bên dưới.",
     "destroyConfirmEmailPlaceholder": "Nhập email của bạn để xác nhận",
     "destroyConfirmAction": "HỦY",
@@ -636,7 +637,7 @@
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
       "importFailedReadFile": "Không thể đọc tệp đã chọn.",
       "importFailedInvalidFormat": "Định dạng tệp không hợp lệ. Thiếu dữ liệu 'userProfile' hoặc 'plants'.",
-      "importSuccess": "Dữ liệu của bạn đã được nhập. Tải lại hoặc điều hướng để xem thay đổi.",
+      "importSuccess": "Dữ liệu của bạn đã được nhập. Bạn có thể cần làm mới hoặc đăng nhập lại để xem tất cả thay đổi.",
       "destroyEmailMismatch": "Xác nhận email không thành công.",
       "destroySuccessTitle": "Đã xóa dữ liệu!",
       "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
@@ -698,3 +699,5 @@
     "version": "Phiên bản: {{versionName}}"
   }
 }
+
+    

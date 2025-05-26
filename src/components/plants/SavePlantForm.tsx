@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Leaf, Save, Edit, ImageOff, Loader2, Camera } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import { compressImage } from '@/lib/image-utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 interface SavePlantFormProps {
   initialData?: Partial<PlantFormData>;
@@ -88,6 +89,7 @@ export function SavePlantForm({
 }: SavePlantFormProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const isStandalone = usePWAStandalone();
 
   const primaryPhotoSchema = typeof window !== 'undefined'
   ? z.instanceof(FileList).optional().nullable()
@@ -153,10 +155,10 @@ export function SavePlantForm({
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoId(null);
-      } else if (!initialData.diagnosedPhotoDataUrl.startsWith('http')) { // Assume it's an IDB key
+      } else if (!initialData.diagnosedPhotoDataUrl.startsWith('http')) { 
         setSelectedGalleryPhotoId(initialData.diagnosedPhotoDataUrl);
-        setImagePreview(null);
-      } else { // It's a placeholder URL
+        setImagePreview(null); 
+      } else { 
          setImagePreview(initialData.diagnosedPhotoDataUrl);
          setSelectedGalleryPhotoId(null);
       }
@@ -182,25 +184,28 @@ export function SavePlantForm({
   const FormIcon = initialData && Object.keys(initialData).length > 0 && !initialData.diagnosedPhotoDataUrl ? Edit : Leaf;
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
-    setImagePreview(null);
-    setSelectedGalleryPhotoId(photo.url);
-    form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null);
+    setImagePreview(null); // Clear direct upload preview
+    setSelectedGalleryPhotoId(photo.url); // Set the IDB key of the selected gallery photo
+    form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true }); // Store IDB key
+    form.setValue('primaryPhoto', null); // Clear any file selected in the input
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""; // Reset the file input field
     }
   };
 
   let displayUrlForPreview: string | null = null;
-  if (imagePreview) {
+  if (imagePreview) { // Prioritize newly uploaded/compressed image preview
     displayUrlForPreview = imagePreview;
-  } else if (selectedGalleryPhotoId) {
-    displayUrlForPreview = initialImageFromDb;
+  } else if (selectedGalleryPhotoId) { // Then IDB key for selected gallery photo
+    displayUrlForPreview = initialImageFromDb; // Which will be the object URL from the hook
   } else if (initialData?.diagnosedPhotoDataUrl && (initialData.diagnosedPhotoDataUrl.startsWith('data:image/') || initialData.diagnosedPhotoDataUrl.startsWith('http'))) {
+    // Fallback to initial data if it was a data URL or HTTP URL (e.g., placeholder)
     displayUrlForPreview = initialData.diagnosedPhotoDataUrl;
   }
 
+
   const isDisplayLoading = (isLoadingInitialImage && !!selectedGalleryPhotoId && !imagePreview) || isCompressing;
+  const uploadAreaText = isStandalone ? t('savePlantForm.uploadAreaTextPWA') : t('savePlantForm.uploadAreaText');
 
   return (
     <Card className={cn("shadow-lg animate-in fade-in-50", hideInternalHeader ? "border-0 shadow-none" : "")}>
@@ -237,9 +242,9 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onBlur, name, ref: formRefSetter } }) => (
+              render={({ field: { onChange, onBlur, name, ref: formRefSetter } }) => (
                 <FormItem>
-                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')}</FormLabel>
+                  <FormLabel>{t('savePlantForm.primaryPhotoLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
                     <div className="flex items-center justify-center w-full">
                         <label
@@ -249,7 +254,7 @@ export function SavePlantForm({
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                 {isCompressing ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <Camera className="w-8 h-8 mb-2 text-muted-foreground" /> }
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                    <span className="font-semibold">{t('savePlantForm.uploadAreaText')}</span>
+                                    <span className="font-semibold">{uploadAreaText}</span>
                                 </p>
                                 <p className="text-xs text-muted-foreground">{t('savePlantForm.uploadAreaHint')}</p>
                                 {(form.getValues('primaryPhoto')?.[0] && imagePreview && !isCompressing) && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
@@ -268,9 +273,9 @@ export function SavePlantForm({
                                 onBlur={onBlur}
                                 onChange={async (e) => {
                                     const files = e.target.files;
-                                    field.onChange(files); // Use react-hook-form's onChange
+                                    onChange(files); 
                                     if (files && files[0]) {
-                                        if (files[0].size > 1 * 1024 * 1024) {
+                                        if (files[0].size > 1 * 1024 * 1024) { 
                                             form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoTooLargeError')});
                                             setImagePreview(null);
                                             if (selectedGalleryPhotoId) {
@@ -292,7 +297,7 @@ export function SavePlantForm({
                                             const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/webp', maxWidth: 1024, maxHeight: 1024 });
                                             setImagePreview(compressedDataUrl);
                                             form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true});
-                                            setSelectedGalleryPhotoId(null);
+                                            setSelectedGalleryPhotoId(null); // Clear gallery selection if new file uploaded
                                           } catch (err) {
                                             console.error("Error compressing image in SavePlantForm:", err);
                                             form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoProcessingError')});
@@ -303,7 +308,7 @@ export function SavePlantForm({
                                         };
                                         reader.readAsDataURL(files[0]);
                                     } else {
-                                        setImagePreview(null);
+                                        setImagePreview(null); 
                                         if (selectedGalleryPhotoId) {
                                             form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoId);
                                         } else if (initialData?.diagnosedPhotoDataUrl) {
@@ -448,7 +453,7 @@ export function SavePlantForm({
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isCompressing}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={isLoading || isCompressing || (!form.formState.isDirty && !initialData) || (form.formState.isSubmitted && !form.formState.isValid) }>
+            <Button type="submit" disabled={isLoading || isCompressing || (!form.formState.isDirty && !initialData) || (form.formStaten .isSubmitted && !form.formState.isValid) }>
               {(isLoading || isCompressing) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
               {(isLoading || isCompressing) ? t('savePlantForm.savingButton') : currentSubmitButtonText}
             </Button>
@@ -458,3 +463,5 @@ export function SavePlantForm({
     </Card>
   );
 }
+
+    

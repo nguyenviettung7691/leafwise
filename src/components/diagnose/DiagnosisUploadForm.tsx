@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, Stethoscope } from 'lucide-react';
+import { Loader2, Sparkles, Stethoscope, Camera } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
+import { cn } from '@/lib/utils';
 
 interface DiagnosisUploadFormProps {
   isLoadingDiagnosis: boolean;
@@ -33,6 +35,7 @@ export function DiagnosisUploadForm({
   isFileSelected,
 }: DiagnosisUploadFormProps) {
   const { t } = useLanguage();
+  const isStandalone = usePWAStandalone();
 
   return (
     <Card className="shadow-xl">
@@ -49,15 +52,43 @@ export function DiagnosisUploadForm({
             <Label htmlFor="plant-image-diagnose" className="block text-sm font-medium text-foreground mb-1">
               {t('diagnosePage.uploadForm.imageLabel')}
             </Label>
-            <Input
-              id="plant-image-diagnose"
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              capture // Added for camera input
-              onChange={onFileChange}
-              className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-            />
+            {isStandalone ? (
+              <label
+                htmlFor="plant-image-diagnose"
+                className="flex flex-col items-center justify-center w-full h-32 border-2 border-border border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50"
+              >
+                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                  {isLoadingDiagnosis && previewUrl === null ? ( // Show loader here only if image is processing immediately after selection
+                     <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" />
+                  ) : (
+                    <Camera className="w-8 h-8 mb-2 text-muted-foreground" />
+                  )}
+                  <p className="mb-1 text-sm text-muted-foreground">
+                    <span className="font-semibold">{t('savePlantForm.uploadAreaTextPWA')}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">{t('savePlantForm.uploadAreaHint')}</p>
+                </div>
+                <Input
+                  id="plant-image-diagnose"
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  capture
+                  onChange={onFileChange}
+                />
+              </label>
+            ) : (
+              <Input
+                id="plant-image-diagnose"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                capture
+                onChange={onFileChange}
+                className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+              />
+            )}
           </div>
 
           {previewUrl && (
@@ -87,7 +118,7 @@ export function DiagnosisUploadForm({
           </div>
 
           <Button type="submit" disabled={isLoadingDiagnosis || !isFileSelected} className="w-full text-base py-3">
-            {isLoadingDiagnosis ? (
+            {isLoadingDiagnosis && !previewUrl ? ( // Show loader on button only if image is still processing and no preview yet
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.uploadForm.submitButtonLoading')}</>
             ) : (
               <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.uploadForm.submitButton')}</>
@@ -98,3 +129,5 @@ export function DiagnosisUploadForm({
     </Card>
   );
 }
+
+    
