@@ -213,8 +213,6 @@ export function PlantCareManagement({
                   )}
                   onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
                   onKeyDown={isManagingCarePlan ? (e) => { if (e.key === 'Enter' || e.key === ' ') onToggleTaskSelection(task.id); } : undefined}
-                  role={isManagingCarePlan ? "button" : undefined}
-                  tabIndex={isManagingCarePlan ? 0 : -1}
                   aria-pressed={isManagingCarePlan ? isSelected : undefined}
                 >
                   <CardContent className="p-4 flex justify-between items-center">
@@ -230,7 +228,10 @@ export function PlantCareManagement({
                     )}
                     <div className="flex-1 min-w-0">
                       <div className={cn("font-medium flex items-center flex-wrap gap-x-2 min-w-0")}>
-                        <span className={cn("truncate", isAdvanced ? "text-primary" : "text-card-foreground")}>{task.name}</span>
+                        <span className={cn(
+                          "break-words", // Allow wrapping
+                          isAdvanced ? "text-primary" : "text-card-foreground"
+                        )}>{task.name}</span>
                         <Badge
                           variant={isAdvanced ? 'default' : 'outline'}
                           className={cn(
