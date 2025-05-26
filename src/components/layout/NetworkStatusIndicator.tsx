@@ -7,14 +7,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Import the hook
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 export function NetworkStatusIndicator() {
   const { t, dateFnsLocale } = useLanguage();
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [lastConnectedTime, setLastConnectedTime] = useState<Date | null>(null);
   const appVersionName = "Sapling Kodama";
-  const isStandalone = usePWAStandalone(); // Use the hook
+  const isStandalone = usePWAStandalone();
 
   useEffect(() => {
     if (typeof navigator !== 'undefined' && typeof window !== 'undefined') {
@@ -60,9 +60,9 @@ export function NetworkStatusIndicator() {
   return (
     <div className={cn(
       "fixed left-4 z-50",
-      isStandalone ? "bottom-20" : "bottom-4" // Adjust position based on standalone mode
+      isStandalone ? "bottom-20" : "bottom-4"
     )}>
-      <TooltipProvider>
+      <TooltipProvider delayDuration={0}>
         <Tooltip>
           <TooltipTrigger asChild>
             <button
