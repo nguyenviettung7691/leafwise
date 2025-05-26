@@ -4,7 +4,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
-import type { Plant, PlantHealthCondition, PlantFormData, PlantPhoto } from '@/types';
+import type { Plant, PlantFormData, PlantPhoto, PlantHealthCondition } from '@/types';
 import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,10 @@ import {
 } from "@/components/ui/dialog";
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
-import { usePlantData } from '@/contexts/PlantDataContext'; // Added import
+import { usePlantData } from '@/contexts/PlantDataContext';
+import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added import
+import { cn } from '@/lib/utils'; // Added import
 
 
 const initialFiltersState: Filters = {
@@ -51,19 +54,26 @@ const getNextCareTaskDate = (plant: Plant): Date | null => {
   const upcomingTasks = plant.careTasks
     .filter(task => !task.isPaused && task.nextDueDate)
     .map(task => parseISO(task.nextDueDate!))
-    .filter(date => date >= new Date(new Date().setHours(0,0,0,0)))
+    .filter(date => {
+      try {
+        return date >= new Date(new Date().setHours(0,0,0,0));
+      } catch {
+        return false;
+      }
+    })
     .sort((a, b) => a.getTime() - b.getTime());
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
 
 
 export default function MyPlantsPage() {
-  const { plants: plantsFromContext, isLoading: isLoadingPlants, deleteMultiplePlants, updatePlant: updateContextPlant } = usePlantData(); // Using context
-  const [plants, setPlants] = useState<Plant[]>([]); // Local state for display, derived from context
+  const { plants: plantsFromContext, isLoading: isLoadingPlants, deleteMultiplePlants, updatePlant: updateContextPlant } = usePlantData();
+  const [plants, setPlants] = useState<Plant[]>([]);
   const [isNavigatingToNewPlant, setIsNavigatingToNewPlant] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
   const { toast } = useToast();
+  const isStandalone = usePWAStandalone(); // Added hook call
 
   const [filters, setFilters] = useState<Filters>(initialFiltersState);
   const [sortConfig, setSortConfig] = useState<SortConfig>(initialSortConfigState);
@@ -93,18 +103,11 @@ export default function MyPlantsPage() {
     const foundPlant = plantsFromContext.find(p => p.id === plantId);
     if (foundPlant) {
       setPlantToEdit(foundPlant);
-      let ageYears: number | undefined = undefined;
-      if (foundPlant.ageEstimate) {
-        const match = foundPlant.ageEstimate.match(/(\d+(\.\d+)?)/);
-        if (match && match[1]) {
-          ageYears = parseFloat(match[1]);
-        }
-      }
       setInitialEditFormData({
         commonName: foundPlant.commonName,
         scientificName: foundPlant.scientificName || '',
         familyCategory: foundPlant.familyCategory || '',
-        ageEstimateYears: ageYears,
+        ageEstimateYears: foundPlant.ageEstimateYears,
         healthCondition: foundPlant.healthCondition,
         location: foundPlant.location || '',
         customNotes: foundPlant.customNotes || '',
@@ -117,50 +120,63 @@ export default function MyPlantsPage() {
   }, [plantsFromContext, t, toast]);
 
   const handleSaveEditedPlant = async (data: PlantFormData) => {
-    if (!plantToEdit) return;
+    if (!plantToEdit || !plantToEdit.id) {
+       toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: 'destructive'});
+       return;
+    }
     setIsSavingEditedPlant(true);
 
-    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    const userContext = JSON.parse(localStorage.getItem('currentLeafwiseUserId') || 'null');
+    const userId = userContext; // Assuming userContext directly holds the ID or is null
 
-    let newPrimaryPhotoUrl = data.diagnosedPhotoDataUrl;
-    let updatedPhotos = [...plantToEdit.photos];
+    let finalPrimaryPhotoId: string | undefined = plantToEdit.primaryPhotoUrl;
+    let updatedPhotosArray = [...(plantToEdit.photos || [])];
 
-    if (data.primaryPhoto && data.primaryPhoto[0]) {
-      newPrimaryPhotoUrl = await new Promise<string | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(data.primaryPhoto![0]);
-      });
-      if (newPrimaryPhotoUrl) {
-        const existingPhotoIndex = updatedPhotos.findIndex(p => p.url === newPrimaryPhotoUrl);
-        if (existingPhotoIndex === -1) { 
-          updatedPhotos.unshift({ 
-            id: `p-${plantToEdit.id}-new-${Date.now()}`,
-            url: newPrimaryPhotoUrl,
+    if (data.primaryPhoto && data.primaryPhoto[0] && data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+      // New image uploaded via form, data.diagnosedPhotoDataUrl is a data URL from compressImage
+      if (!userId) {
+        toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
+        setIsSavingEditedPlant(false);
+        return;
+      }
+      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
+      if (blob) {
+        const newPhotoId = `photo-${plantToEdit.id}-edited-${Date.now()}`;
+        try {
+          await addIDBImage(userId, newPhotoId, blob);
+          finalPrimaryPhotoId = newPhotoId;
+          updatedPhotosArray.unshift({ 
+            id: newPhotoId,
+            url: newPhotoId,
             dateTaken: new Date().toISOString(),
-            healthCondition: data.healthCondition, // Use form's health condition for new photo
-            diagnosisNotes: "Primary photo updated via edit form."
+            healthCondition: data.healthCondition, 
+            diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') 
           });
+        } catch (e) {
+          console.error("Error saving edited primary photo to IDB:", e);
+          toast({ title: t('common.error'), description: "Failed to save updated image.", variant: "destructive" });
         }
       }
+    } else if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl !== plantToEdit.primaryPhotoUrl) {
+      // Existing gallery photo selected (data.diagnosedPhotoDataUrl is an IDB key) or placeholder selected
+      finalPrimaryPhotoId = data.diagnosedPhotoDataUrl;
     }
-
+    
     const updatedPlant: Plant = {
       ...plantToEdit,
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
-      ageEstimate: data.ageEstimateYears ? `${data.ageEstimateYears} ${t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears })}` : undefined,
+      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: newPrimaryPhotoUrl || plantToEdit.primaryPhotoUrl,
-      photos: updatedPhotos,
+      primaryPhotoUrl: finalPrimaryPhotoId,
+      photos: updatedPhotosArray,
     };
     
-    updateContextPlant(plantToEdit.id, updatedPlant); // Update context
+    updateContextPlant(plantToEdit.id, updatedPlant);
 
     toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
     
@@ -177,7 +193,7 @@ export default function MyPlantsPage() {
   };
 
 
-  const handleFilterChange = (filterName: keyof Filters, value: string) => {
+  const handleFilterChange = (filterName: keyof Filters, value: string | PlantHealthCondition) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
@@ -205,7 +221,7 @@ export default function MyPlantsPage() {
   };
 
   const filteredAndSortedPlants = useMemo(() => {
-    let processedPlants = [...plants]; // Use local plants state for filtering/sorting
+    let processedPlants = [...plants]; 
 
     processedPlants = processedPlants.filter(plant => {
       const searchTermLower = filters.searchTerm.toLowerCase();
@@ -231,8 +247,8 @@ export default function MyPlantsPage() {
         valA = getNextCareTaskDate(a);
         valB = getNextCareTaskDate(b);
         if (valA === null && valB === null) return 0;
-        if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1; // Nulls last for asc
-        if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1; // Nulls last for asc
+        if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1; 
       } else {
         valA = a[sortConfig.key as keyof Plant];
         valB = b[sortConfig.key as keyof Plant];
@@ -247,7 +263,11 @@ export default function MyPlantsPage() {
         comparison = compareAsc(valA, valB);
       } else if (typeof valA === 'string' && typeof valB === 'string') {
         if (sortConfig.key === 'plantingDate' || sortConfig.key === 'lastCaredDate') {
-           comparison = compareAsc(parseISO(valA), parseISO(valB));
+           try {
+            comparison = compareAsc(parseISO(valA), parseISO(valB));
+           } catch (e) {
+            comparison = 0;
+           }
         } else {
            comparison = valA.toLowerCase().localeCompare(valB.toLowerCase());
         }
@@ -308,10 +328,28 @@ export default function MyPlantsPage() {
     });
   }, []);
 
-  const handleDeleteSelectedPlants = () => {
+  const handleDeleteSelectedPlants = async () => {
     const numSelected = selectedPlantIds.size;
-    deleteMultiplePlants(selectedPlantIds); // Use context function
-
+    if (numSelected === 0) return;
+  
+    const userId = localStorage.getItem('currentLeafwiseUserId');
+    if (!userId) {
+      toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: "destructive" });
+      return;
+    }
+  
+    const plantsToDelete = plantsFromContext.filter(p => selectedPlantIds.has(p.id));
+  
+    for (const plant of plantsToDelete) {
+      for (const photo of plant.photos || []) {
+        if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
+          await addIDBImage.deleteImage(userId, photo.url); // Assuming deleteImage is on addIDBImage for now
+        }
+      }
+    }
+  
+    deleteMultiplePlants(selectedPlantIds); 
+  
     toast({
       title: t('myPlantsPage.plantsDeletedToastTitle'),
       description: t('myPlantsPage.plantsDeletedToastDescription', { count: numSelected }),
@@ -324,9 +362,17 @@ export default function MyPlantsPage() {
 
   return (
     <AppLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className={cn(
+        "mb-6 flex",
+        isStandalone 
+          ? "flex-col items-start gap-4" 
+          : "flex-row justify-between items-center"
+      )}>
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.myPlants')}</h1>
-        <div className="flex items-center gap-2">
+        <div className={cn(
+          "flex items-center gap-2",
+          isStandalone && "w-full justify-start" // Ensure buttons are on the left in standalone
+        )}>
           {isManagingPlants && selectedPlantIds.size > 0 && (
             <Button
                 variant="destructive"
@@ -398,7 +444,13 @@ export default function MyPlantsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={isEditPlantDialogOpen} onOpenChange={setIsEditPlantDialogOpen}>
+      <Dialog open={isEditPlantDialogOpen} onOpenChange={(isOpen) => {
+        if (!isOpen) {
+            handleCancelEditPlantDialog();
+        } else {
+            setIsEditPlantDialogOpen(true);
+        }
+      }}>
         <DialogContent className="sm:max-w-2xl p-0">
           <DialogHeader className="p-6 pb-0">
             <DialogTitlePrimitive>{t('myPlantsPage.editPlantDialogTitle')}</DialogTitlePrimitive>
@@ -414,6 +466,7 @@ export default function MyPlantsPage() {
               onCancel={handleCancelEditPlantDialog}
               isLoading={isSavingEditedPlant}
               hideInternalHeader={true} 
+              formTitle={t('myPlantsPage.editPlantDialogTitle')}
               submitButtonText={t('common.update')}
             />
           )}
@@ -423,5 +476,3 @@ export default function MyPlantsPage() {
     </AppLayout>
   );
 }
-
-    
