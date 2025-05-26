@@ -38,7 +38,8 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
@@ -91,12 +92,12 @@ interface CareCalendarViewProps {
 interface TaskPlantAvatarDisplayProps {
   photoId?: string;
   plantName: string;
-  userId?: string; // Added userId
+  userId?: string; 
   className?: string;
 }
 
 const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, userId, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); // Pass userId
+  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); 
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {
@@ -122,11 +123,12 @@ export function CareCalendarView({
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user } = useAuth(); 
   const { t, dateFnsLocale } = useLanguage();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
+  const isStandalone = usePWAStandalone(); // Added
 
   const weekStartsOn: 0 | 1 | 2 | 3 | 4 | 5 | 6 = 1; 
 
@@ -341,12 +343,11 @@ export function CareCalendarView({
     const isAdvanced = occurrence.originalTask.level === 'advanced';
     let nameColor = isAdvanced ? "text-primary" : "text-card-foreground";
     let iconColorClass = isAdvanced ? 'text-primary' : 'text-foreground/70 hover:text-foreground';
-    let baseBg = 'bg-card';
-
+    
     const taskItemClasses = cn(
       "rounded text-[10px] leading-tight shadow-sm flex items-center border border-border border-l-2",
       compact ? "p-0.5 text-[9px] gap-0.5" : "p-1 gap-1",
-      baseBg,
+      "bg-card",
       isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500"
     );
 
@@ -359,7 +360,7 @@ export function CareCalendarView({
                 <TaskPlantAvatarDisplay
                   photoId={occurrence.plantPrimaryPhotoUrl}
                   plantName={occurrence.plantName}
-                  userId={user?.id} // Pass userId
+                  userId={user?.id} 
                   className={compact ? "h-3 w-3 text-[7px]" : "h-4 w-4 text-[8px]"}
                 />
               </Avatar>
@@ -388,13 +389,33 @@ export function CareCalendarView({
 
   return (
     <Card className="shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
+      <CardHeader 
+        className={cn(
+          "pb-3 pt-4 px-4",
+          isStandalone
+            ? "flex flex-col items-start gap-y-3 sm:flex-row sm:items-center sm:justify-between"
+            : "flex flex-row items-center justify-between"
+        )}
+      >
         <CardTitle className="text-lg font-medium flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary"/>
             {viewMode === 'week' ? t('calendarPage.calendarView.weeklyViewTitle') : t('calendarPage.calendarView.monthlyViewTitle')}
         </CardTitle>
-        <div className="flex items-center gap-4">
-            <RadioGroup value={viewMode} onValueChange={(value) => setViewMode(value as 'week' | 'month')} className="flex">
+        <div 
+          className={cn(
+            isStandalone
+              ? "flex flex-col items-start gap-3 w-full sm:flex-row sm:items-center sm:justify-end sm:w-auto"
+              : "flex items-center gap-4"
+          )}
+        >
+            <RadioGroup 
+              value={viewMode} 
+              onValueChange={(value) => setViewMode(value as 'week' | 'month')} 
+              className={cn(
+                "flex",
+                isStandalone && "w-full justify-start sm:w-auto sm:justify-end"
+              )}
+            >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="week" id="view-week" />
                 <Label htmlFor="view-week" className="text-xs">{t('calendarPage.calendarView.viewModeWeekly')}</Label>
@@ -501,7 +522,10 @@ export function CareCalendarView({
           </>
         )}
         {viewMode === 'month' && (
-          <div className="grid grid-cols-7 border-t">
+          <div className={cn(
+            "grid grid-cols-7 border-t",
+            isStandalone && "min-w-[50rem]" 
+          )}>
             {dayHeadersStatic.map(header => (
                 <div key={header.key} className={cn("p-2 border-r border-b text-center text-xs font-semibold h-10 flex items-center justify-center", header.isWeekend ? "text-primary" : "text-muted-foreground")}>{t(header.labelKey)}</div>
             ))}
@@ -544,7 +568,7 @@ export function CareCalendarView({
                                         {dayTasksDaytime.map(occ => renderTaskItem(occ, true, 'daytime'))}
                                     </div>
 
-                                    { (dayTasksDaytime.length > 0 && dayTasksNighttime.length > 0 || dayTasksDaytime.length > 0 && dayTasksAllDay.length === 0 || dayTasksNighttime.length > 0 && dayTasksAllDay.length === 0) &&
+                                    { (dayTasksDaytime.length > 0 || dayTasksNighttime.length > 0 ) && (dayTasksAllDay.length > 0 || dayTasksDaytime.length > 0 && dayTasksNighttime.length > 0) &&
                                         <div className="h-px bg-muted-foreground/20 my-1 mx-1"></div>
                                     }
 
@@ -566,3 +590,4 @@ export function CareCalendarView({
     </Card>
   );
 }
+
