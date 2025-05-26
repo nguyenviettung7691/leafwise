@@ -1,11 +1,11 @@
 
 import type { Plant } from '@/types';
 import { PlantCard } from './PlantCard';
-import { Leaf, Sparkles, PlusCircle } from 'lucide-react'; // Import Sparkles and PlusCircle
+import { Leaf, Sparkles, PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // Import ProgressBarLink
-import { Button } from '@/components/ui/button'; // Import Button
-import { cn } from '@/lib/utils'; // Import cn
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface PlantGridProps {
   plants: Plant[];
@@ -13,9 +13,17 @@ interface PlantGridProps {
   selectedPlantIds?: Set<string>;
   onToggleSelect?: (plantId: string) => void;
   onEdit?: (plantId: string) => void;
+  isPWAStandalone?: boolean;
 }
 
-export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect, onEdit }: PlantGridProps) {
+export function PlantGrid({
+  plants,
+  isManaging,
+  selectedPlantIds,
+  onToggleSelect,
+  onEdit,
+  isPWAStandalone,
+}: PlantGridProps) {
   const { t } = useLanguage();
 
   if (plants.length === 0) {
@@ -46,7 +54,12 @@ export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div className={cn(
+      "grid gap-6",
+      isPWAStandalone
+        ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    )}>
       {plants.map((plant) => (
         <PlantCard
           key={plant.id}
