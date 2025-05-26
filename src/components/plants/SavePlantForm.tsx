@@ -91,10 +91,7 @@ export function SavePlantForm({
   const { t } = useLanguage();
   const isStandalone = usePWAStandalone();
 
-  const primaryPhotoSchema = typeof window !== 'undefined'
-  ? z.instanceof(FileList).optional().nullable()
-  : z.any().optional().nullable();
-
+  // Moved schema definition inside the component to access `t`
   const plantFormSchema = z.object({
     commonName: z.string().min(1, { message: t('savePlantForm.validation.commonNameRequired') }),
     scientificName: z.string().optional(),
@@ -105,7 +102,7 @@ export function SavePlantForm({
     }),
     location: z.string().optional(),
     customNotes: z.string().optional(),
-    primaryPhoto: primaryPhotoSchema,
+    primaryPhoto: typeof window !== 'undefined' ? z.instanceof(FileList).optional().nullable() : z.any().optional().nullable(),
     diagnosedPhotoDataUrl: z.string().optional().nullable(),
   });
 
@@ -132,13 +129,17 @@ export function SavePlantForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(
-    initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/') && !initialData.diagnosedPhotoDataUrl.startsWith('http')
-      ? initialData.diagnosedPhotoDataUrl
+    (selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl) &&
+    !(selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)?.startsWith('data:image/') &&
+    !(selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)?.startsWith('http')
+      ? (selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)
       : undefined,
     user?.id
   );
-
+  
   useEffect(() => {
+    // This effect primarily sets the initial state from props
+    // and handles changes if initialData itself changes.
     form.reset({
       commonName: initialData?.commonName || '',
       scientificName: initialData?.scientificName || '',
@@ -147,7 +148,7 @@ export function SavePlantForm({
       healthCondition: initialData?.healthCondition || 'unknown',
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
-      primaryPhoto: null,
+      primaryPhoto: null, // Always reset file input part
       diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
     });
 
@@ -156,9 +157,11 @@ export function SavePlantForm({
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoId(null);
       } else if (!initialData.diagnosedPhotoDataUrl.startsWith('http')) { 
+        // Assume it's an IDB key if not data URL or HTTP URL
         setSelectedGalleryPhotoId(initialData.diagnosedPhotoDataUrl);
         setImagePreview(null); 
       } else { 
+         // It's an HTTP URL (e.g., placeholder)
          setImagePreview(initialData.diagnosedPhotoDataUrl);
          setSelectedGalleryPhotoId(null);
       }
@@ -166,7 +169,7 @@ export function SavePlantForm({
       setImagePreview(null);
       setSelectedGalleryPhotoId(null);
     }
-  }, [initialData, form]);
+  }, [initialData, form.reset]);
 
 
   const onSubmit = async (data: SavePlantFormValues) => {
@@ -183,28 +186,30 @@ export function SavePlantForm({
   const currentSubmitButtonText = submitButtonText || t('savePlantForm.submitButtonText');
   const FormIcon = initialData && Object.keys(initialData).length > 0 && !initialData.diagnosedPhotoDataUrl ? Edit : Leaf;
 
+
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
     setImagePreview(null); // Clear direct upload preview
     setSelectedGalleryPhotoId(photo.url); // Set the IDB key of the selected gallery photo
-    form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true }); // Store IDB key
-    form.setValue('primaryPhoto', null); // Clear any file selected in the input
+    form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
+    form.setValue('primaryPhoto', null); 
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Reset the file input field
+      fileInputRef.current.value = ""; 
     }
   };
 
   let displayUrlForPreview: string | null = null;
-  if (imagePreview) { // Prioritize newly uploaded/compressed image preview
+  if (imagePreview) { 
     displayUrlForPreview = imagePreview;
-  } else if (selectedGalleryPhotoId) { // Then IDB key for selected gallery photo
-    displayUrlForPreview = initialImageFromDb; // Which will be the object URL from the hook
+  } else if (selectedGalleryPhotoId) { 
+    displayUrlForPreview = initialImageFromDb; 
   } else if (initialData?.diagnosedPhotoDataUrl && (initialData.diagnosedPhotoDataUrl.startsWith('data:image/') || initialData.diagnosedPhotoDataUrl.startsWith('http'))) {
-    // Fallback to initial data if it was a data URL or HTTP URL (e.g., placeholder)
     displayUrlForPreview = initialData.diagnosedPhotoDataUrl;
+  } else if (initialImageFromDb) { // If initialData had an IDB key and nothing else was selected
+    displayUrlForPreview = initialImageFromDb;
   }
 
 
-  const isDisplayLoading = (isLoadingInitialImage && !!selectedGalleryPhotoId && !imagePreview) || isCompressing;
+  const isDisplayLoading = (isLoadingInitialImage && (!!selectedGalleryPhotoId || (!!initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/') && !initialData.diagnosedPhotoDataUrl.startsWith('http'))) && !imagePreview) || isCompressing;
   const uploadAreaText = isStandalone ? t('savePlantForm.uploadAreaTextPWA') : t('savePlantForm.uploadAreaText');
 
   return (
@@ -453,7 +458,7 @@ export function SavePlantForm({
             <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading || isCompressing}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={isLoading || isCompressing || (!form.formState.isDirty && !initialData) || (form.formStaten .isSubmitted && !form.formState.isValid) }>
+            <Button type="submit" disabled={isLoading || isCompressing || (!form.formState.isDirty && !initialData) || (form.formState.isSubmitted && !form.formState.isValid) }>
               {(isLoading || isCompressing) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
               {(isLoading || isCompressing) ? t('savePlantForm.savingButton') : currentSubmitButtonText}
             </Button>
