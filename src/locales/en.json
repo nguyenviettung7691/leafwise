@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Settings",
@@ -678,8 +679,8 @@
     "offline": "Offline - No internet connection",
     "lastConnected": "Last connected: {{time}}",
     "neverConnected": "Not yet connected",
-    "checking": "Checking connection..."
+    "checking": "Checking connection...",
+    "version": "Version: {{versionName}}"
   }
 }
 
-    

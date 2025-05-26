@@ -1,3 +1,4 @@
+
 {
   "settings": {
     "title": "Cài đặt",
@@ -678,8 +679,7 @@
     "offline": "Ngoại tuyến - Không có kết nối internet",
     "lastConnected": "Kết nối lần cuối: {{time}}",
     "neverConnected": "Chưa kết nối",
-    "checking": "Đang kiểm tra kết nối..."
+    "checking": "Đang kiểm tra kết nối...",
+    "version": "Phiên bản: {{versionName}}"
   }
 }
-
-    

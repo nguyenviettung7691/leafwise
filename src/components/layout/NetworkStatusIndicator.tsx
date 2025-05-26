@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Sprout, Leaf } from 'lucide-react'; // Changed Seedling to Leaf
+import { Sprout, Leaf } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
@@ -12,9 +12,10 @@ export function NetworkStatusIndicator() {
   const { t, dateFnsLocale } = useLanguage();
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [lastConnectedTime, setLastConnectedTime] = useState<Date | null>(null);
+  const appVersionName = "Sapling Kodama"; // Codename
 
   useEffect(() => {
-    if (typeof navigator !== 'undefined') {
+    if (typeof navigator !== 'undefined' && typeof window !== 'undefined') {
       setIsOnline(navigator.onLine);
       if (navigator.onLine) {
         setLastConnectedTime(new Date());
@@ -72,6 +73,7 @@ export function NetworkStatusIndicator() {
           <TooltipContent side="right" className="text-xs">
             <p className={cn("font-semibold", isOnline ? "text-primary" : "text-destructive")}>{tooltipStatusText}</p>
             <p className="text-muted-foreground">{formatLastConnected()}</p>
+            <p className="text-muted-foreground mt-1">{t('networkIndicator.version', { versionName: appVersionName })}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
