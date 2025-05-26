@@ -67,6 +67,12 @@
     "plantUpdatedToastDescription": "{{plantName}} đã được cập nhật.",
     "plantNotFoundError": "Không tìm thấy cây để chỉnh sửa.",
     "loadingPlants": "Đang tải những cây xinh đẹp của bạn...",
+    "emptyState": {
+      "title": "Vườn LeafWise của bạn đang nảy mầm!",
+      "descriptionPart1": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng nó tại trang ",
+      "descriptionPart2": "!",
+      "addNewPlantButton": "Thêm cây mới"
+    },
     "filterSortCard": {
       "title": "Lọc & Sắp xếp cây",
       "searchChipPrefix": "Tìm: \"{{term}}\"",
@@ -113,9 +119,7 @@
       "selectDirection": "Chọn thứ tự",
       "ascending": "Tăng dần",
       "descending": "Giảm dần",
-      "resetAllButton": "Đặt lại tất cả bộ lọc",
-      "noPlantsFoundTitle": "Vườn LeafWise của bạn đang nảy mầm!",
-      "noPlantsHintAI": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng cây tại trang <0>Chẩn đoán cây</0>!"
+      "resetAllButton": "Đặt lại tất cả bộ lọc"
     }
   },
   "addNewPlantPage": {
@@ -155,7 +159,15 @@
     "locationPlaceholder": "VD: Cửa sổ phòng khách",
     "customNotesLabel": "Ghi chú tùy chỉnh",
     "customNotesPlaceholder": "VD: Tưới khi lớp đất mặt khô.",
-    "savingButton": "Đang lưu..."
+    "savingButton": "Đang lưu...",
+    "validation": {
+      "commonNameRequired": "Tên thường gọi là bắt buộc.",
+      "familyCategoryRequired": "Họ thực vật là bắt buộc.",
+      "agePositive": "Tuổi phải là một số dương.",
+      "healthConditionRequired": "Tình trạng sức khỏe là bắt buộc.",
+      "photoProcessingError": "Không thể xử lý ảnh.",
+      "photoTooLargeError": "Ảnh quá lớn. Tối đa 1MB."
+    }
   },
   "diagnosePage": {
     "uploadForm": {
@@ -436,7 +448,7 @@
     "dueTomorrow": "Ngày mai",
     "dueInDays": "Trong {{count}} ngày",
     "dueInDay": "Trong {{count}} ngày",
-    "imageError": "Lỗi ảnh",
+    "imageError": "Lỗi tải ảnh",
     "noImage": "Không có ảnh"
   },
   "carePlanTaskForm": {
@@ -452,7 +464,7 @@
     "frequencyLabel": "Tần suất",
     "frequencyPlaceholder": "Chọn tần suất",
     "frequencyValueLabel": "Mỗi (Số)",
-    "frequencyValuePlaceholder": "Ví dụ: 3",
+    "frequencyValuePlaceholder": "VD: 3",
     "timeOfDayLabel": "Thời gian trong ngày",
     "timeOfDayOptionAllDay": "Cả ngày",
     "timeOfDayOptionSpecificTime": "Thời gian cụ thể",

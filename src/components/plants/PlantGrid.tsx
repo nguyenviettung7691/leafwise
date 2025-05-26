@@ -26,22 +26,19 @@ export function PlantGrid({ plants, isManaging, selectedPlantIds, onToggleSelect
           <Sparkles className="h-10 w-10 text-accent absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4" />
         </div>
         <h3 className="text-2xl font-semibold text-foreground mb-3">
-          {t('myPlantsPage.filterSortCard.noPlantsFoundTitle')}
+          {t('myPlantsPage.emptyState.title')}
         </h3>
         <p className="text-md text-muted-foreground max-w-md mb-6">
-          {t('myPlantsPage.filterSortCard.noPlantsHintAI', {
-            diagnoseLinkStart: '', // Placeholder, actual link is below
-            diagnoseLinkEnd: ''    // Placeholder
-          }).split('{{diagnoseLink}}')[0]}
+          {t('myPlantsPage.emptyState.descriptionPart1')}
           <ProgressBarLink href="/diagnose" className="font-semibold text-primary hover:underline">
             {t('nav.diagnosePlant')}
           </ProgressBarLink>
-          {t('myPlantsPage.filterSortCard.noPlantsHintAI').split('{{diagnoseLink}}')[1]}
+          {t('myPlantsPage.emptyState.descriptionPart2')}
         </p>
         <ProgressBarLink href="/plants/new">
           <Button>
             <PlusCircle className="mr-2 h-5 w-5" />
-            {t('myPlantsPage.addNewPlant')}
+            {t('myPlantsPage.emptyState.addNewPlantButton')}
           </Button>
         </ProgressBarLink>
       </div>

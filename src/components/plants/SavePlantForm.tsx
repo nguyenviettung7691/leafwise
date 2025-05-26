@@ -14,34 +14,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
-import { Leaf, UploadCloud, Save, Edit, ImageOff, Loader2, Camera } from 'lucide-react';
+import { Leaf, Save, Edit, ImageOff, Loader2, Camera } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
-import { compressImage } from '@/lib/image-utils'; 
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
-
-const primaryPhotoSchema = typeof window !== 'undefined'
-  ? z.instanceof(FileList).optional().nullable()
-  : z.any().optional().nullable();
-
-const plantFormSchema = z.object({
-  commonName: z.string().min(1, { message: "Common name is required." }),
-  scientificName: z.string().optional(),
-  familyCategory: z.string().min(1, { message: "Family category is required." }),
-  ageEstimateYears: z.coerce.number().min(0, "Age must be a positive number.").optional().nullable(),
-  healthCondition: z.enum(['healthy', 'needs_attention', 'sick', 'unknown'], {
-    required_error: "Health condition is required.",
-  }),
-  location: z.string().optional(),
-  customNotes: z.string().optional(),
-  primaryPhoto: primaryPhotoSchema,
-  diagnosedPhotoDataUrl: z.string().optional().nullable(), 
-});
-
-type SavePlantFormValues = z.infer<typeof plantFormSchema>;
+import { compressImage } from '@/lib/image-utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SavePlantFormProps {
   initialData?: Partial<PlantFormData>;
@@ -58,12 +38,12 @@ interface SavePlantFormProps {
 interface GalleryPhotoThumbnailProps {
   photo: PlantPhoto;
   isSelected: boolean;
-  userId?: string; // Added userId
+  userId?: string;
   onClick: () => void;
 }
 
 const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, userId, onClick }) => {
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId); // Pass userId
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId);
 
   return (
     <button
@@ -106,8 +86,29 @@ export function SavePlantForm({
   submitButtonText,
   hideInternalHeader = false,
 }: SavePlantFormProps) {
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user } = useAuth();
   const { t } = useLanguage();
+
+  const primaryPhotoSchema = typeof window !== 'undefined'
+  ? z.instanceof(FileList).optional().nullable()
+  : z.any().optional().nullable();
+
+  const plantFormSchema = z.object({
+    commonName: z.string().min(1, { message: t('savePlantForm.validation.commonNameRequired') }),
+    scientificName: z.string().optional(),
+    familyCategory: z.string().min(1, { message: t('savePlantForm.validation.familyCategoryRequired') }),
+    ageEstimateYears: z.coerce.number().min(0, {message: t('savePlantForm.validation.agePositive')}).optional().nullable(),
+    healthCondition: z.enum(['healthy', 'needs_attention', 'sick', 'unknown'], {
+      required_error: t('savePlantForm.validation.healthConditionRequired'),
+    }),
+    location: z.string().optional(),
+    customNotes: z.string().optional(),
+    primaryPhoto: primaryPhotoSchema,
+    diagnosedPhotoDataUrl: z.string().optional().nullable(),
+  });
+
+  type SavePlantFormValues = z.infer<typeof plantFormSchema>;
+
   const form = useForm<SavePlantFormValues>({
     resolver: zodResolver(plantFormSchema),
     defaultValues: {
@@ -123,16 +124,16 @@ export function SavePlantForm({
     },
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null); 
-  const [selectedGalleryPhotoId, setSelectedGalleryPhotoId] = useState<string | null>(null); 
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedGalleryPhotoId, setSelectedGalleryPhotoId] = useState<string | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(
-    initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/')
+    initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/') && !initialData.diagnosedPhotoDataUrl.startsWith('http')
       ? initialData.diagnosedPhotoDataUrl
       : undefined,
-    user?.id // Pass userId
+    user?.id
   );
 
   useEffect(() => {
@@ -152,9 +153,12 @@ export function SavePlantForm({
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoId(null);
-      } else {
+      } else if (!initialData.diagnosedPhotoDataUrl.startsWith('http')) { // Assume it's an IDB key
         setSelectedGalleryPhotoId(initialData.diagnosedPhotoDataUrl);
-        setImagePreview(null); 
+        setImagePreview(null);
+      } else { // It's a placeholder URL
+         setImagePreview(initialData.diagnosedPhotoDataUrl);
+         setSelectedGalleryPhotoId(null);
       }
     } else {
       setImagePreview(null);
@@ -167,7 +171,7 @@ export function SavePlantForm({
     const formDataToSave: PlantFormData = {
         ...data,
         primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        diagnosedPhotoDataUrl: imagePreview || selectedGalleryPhotoId, 
+        diagnosedPhotoDataUrl: imagePreview || selectedGalleryPhotoId || data.diagnosedPhotoDataUrl,
     };
     await onSave(formDataToSave);
   };
@@ -177,28 +181,27 @@ export function SavePlantForm({
   const currentSubmitButtonText = submitButtonText || t('savePlantForm.submitButtonText');
   const FormIcon = initialData && Object.keys(initialData).length > 0 && !initialData.diagnosedPhotoDataUrl ? Edit : Leaf;
 
-
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
-    setImagePreview(null); 
-    setSelectedGalleryPhotoId(photo.url); 
+    setImagePreview(null);
+    setSelectedGalleryPhotoId(photo.url);
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null); 
+    form.setValue('primaryPhoto', null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = "";
     }
   };
-  
+
   let displayUrlForPreview: string | null = null;
-  if (imagePreview) { 
+  if (imagePreview) {
     displayUrlForPreview = imagePreview;
-  } else if (selectedGalleryPhotoId) { 
-    displayUrlForPreview = initialImageFromDb; 
-  } else if (initialData?.diagnosedPhotoDataUrl && initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+  } else if (selectedGalleryPhotoId) {
+    displayUrlForPreview = initialImageFromDb;
+  } else if (initialData?.diagnosedPhotoDataUrl && (initialData.diagnosedPhotoDataUrl.startsWith('data:image/') || initialData.diagnosedPhotoDataUrl.startsWith('http'))) {
     displayUrlForPreview = initialData.diagnosedPhotoDataUrl;
   }
 
   const isDisplayLoading = (isLoadingInitialImage && !!selectedGalleryPhotoId && !imagePreview) || isCompressing;
-  
+
   return (
     <Card className={cn("shadow-lg animate-in fade-in-50", hideInternalHeader ? "border-0 shadow-none" : "")}>
       {!hideInternalHeader && (
@@ -234,7 +237,7 @@ export function SavePlantForm({
             <FormField
               control={form.control}
               name="primaryPhoto"
-              render={({ field: { onBlur, name, ref: formRefSetter } }) => ( 
+              render={({ field: { onBlur, name, ref: formRefSetter } }) => (
                 <FormItem>
                   <FormLabel>{t('savePlantForm.primaryPhotoLabel')}</FormLabel>
                   <FormControl>
@@ -256,18 +259,19 @@ export function SavePlantForm({
                                 type="file"
                                 className="hidden"
                                 accept="image/png, image/jpeg, image/gif, image/webp"
+                                capture
                                 name={name}
                                 ref={(e) => {
                                   formRefSetter(e);
                                   if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
                                 }}
                                 onBlur={onBlur}
-                                onChange={async (e) => { 
+                                onChange={async (e) => {
                                     const files = e.target.files;
-                                    form.setValue('primaryPhoto', files, { shouldValidate: true, shouldDirty: true }); 
+                                    field.onChange(files); // Use react-hook-form's onChange
                                     if (files && files[0]) {
-                                        if (files[0].size > 5 * 1024 * 1024) { 
-                                            form.setError("primaryPhoto", { type: "manual", message: t('diagnosePage.toasts.imageTooLargeDesc')});
+                                        if (files[0].size > 1 * 1024 * 1024) {
+                                            form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoTooLargeError')});
                                             setImagePreview(null);
                                             if (selectedGalleryPhotoId) {
                                               form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoId);
@@ -276,7 +280,7 @@ export function SavePlantForm({
                                             } else {
                                               form.setValue('diagnosedPhotoDataUrl', null);
                                             }
-                                            e.target.value = '';
+                                            if (e.target) e.target.value = '';
                                             return;
                                         }
                                         form.clearErrors("primaryPhoto");
@@ -288,10 +292,10 @@ export function SavePlantForm({
                                             const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/webp', maxWidth: 1024, maxHeight: 1024 });
                                             setImagePreview(compressedDataUrl);
                                             form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true});
-                                            setSelectedGalleryPhotoId(null); 
+                                            setSelectedGalleryPhotoId(null);
                                           } catch (err) {
                                             console.error("Error compressing image in SavePlantForm:", err);
-                                            form.setError("primaryPhoto", { type: "manual", message: "Failed to process image."});
+                                            form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoProcessingError')});
                                             setImagePreview(null);
                                           } finally {
                                             setIsCompressing(false);
@@ -328,7 +332,7 @@ export function SavePlantForm({
                         key={photo.id}
                         photo={photo}
                         isSelected={selectedGalleryPhotoId === photo.url && !imagePreview}
-                        userId={user?.id} // Pass userId
+                        userId={user?.id}
                         onClick={() => handleGalleryPhotoSelect(photo)}
                       />
                     ))}

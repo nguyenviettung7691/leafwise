@@ -67,6 +67,12 @@
     "plantUpdatedToastDescription": "{{plantName}} has been updated.",
     "plantNotFoundError": "Plant not found for editing.",
     "loadingPlants": "Loading your beautiful plants...",
+    "emptyState": {
+      "title": "Your LeafWise garden is sprouting!",
+      "descriptionPart1": "Add your first plant manually, or let AI help you identify it on the ",
+      "descriptionPart2": " page!",
+      "addNewPlantButton": "Add New Plant"
+    },
     "filterSortCard": {
       "title": "Filter & Sort Plants",
       "searchChipPrefix": "Search: \"{{term}}\"",
@@ -113,9 +119,7 @@
       "selectDirection": "Select direction",
       "ascending": "Ascending",
       "descending": "Descending",
-      "resetAllButton": "Reset All Filters",
-      "noPlantsFoundTitle": "Your LeafWise garden is sprouting!",
-      "noPlantsHintAI": "Add your first plant manually, or let AI help you identify it on the <0>Diagnose Plant</0> page!"
+      "resetAllButton": "Reset All Filters"
     }
   },
   "addNewPlantPage": {
@@ -155,7 +159,15 @@
     "locationPlaceholder": "e.g., Living Room Window",
     "customNotesLabel": "Custom Notes",
     "customNotesPlaceholder": "e.g., Water when top inch is dry.",
-    "savingButton": "Saving..."
+    "savingButton": "Saving...",
+    "validation": {
+      "commonNameRequired": "Common name is required.",
+      "familyCategoryRequired": "Family category is required.",
+      "agePositive": "Age must be a positive number.",
+      "healthConditionRequired": "Health condition is required.",
+      "photoProcessingError": "Failed to process image.",
+      "photoTooLargeError": "Image too large. Max 1MB."
+    }
   },
   "diagnosePage": {
     "uploadForm": {
@@ -436,8 +448,8 @@
     "dueTomorrow": "Tomorrow",
     "dueInDays": "In {{count}} days",
     "dueInDay": "In {{count}} day",
-    "imageError": "Error",
-    "noImage": "No Image"
+    "imageError": "Error loading image",
+    "noImage": "No image"
   },
   "carePlanTaskForm": {
     "taskNameLabel": "Task Name",
