@@ -253,7 +253,7 @@
       "durationYears": "{{count}} năm",
       "durationMonths": "{{count}} tháng",
       "durationDays": "{{count}} ngày",
-      "lastCaredDatePrefix": "Chăm sóc cuối:",
+      "lastCaredDatePrefix": "Chăm sóc cuối",
       "editPlantAriaLabel": "Chỉnh sửa cây",
       "deletePlantAriaLabel": "Xóa cây",
       "fullSizePhotoTitle": "{{plantName}} - Ảnh kích thước đầy đủ",
@@ -616,6 +616,7 @@
       "exportSuccessTitle": "Xuất thành công!",
       "exportSuccessDesc": "Dữ liệu của bạn đã được tải xuống thành công dưới dạng tệp JSON.",
       "exportFailedGeneral": "Xuất dữ liệu thất bại. Vui lòng thử lại.",
+      "exportErrorNoData": "Không có dữ liệu người dùng để xuất.",
       "importStartingTitle": "Đang nhập dữ liệu",
       "importStartingDesc": "Đang xử lý tệp sao lưu của bạn...",
       "importFailedGeneral": "Không thể phân tích cú pháp hoặc áp dụng dữ liệu đã nhập.",
@@ -624,8 +625,7 @@
       "importSuccess": "Dữ liệu của bạn đã được nhập. Tải lại hoặc điều hướng để xem thay đổi.",
       "destroyEmailMismatch": "Xác nhận email không thành công.",
       "destroySuccessTitle": "Đã xóa dữ liệu!",
-      "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa.",
-      "exportErrorNoData": "Không có dữ liệu người dùng để xuất."
+      "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa."
     }
   },
   "loginPage": {

@@ -253,7 +253,7 @@
       "durationYears": "{{count}} year(s)",
       "durationMonths": "{{count}} month(s)",
       "durationDays": "{{count}} day(s)",
-      "lastCaredDatePrefix": "Last Cared:",
+      "lastCaredDatePrefix": "Last Cared",
       "editPlantAriaLabel": "Edit Plant",
       "deletePlantAriaLabel": "Delete Plant",
       "fullSizePhotoTitle": "{{plantName}} - Full Size Photo",
@@ -616,6 +616,7 @@
       "exportSuccessTitle": "Export Successful!",
       "exportSuccessDesc": "Your data has been successfully downloaded as a JSON file.",
       "exportFailedGeneral": "Data export failed. Please try again.",
+      "exportErrorNoData": "No user data to export.",
       "importStartingTitle": "Importing Data",
       "importStartingDesc": "Processing your backup file...",
       "importFailedGeneral": "Could not parse or apply the imported data.",
@@ -624,8 +625,7 @@
       "importSuccess": "Your data has been imported. Refresh or navigate to see changes.",
       "destroyEmailMismatch": "Email confirmation failed.",
       "destroySuccessTitle": "Data Destroyed!",
-      "destroySuccessDesc": "All your personal data has been removed.",
-      "exportErrorNoData": "No user data to export."
+      "destroySuccessDesc": "All your personal data has been removed."
     }
   },
   "loginPage": {
@@ -683,4 +683,3 @@
     "version": "Version: {{versionName}}"
   }
 }
-

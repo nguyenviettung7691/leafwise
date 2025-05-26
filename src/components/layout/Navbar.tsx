@@ -2,7 +2,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { NavItem } from '@/types';
+import type { NavItemConfig } from '@/types';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Logo } from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,13 +27,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
-import { Settings, LogIn, Menu, Palette, Languages, LogOut as LogOutIcon } from 'lucide-react';
+import { Settings, LogIn, Menu, Palette, Languages } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
-    // Highlight "My Plants" if on root or any /plants/... sub-route
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
@@ -44,7 +43,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ isStandalone = false }: NavbarProps) {
-  const { user, isLoading: authIsLoading, logout } = useAuth();
+  const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
   const { theme, setTheme } = useTheme();
@@ -64,28 +63,28 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                       : `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`);
 
 
-  const navItems: NavItem[] = React.useMemo(() => {
+  const navItems: NavItemConfig[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
       ...item,
       title: t(item.titleKey),
     }));
   }, [t]);
 
-  const NavLinks = ({ isMobile = false, standaloneMode = false }: { isMobile?: boolean, standaloneMode?: boolean }) => (
+  const NavLinks = ({ isMobile = false, standaloneModeInternal = false }: { isMobile?: boolean, standaloneModeInternal?: boolean }) => (
     navItems.map((item) => (
       <ProgressBarLink
         key={item.href}
         href={item.disabled ? '#' : item.href}
         className={cn(
           "transition-colors ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          standaloneMode
+          standaloneModeInternal
             ? "flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full"
             : "h-9 px-3 w-full justify-start md:w-auto md:justify-center inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
           isActive(item.href, pathname)
-            ? standaloneMode
-              ? "text-primary" 
+            ? standaloneModeInternal
+              ? "text-primary"
               : "text-primary font-semibold bg-primary/10 hover:bg-primary/20"
-            : standaloneMode
+            : standaloneModeInternal
               ? "text-muted-foreground hover:text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
           item.disabled ? "pointer-events-none opacity-50" : ""
@@ -94,8 +93,8 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
           if (isMobile) setIsMobileMenuOpen(false);
         }}
       >
-        <item.icon className={cn("mr-0", standaloneMode ? "h-5 w-5" : "h-4 w-4")} />
-        <span className={cn(standaloneMode && "mt-0.5 text-center")}>{item.title}</span>
+        <item.icon className={cn("mr-0", standaloneModeInternal ? "h-6 w-6" : "h-4 w-4")} />
+        <span className={cn(standaloneModeInternal && "mt-0.5 text-center")}>{item.title}</span>
       </ProgressBarLink>
     ))
   );
@@ -113,20 +112,20 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
       )}>
         {!isStandalone && (
           <div className="flex items-center gap-x-6">
-            <Logo iconSize={28} textSize="text-2xl" iconColorClassName="text-primary" textColorClassName="text-foreground"/>
+            <Logo iconSize={28} textSize="text-2xl" />
             <nav className="hidden md:flex items-center gap-1">
-              <NavLinks standaloneMode={false} />
+              <NavLinks standaloneModeInternal={false} />
             </nav>
           </div>
         )}
 
-        {isStandalone && (
+        {isStandalone && user && ( // Ensure user is loaded for standalone PWA nav
           <nav className="flex items-center justify-around w-full h-full">
-            <NavLinks standaloneMode={true} />
+            <NavLinks standaloneModeInternal={true} />
              <ProgressBarLink href="/profile" className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full", isActive("/profile", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Avatar
                   className={cn(
-                    "h-9 w-9 cursor-pointer border-2 hover:border-primary transition-colors",
+                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", // Adjusted size
                     isActive("/profile", pathname) ? "border-primary" : "border-transparent"
                   )}
                 >
@@ -135,7 +134,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                   ) : (
                     <AvatarImage src={avatarSrc} alt={user?.name || "User"} data-ai-hint="person avatar" />
                   )}
-                  <AvatarFallback className="text-sm bg-muted">
+                  <AvatarFallback className="text-xs bg-muted"> 
                     {(user?.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -143,20 +142,18 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
               </ProgressBarLink>
                <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="default"
+                  <Button
+                    variant="ghost"
                     aria-label={t('nav.settings')}
                     className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full",
-                                   isActive("/settings", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary"
+                                   isActive("/settings", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary" // /settings doesn't exist, but this is for visual consistency
                     )}
                   >
-                    <Settings className="h-5 w-5" />
+                    <Settings className="h-6 w-6" />
                     <span className="mt-0.5 text-center">{t('nav.settings')}</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-md">
-                   {/* Dialog Content for Settings remains the same */}
                    <DialogHeader>
                     <DialogTitlePrimitive className="flex items-center gap-2">
                       <Settings className="h-6 w-6 text-primary" />
@@ -170,12 +167,12 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                     <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
                       <div className='flex items-center gap-3'>
                           <Palette className="h-5 w-5 text-primary" />
-                          <Label htmlFor="themePreference-dialog" className="text-base font-medium">
+                          <Label htmlFor="themePreference-dialog-standalone" className="text-base font-medium">
                           {t('settings.darkMode')}
                           </Label>
                       </div>
                       <Switch
-                          id="themePreference-dialog"
+                          id="themePreference-dialog-standalone"
                           checked={theme === 'dark'}
                           onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                           aria-label={t('settings.darkMode')}
@@ -185,12 +182,12 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                     <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                       <div className="flex items-center gap-3 mb-2">
                         <Languages className="h-5 w-5 text-primary" />
-                        <Label htmlFor="language-select-dialog" className="text-base font-medium">
+                        <Label htmlFor="language-select-dialog-standalone" className="text-base font-medium">
                           {t('settings.language')}
                         </Label>
                       </div>
                       <Select value={language} onValueChange={(value) => setLanguage(value as 'en' | 'vi')}>
-                        <SelectTrigger id="language-select-dialog" className="w-full">
+                        <SelectTrigger id="language-select-dialog-standalone" className="w-full">
                           <SelectValue placeholder={t('settings.language')} />
                         </SelectTrigger>
                         <SelectContent>
@@ -214,7 +211,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
 
         <div className={cn(
           "flex items-center",
-          isStandalone ? "hidden" : "gap-2" 
+          isStandalone ? "hidden" : "gap-2"
         )}>
           {!isStandalone && (
             <div className="md:hidden">
@@ -230,7 +227,7 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
                     <SheetTitle>{t('nav.mobileMenuTitle')}</SheetTitle>
                   </SheetHeader>
                   <div className="flex flex-col gap-2 p-4">
-                    <NavLinks isMobile={true} standaloneMode={false}/>
+                    <NavLinks isMobile={true} standaloneModeInternal={false}/>
                   </div>
                 </SheetContent>
               </Sheet>
@@ -261,9 +258,9 @@ export function Navbar({ isStandalone = false }: NavbarProps) {
 
               <Dialog open={isSettingsDialogOpen} onOpenChange={setIsSettingsDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     aria-label={t('nav.settings')}
                   >
                     <Settings className="h-5 w-5" />
