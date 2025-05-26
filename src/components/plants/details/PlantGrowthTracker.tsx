@@ -17,7 +17,8 @@ import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
 import dynamic from 'next/dynamic';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 const DynamicHealthTrendChart = dynamic(
   () => import('./HealthTrendChartComponent'),
@@ -51,7 +52,7 @@ interface GalleryPhotoItemProps {
   isSelected: boolean;
   isManagingPhotos: boolean;
   plantCommonName: string;
-  userId?: string; 
+  userId?: string;
   onPhotoClick: (photo: PlantPhoto) => void;
   onToggleSelection: (photoId: string) => void;
   onOpenEditDialog: (photo: PlantPhoto) => void;
@@ -59,7 +60,7 @@ interface GalleryPhotoItemProps {
 
 const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plantCommonName, userId, onPhotoClick, onToggleSelection, onOpenEditDialog }: GalleryPhotoItemProps) => {
   const { t, dateFnsLocale } = useLanguage();
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId); 
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId);
 
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
@@ -193,8 +194,9 @@ export function PlantGrowthTracker({
   onDeleteSelectedPhotos,
   onOpenEditPhotoDialog,
 }: PlantGrowthTrackerProps) {
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const { t, dateFnsLocale } = useLanguage();
+  const isStandalone = usePWAStandalone();
 
   const healthScoreLabels: Record<number, string> = {
     0: t('common.unknown'),
@@ -232,7 +234,7 @@ export function PlantGrowthTracker({
 
 
   const handleRechartsDotClick = (dotPayload: any) => {
-    if (dotPayload) { // Simplified, dotPayload is the direct data point
+    if (dotPayload) {
       onChartDotClick(dotPayload);
     }
   };
@@ -241,12 +243,18 @@ export function PlantGrowthTracker({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn(
+          "flex items-center justify-between",
+          isStandalone ? "flex-col items-start gap-y-3 sm:flex-row sm:items-center" : "flex-row"
+        )}>
           <CardTitle className="text-lg flex items-center gap-2">
             <ImageIcon className="h-5 w-5 text-primary" />
             {t('plantDetail.growthTracker.photoGalleryTitle')}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className={cn(
+            "flex items-center gap-2",
+            isStandalone ? "w-full flex-wrap justify-start sm:w-auto sm:justify-end" : ""
+          )}>
             {isManagingPhotos && selectedPhotoIds.size > 0 && (
               <Button
                 variant="destructive"
@@ -283,7 +291,7 @@ export function PlantGrowthTracker({
           </div>
         </CardHeader>
         <CardContent>
-          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4")}> {/* Removed conditional blur from here */}
+          <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4")}>
             {sortedPhotosForGallery && sortedPhotosForGallery.length > 0 ? (
               sortedPhotosForGallery.map(photo => (
                 <GalleryPhotoItem
@@ -293,7 +301,7 @@ export function PlantGrowthTracker({
                   isSelected={selectedPhotoIds.has(photo.id)}
                   isManagingPhotos={isManagingPhotos}
                   plantCommonName={plant.commonName}
-                  userId={user?.id} 
+                  userId={user?.id}
                   onPhotoClick={onOpenGridPhotoDialog}
                   onToggleSelection={onTogglePhotoSelection}
                   onOpenEditDialog={onOpenEditPhotoDialog}
@@ -309,7 +317,7 @@ export function PlantGrowthTracker({
       {(chartData.length > 0) && (
           <Card className={cn(
             "transition-all",
-            isManagingPhotos ? "filter blur-sm opacity-60 pointer-events-none" : "" // Blur applied here
+            isManagingPhotos ? "filter blur-sm opacity-60 pointer-events-none" : ""
           )}>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -331,3 +339,4 @@ export function PlantGrowthTracker({
   );
 }
 
+    

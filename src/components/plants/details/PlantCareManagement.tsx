@@ -6,13 +6,14 @@ import React, { useMemo, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, CalendarDays, Sparkles } from 'lucide-react'; // Added Sparkles
+import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, Sparkles } from 'lucide-react';
 import { format, parseISO, isToday as fnsIsToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import dynamic from 'next/dynamic';
 import type { Locale } from 'date-fns';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 const DynamicWeeklyCareCalendarView = dynamic(
   () => import('@/components/plants/WeeklyCareCalendarView').then(mod => mod.WeeklyCareCalendarView),
@@ -98,8 +99,8 @@ interface PlantCareManagementProps {
   onDeleteSelectedTasks: () => void;
   isManagingCarePlan: boolean;
   onToggleManageCarePlan: () => void;
-  isLoadingProactiveReview: boolean; // New prop
-  onOpenProactiveReviewDialog: () => void; // New prop
+  isLoadingProactiveReview: boolean;
+  onOpenProactiveReviewDialog: () => void;
 }
 
 
@@ -115,10 +116,11 @@ export function PlantCareManagement({
   onDeleteSelectedTasks,
   isManagingCarePlan,
   onToggleManageCarePlan,
-  isLoadingProactiveReview, // Destructure new prop
-  onOpenProactiveReviewDialog, // Destructure new prop
+  isLoadingProactiveReview,
+  onOpenProactiveReviewDialog,
 }: PlantCareManagementProps) {
   const { t, dateFnsLocale } = useLanguage();
+  const isStandalone = usePWAStandalone();
 
   const sortedTasks = useMemo(() => {
     if (!plant.careTasks) return [];
@@ -141,12 +143,18 @@ export function PlantCareManagement({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className={cn(
+          "flex items-center justify-between",
+          isStandalone ? "flex-col items-start gap-y-3 sm:flex-row sm:items-center" : "flex-row"
+        )}>
           <CardTitle className="text-lg flex items-center gap-2">
             <ListChecks className="h-5 w-5 text-primary" />
             {t('plantDetail.careManagement.sectionTitle')}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className={cn(
+            "flex items-center gap-2",
+            isStandalone ? "w-full flex-wrap justify-start sm:w-auto sm:justify-end" : ""
+          )}>
             {isManagingCarePlan && selectedTaskIds.size > 0 && (
               <Button
                 variant="destructive"
@@ -200,13 +208,13 @@ export function PlantCareManagement({
                     "bg-card border border-border shadow-sm transition-all border-l-4",
                     isAdvanced ? "border-l-primary" : "border-l-gray-400 dark:border-l-gray-500",
                     task.isPaused ? "opacity-70" : "",
-                    isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "", 
+                    isTaskToday && !task.isPaused ? "border-2 border-primary bg-primary/10 shadow-lg" : "",
                     isManagingCarePlan && isSelected ? "ring-2 ring-primary ring-offset-2" : ""
                   )}
-                  role={isManagingCarePlan ? "button" : undefined}
-                  tabIndex={isManagingCarePlan ? 0 : undefined}
                   onClick={isManagingCarePlan ? () => onToggleTaskSelection(task.id) : undefined}
                   onKeyDown={isManagingCarePlan ? (e) => { if (e.key === 'Enter' || e.key === ' ') onToggleTaskSelection(task.id); } : undefined}
+                  role={isManagingCarePlan ? "button" : undefined}
+                  tabIndex={isManagingCarePlan ? 0 : -1}
                   aria-pressed={isManagingCarePlan ? isSelected : undefined}
                 >
                   <CardContent className="p-4 flex justify-between items-center">
@@ -215,7 +223,7 @@ export function PlantCareManagement({
                         <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => onToggleTaskSelection(task.id)}
-                            onClick={(e) => e.stopPropagation()} // Prevent card click when checkbox is clicked
+                            onClick={(e) => e.stopPropagation()}
                             aria-label={t('plantDetail.careManagement.selectTaskAria', { taskName: task.name })}
                         />
                       </div>
@@ -296,15 +304,19 @@ export function PlantCareManagement({
         </CardContent>
       </Card>
 
-      {plant.careTasks && plant.careTasks.length > 0 && (
-         <div className={cn("mt-6", isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all")}>
+      <div className={cn(
+          "mt-6",
+          isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all"
+        )}
+      >
+        {plant.careTasks && plant.careTasks.length > 0 && (
           <DynamicWeeklyCareCalendarView
             tasks={plant.careTasks}
             onEditTask={onOpenEditTaskDialog}
             onDeleteTask={onOpenDeleteTaskDialog}
           />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Trash2, Sun, Moon, CalendarDays } from 'lucide-react'; // Added CalendarDays
+import { ChevronLeft, ChevronRight, Trash2, Sun, Moon, CalendarDays } from 'lucide-react';
 import {
   format,
   startOfWeek,
@@ -27,13 +27,14 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
   occurrenceDate: Date;
 }
 
-const DEFAULT_HOURS = Array.from({ length: 17 }, (_, i) => i + 7); // 7 AM (7) to 11 PM (23)
+const DEFAULT_HOURS = Array.from({ length: 17 }, (_, i) => i + 7); 
 
 const setTimeToTaskTime = (date: Date, timeOfDay?: string): Date => {
   const newDate = new Date(date);
@@ -77,6 +78,7 @@ interface WeeklyCareCalendarViewProps {
 
 export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: WeeklyCareCalendarViewProps) {
   const { t, dateFnsLocale } = useLanguage();
+  const isStandalone = usePWAStandalone();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
   const [displayedOccurrences, setDisplayedOccurrences] = useState<DisplayableTaskOccurrence[]>([]);
@@ -169,7 +171,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     });
     setDisplayedOccurrences(allOccurrences);
 
-  }, [tasks, currentDate, currentWeekStart, currentWeekEnd]);
+  }, [tasks, currentDate, currentWeekStart, currentWeekEnd, weekStartsOn]);
 
 
   const getTasksForDay = (day: Date): DisplayableTaskOccurrence[] => {
@@ -210,12 +212,18 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
 
   return (
     <Card className="mt-6 shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4 px-4">
+      <CardHeader className={cn(
+        "flex items-center justify-between pb-3 pt-4 px-4",
+        isStandalone ? "flex-col items-start gap-y-3 sm:flex-row sm:items-center" : "flex-row"
+      )}>
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-primary" />
           {t('weeklyCareCalendar.title')}
         </CardTitle>
-        <div className="flex items-center gap-2">
+        <div className={cn(
+            "flex items-center gap-2",
+            isStandalone ? "w-full flex-wrap justify-start sm:w-auto sm:justify-end" : ""
+          )}>
           <Button variant="outline" size="icon" onClick={goToPreviousWeek} aria-label={t('weeklyCareCalendar.previousWeekAria')}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -373,3 +381,5 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
     </Card>
   );
 }
+
+    
