@@ -115,7 +115,7 @@
       "descending": "Descending",
       "resetAllButton": "Reset All Filters",
       "noPlantsFoundTitle": "Your LeafWise garden is sprouting!",
-      "noPlantsHintAI": "Add your first plant manually, or let AI help you identify it on the {{diagnoseLink}} page!"
+      "noPlantsHintAI": "Add your first plant manually, or let AI help you identify it on the <0>Diagnose Plant</0> page!"
     }
   },
   "addNewPlantPage": {
@@ -637,7 +637,8 @@
     "passwordPlaceholder": "••••••••",
     "signInButton": "Sign In",
     "noAccountText": "Don't have an account?",
-    "signUpLink": "Sign up"
+    "signUpLink": "Sign up",
+    "backToHomepageLink": "Back to Homepage"
   },
   "registerPage": {
     "title": "Create Your Account",

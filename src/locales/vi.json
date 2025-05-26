@@ -115,7 +115,7 @@
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc",
       "noPlantsFoundTitle": "Vườn LeafWise của bạn đang nảy mầm!",
-      "noPlantsHintAI": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng cây tại trang {{diagnoseLink}}!"
+      "noPlantsHintAI": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng cây tại trang <0>Chẩn đoán cây</0>!"
     }
   },
   "addNewPlantPage": {
@@ -637,7 +637,8 @@
     "passwordPlaceholder": "••••••••",
     "signInButton": "Đăng nhập",
     "noAccountText": "Chưa có tài khoản?",
-    "signUpLink": "Đăng ký"
+    "signUpLink": "Đăng ký",
+    "backToHomepageLink": "Quay lại Trang chủ"
   },
   "registerPage": {
     "title": "Tạo tài khoản",

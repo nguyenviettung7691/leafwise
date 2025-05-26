@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext'; // Assuming you might want to translate
+import { useLanguage } from '@/contexts/LanguageContext';
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // Added ProgressBarLink
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -79,10 +80,16 @@ export default function LoginPage() {
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t('loginPage.noAccountText')}{' '}
-            <Link href="/register" className="font-medium text-primary hover:underline">
+            <ProgressBarLink href="/register" className="font-medium text-primary hover:underline">
               {t('loginPage.signUpLink')}
-            </Link>
+            </ProgressBarLink>
           </p>
+          <div className="mt-4 text-center">
+            <ProgressBarLink href="/" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center group">
+              <ArrowLeft className="mr-1.5 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+              {t('loginPage.backToHomepageLink')}
+            </ProgressBarLink>
+          </div>
         </CardContent>
       </Card>
     </div>
