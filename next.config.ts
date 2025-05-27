@@ -20,9 +20,7 @@ const withPWA = withPWAInit({
           maxEntries: 50, // Max number of images to cache
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
         },
-        cacheableResponse: {
-          statuses: [0, 200], // Cache opaque responses and successful responses
-        },
+        // Removed cacheableResponse to simplify and see if it resolves the _ref error
       },
     },
     // You can add more runtimeCaching rules here for other origins or strategies
@@ -50,4 +48,3 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA(nextConfig);
-
