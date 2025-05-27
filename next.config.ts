@@ -9,14 +9,23 @@ const withPWA = withPWAInit({
   clientsClaim: true, // Ensure new SW takes control immediately
   swSrc: 'public/sw.js', // Specify your custom service worker
   buildExcludes: [ // Explicitly exclude these Next.js internal files from precaching
+    // Matches files like /app-build-manifest.json at the root of the build output
     /app-build-manifest\.json$/,
     /app-route-manifest\.json$/,
-    /_next\/static\/.*\/_buildManifest\.js/, // Regex to match build ID in path
-    /_next\/static\/.*\/_ssgManifest\.js/,   // Regex to match build ID in path
-    /\.map$/, // Exclude all source maps
+    // Matches /_next/static/<buildID>/_buildManifest.js
+    // Using a more specific regex for the build ID part
+    /\/_next\/static\/[a-zA-Z0-9_-]+\/_buildManifest\.js$/,
+    // Matches /_next/static/<buildID>/_ssgManifest.js
+    /\/_next\/static\/[a-zA-Z0-9_-]+\/_ssgManifest\.js$/,
+    // Exclude all source maps
+    /\.map$/,
+    // Exclude middleware manifest
     /middleware-manifest\.json$/,
+    // Exclude next font manifests
     /next-font-manifest\.(js|json)$/,
-    // /react-loadable-manifest\.json$/, // Usually for Pages Router, might not be needed
+    // A more general exclusion as a fallback, though the above should be preferred
+    // /_buildManifest\.js$/, 
+    // /_ssgManifest\.js$/,
   ],
   // disable: process.env.NODE_ENV === "development", // Keep enabled for testing
   runtimeCaching: [
