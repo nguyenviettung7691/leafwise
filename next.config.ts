@@ -16,11 +16,11 @@ const withPWA = withPWAInit({
       handler: "CacheFirst", // Strategy: try cache first, then network.
       options: {
         cacheName: "placeholder-images",
-        expiration: {
-          maxEntries: 50, // Max number of images to cache
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-        },
-        // Removed cacheableResponse to simplify and see if it resolves the _ref error
+        // Temporarily removed expiration to diagnose the _ref error
+        // expiration: {
+        //   maxEntries: 50, // Max number of images to cache
+        //   maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        // },
       },
     },
     // You can add more runtimeCaching rules here for other origins or strategies
