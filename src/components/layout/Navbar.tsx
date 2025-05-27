@@ -30,7 +30,7 @@ import { useTheme } from 'next-themes';
 import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
-import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added import
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
@@ -44,7 +44,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ }: NavbarProps) {
-  const isStandalone = usePWAStandalone(); // Use the hook internally
+  const isStandalone = usePWAStandalone();
   const { user, isLoading: authIsLoading } = useAuth();
   const pathname = usePathname();
   const { t, language, setLanguage } = useLanguage();
@@ -255,7 +255,7 @@ export function Navbar({ }: NavbarProps) {
               <ProgressBarLink href="/profile" className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full", isActive("/profile", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Avatar
                   className={cn(
-                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors",
+                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", // Size set to h-6 w-6
                     isActive("/profile", pathname) ? "border-primary" : "border-transparent"
                   )}
                 >
@@ -285,7 +285,7 @@ export function Navbar({ }: NavbarProps) {
                     isSettingsDialogOpen ? "text-primary" : "text-muted-foreground hover:text-primary"
                   )}
                 >
-                  <Settings className="h-6 w-6" />
+                  <Settings className="h-6 w-6" /> {/* Changed to h-6 w-6 */}
                   <span className="mt-0.5 text-center">{t('nav.settings')}</span>
                 </Button>
               </DialogTrigger>
