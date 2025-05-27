@@ -1,41 +1,109 @@
 
-// Make sure to import Workbox libraries if you're using them for other purposes
-// e.g., import { StaleWhileRevalidate } from 'workbox-strategies';
-// import { registerRoute } from 'workbox-routing';
+// MODULE_NAME_FALLBACK: "workbox-core"
+// MODULE_NAME_FALLBACK: "workbox-precaching"
+// MODULE_NAME_FALLBACK: "workbox-routing"
+// MODULE_NAME_FALLBACK: "workbox-strategies"
+
+import { clientsClaim } from 'workbox-core';
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
+import { ExpirationPlugin } from 'workbox-expiration';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
-// Standard service worker lifecycle events
-self.addEventListener('install', (event) => {
-  console.log('[SW] Install event');
-  // Optionally, force the waiting service worker to become the active service worker.
-  event.waitUntil(self.skipWaiting());
+self.skipWaiting();
+clientsClaim();
+
+cleanupOutdatedCaches();
+
+// Define patterns for files to exclude from precaching
+// These patterns match the path part of the URL after the domain
+const patternsToExclude = [
+  /\/app-build-manifest\.json(\?.*)?$/,
+  /\/app-route-manifest\.json(\?.*)?$/,
+  /\/\_next\/static\/[a-zA-Z0-9._-]+\/_buildManifest\.js(\?.*)?$/, // Added '.' to char class for build IDs like Next.js 14 uses
+  /\/\_next\/static\/[a-zA-Z0-9._-]+\/_ssgManifest\.js(\?.*)?$/,   // Added '.'
+  /\.map$/,
+  /\/middleware-manifest\.json(\?.*)?$/,
+  /\/next-font-manifest\.(js|json)(\?.*)?$/,
+];
+
+const originalManifest = self.__WB_MANIFEST || [];
+
+const filteredManifest = originalManifest.filter(entry => {
+  const urlString = typeof entry === 'string' ? entry : entry.url;
+  let pathOnly = urlString;
+  try {
+    // Attempt to parse as a full URL and get the pathname
+    const parsedUrl = new URL(urlString, self.location.origin);
+    pathOnly = parsedUrl.pathname + parsedUrl.search; // include search query for matching
+  } catch (e) {
+    // If it's not a full URL, assume it's a path already (might start with / or not)
+    // Ensure it starts with a / for consistent regex matching
+    if (!pathOnly.startsWith('/')) {
+      pathOnly = '/' + pathOnly;
+    }
+  }
+
+  const isExcluded = patternsToExclude.some(pattern => pattern.test(pathOnly));
+  
+  if (isExcluded) {
+    console.log('[SW] Excluding from precache:', urlString, '(Path tested:', pathOnly, ')');
+  } else {
+    // console.log('[SW] Keeping in precache:', urlString, '(Path tested:', pathOnly, ')');
+  }
+  return !isExcluded;
 });
 
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activate event');
-  // Optionally, take control of all clients immediately.
-  event.waitUntil(self.clients.claim());
-});
+if (filteredManifest.length < originalManifest.length) {
+  console.log(`[SW] Filtered manifest: ${filteredManifest.length} entries from original ${originalManifest.length}`);
+} else {
+  console.log('[SW] No entries excluded by custom filter. Original manifest entries:', originalManifest.length);
+}
+// Make sure filteredManifest is not empty if originalManifest was not
+if (originalManifest.length > 0 && filteredManifest.length === 0) {
+  console.warn('[SW] Warning: All entries were filtered out from precache manifest. This is likely an issue with exclusion patterns.');
+  // To be safe, use originalManifest if filtering results in empty, but original had items
+  precacheAndRoute(originalManifest);
+} else {
+  precacheAndRoute(filteredManifest);
+}
 
-// Custom push notification listener
-self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : { title: 'LeafWise', body: 'You have a new notification.' };
-  const title = data.title || 'LeafWise';
-  const options = {
-    body: data.body || 'Something new happened!',
-    icon: data.icon || '/icons/icon-192x192.png', // Ensure this path is correct
-    badge: data.badge || '/icons/icon-72x72.png',  // Ensure this path is correct
-    tag: data.tag || 'leafwise-notification',
-    data: data.data || { url: '/' } // Default to opening the homepage
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+
+// Example runtime caching rule (already present for placehold.co)
+registerRoute(
+  /^https:\/\/placehold\.co\/.*/i,
+  new CacheFirst({
+    cacheName: 'placeholder-images',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200], // Cache opaque and successful responses
+      }),
+      // Re-add expiration if the previous _ref error is resolved, or keep it simple
+      // new ExpirationPlugin({
+      //   maxEntries: 50,
+      //   maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+      // }),
+    ],
+  })
+);
+
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, icon, tag } = event.data.payload;
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body: body,
+        icon: icon || '/icons/icon-192x192.png', // Default icon
+        tag: tag || 'default-tag',
+      })
+    );
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const notificationData = event.notification.data || { url: '/' };
-  const urlToOpen = new URL(notificationData.url, self.location.origin).href;
-
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       if (clientList.length > 0) {
@@ -43,70 +111,12 @@ self.addEventListener('notificationclick', (event) => {
         for (let i = 0; i < clientList.length; i++) {
           if (clientList[i].focused) {
             client = clientList[i];
+            break;
           }
         }
-        return client.focus().then(c => c.navigate(urlToOpen));
+        return client.focus();
       }
-      return clients.openWindow(urlToOpen);
+      return clients.openWindow('/');
     })
   );
 });
-
-
-// --- Precache Filtering Logic ---
-// Patterns for Next.js internal files that might cause issues with precaching,
-// now updated to handle full URLs.
-const patternsToExclude = [
-  /^(https?:\/\/[^\/]+)?\/?app-build-manifest\.json(\?.*)?$/,
-  /^(https?:\/\/[^\/]+)?\/?app-route-manifest\.json(\?.*)?$/,
-  /^(https?:\/\/[^\/]+)?\/?_next\/static\/[a-zA-Z0-9_-]+\/_buildManifest\.js(\?.*)?$/,
-  /^(https?:\/\/[^\/]+)?\/?_next\/static\/[a-zA-Z0-9_-]+\/_ssgManifest\.js(\?.*)?$/,
-  /\.map$/, // Exclude all source maps
-  /^(https?:\/\/[^\/]+)?\/?middleware-manifest\.json(\?.*)?$/,
-  /^(https?:\/\/[^\/]+)?\/?next-font-manifest\.(js|json)(\?.*)?$/,
-];
-
-const originalManifest = self.__WB_MANIFEST || [];
-
-// Log the original manifest for debugging purposes
-// console.log('[SW] Original Precache Manifest:', JSON.stringify(originalManifest, null, 2));
-
-const filteredManifest = originalManifest.filter(entry => {
-  // entry can be a string URL or an object { url: string, revision: string }
-  const url = typeof entry === 'string' ? entry : entry.url;
-  const shouldExclude = patternsToExclude.some(pattern => pattern.test(url));
-  if (shouldExclude) {
-    console.log('[SW] Excluding from precache:', url);
-  }
-  return !shouldExclude;
-});
-
-// console.log('[SW] Filtered Precache Manifest:', JSON.stringify(filteredManifest, null, 2));
-
-// Workbox Precaching
-// This line is critical: Workbox will precache all assets listed in `filteredManifest`.
-// `@ducanh2912/next-pwa` injects `self.__WB_MANIFEST` during the build.
-if (filteredManifest.length > 0) {
-  precacheAndRoute(filteredManifest);
-} else if (originalManifest.length > 0) {
-  console.warn('[SW] All manifest entries were excluded. This might indicate an issue with exclusion patterns or an empty original manifest.');
-  // Still call precacheAndRoute with the original if filtered is empty but original was not,
-  // this might happen if patterns are too aggressive or __WB_MANIFEST is structured unexpectedly.
-  // However, this could re-introduce the original error if the problematic files are still in originalManifest.
-  // A safer fallback might be to precache nothing if filtering results in an empty list from a non-empty original.
-  // For now, let's attempt with the original if filtered is empty from a non-empty source.
-  // precacheAndRoute(originalManifest); 
-}
-
-
-cleanupOutdatedCaches();
-
-// You can add custom runtime caching strategies below if needed,
-// e.g., for API calls or third-party assets not covered by precaching.
-// Example:
-// registerRoute(
-//   ({url}) => url.origin === 'https://some-api.example.com',
-//   new StaleWhileRevalidate({
-//     cacheName: 'api-cache',
-//   })
-// );
