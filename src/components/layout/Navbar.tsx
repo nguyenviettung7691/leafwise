@@ -34,6 +34,7 @@ import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
   if (itemHref === '/') {
+    // "My Plants" is active for "/" or "/plants/*"
     return currentPathname === '/' || currentPathname.startsWith('/plants');
   }
   return currentPathname.startsWith(itemHref);
@@ -104,7 +105,7 @@ export function Navbar({ }: NavbarProps) {
             if (isMobile) setIsMobileMenuOpen(false);
           }}
         >
-          <item.icon className={cn("mr-0", standaloneModeInternal ? "h-6 w-6" : "h-4 w-4")} />
+          {standaloneModeInternal ? <item.icon size={24} /> : <item.icon className="h-4 w-4" /> }
           <span className={cn(standaloneModeInternal && "mt-0.5 text-center")}>{title}</span>
         </ProgressBarLink>
       );
@@ -119,8 +120,8 @@ export function Navbar({ }: NavbarProps) {
       isStandalone ? "fixed bottom-0 left-0 right-0 border-t h-16" : "sticky top-0 border-b h-16"
     )}>
       <div className={cn(
-        "flex items-center h-full",
-        isStandalone ? "justify-around px-2" : "container mx-auto justify-between px-4 sm:px-6 lg:px-8"
+        "flex items-center h-full container mx-auto",
+        isStandalone ? "justify-around px-2" : "justify-between px-4 sm:px-6 lg:px-8"
       )}>
         {/* Top Navbar for Browser Mode */}
         {!isStandalone && (
@@ -251,11 +252,16 @@ export function Navbar({ }: NavbarProps) {
         {isStandalone && (
           <nav className="flex items-center justify-around w-full h-full">
             <NavLinks standaloneModeInternal={true} />
-            {user ? (
+            {authIsLoading ? (
+               <div className="flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full text-muted-foreground">
+                <Skeleton className="h-6 w-6 rounded-full" />
+                <Skeleton className="h-3 w-10 mt-0.5" />
+              </div>
+            ) : user ? (
               <ProgressBarLink href="/profile" className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full", isActive("/profile", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary")}>
                 <Avatar
                   className={cn(
-                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", // Size set to h-6 w-6
+                    "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", 
                     isActive("/profile", pathname) ? "border-primary" : "border-transparent"
                   )}
                 >
@@ -272,7 +278,7 @@ export function Navbar({ }: NavbarProps) {
               </ProgressBarLink>
             ) : (
               <ProgressBarLink href="/login" className={cn("flex flex-col items-center justify-center gap-1 p-2 rounded-md text-xs h-full w-full", isActive("/login", pathname) ? "text-primary" : "text-muted-foreground hover:text-primary")}>
-                <UserCircle className="h-6 w-6" />
+                <UserCircle size={24} />
                 <span className="mt-0.5 text-center">{t('loginPage.signInButton')}</span>
               </ProgressBarLink>
             )}
@@ -285,7 +291,7 @@ export function Navbar({ }: NavbarProps) {
                     isSettingsDialogOpen ? "text-primary" : "text-muted-foreground hover:text-primary"
                   )}
                 >
-                  <Settings className="h-6 w-6" /> {/* Changed to h-6 w-6 */}
+                  <Settings size={24} />
                   <span className="mt-0.5 text-center">{t('nav.settings')}</span>
                 </Button>
               </DialogTrigger>
@@ -348,3 +354,5 @@ export function Navbar({ }: NavbarProps) {
     </header>
   );
 }
+
+    
