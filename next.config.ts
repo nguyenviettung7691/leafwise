@@ -8,7 +8,16 @@ const withPWA = withPWAInit({
   skipWaiting: true,
   clientsClaim: true, // Ensure new SW takes control immediately
   swSrc: 'public/sw.js', // Specify your custom service worker
-  // buildExcludes: ["app-build-manifest.json"], // Already default for app router
+  buildExcludes: [ // Explicitly exclude these Next.js internal files from precaching
+    /app-build-manifest\.json$/,
+    /app-route-manifest\.json$/,
+    /_next\/static\/.*\/_buildManifest\.js/, // Regex to match build ID in path
+    /_next\/static\/.*\/_ssgManifest\.js/,   // Regex to match build ID in path
+    /\.map$/, // Exclude all source maps
+    /middleware-manifest\.json$/,
+    /next-font-manifest\.(js|json)$/,
+    // /react-loadable-manifest\.json$/, // Usually for Pages Router, might not be needed
+  ],
   // disable: process.env.NODE_ENV === "development", // Keep enabled for testing
   runtimeCaching: [
     {
