@@ -8,13 +8,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
+import { APP_VERSION_CODENAME } from '@/lib/constants'; // Import the codename
 
 export function NetworkStatusIndicator() {
   const { t, dateFnsLocale } = useLanguage();
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [lastConnectedTime, setLastConnectedTime] = useState<Date | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const appVersionName = "Sapling Kodama";
   const isStandalone = usePWAStandalone();
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function NetworkStatusIndicator() {
   return (
     <div className={cn(
       "fixed left-4 z-50",
-      isStandalone ? "bottom-20" : "bottom-4"
+      isStandalone ? "bottom-20" : "bottom-4" 
     )}>
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
         <PopoverTrigger asChild>
@@ -84,7 +84,7 @@ export function NetworkStatusIndicator() {
         >
           <p className={cn("font-semibold", isOnline ? "text-primary" : "text-destructive")}>{popoverStatusText}</p>
           <p className="text-muted-foreground">{formatLastConnected()}</p>
-          <p className="text-muted-foreground mt-1">{t('networkIndicator.version', { versionName: appVersionName })}</p>
+          <p className="text-muted-foreground mt-1">{t('networkIndicator.version', { versionName: APP_VERSION_CODENAME })}</p>
         </PopoverContent>
       </Popover>
     </div>

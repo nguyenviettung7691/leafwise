@@ -1,6 +1,6 @@
 
 import type { NavItemConfig } from '@/types';
-import { Sprout, ScanSearch, CalendarDays, Settings2, UserCircle, Stethoscope } from 'lucide-react'; // Added Stethoscope
+import { Sprout, ScanSearch, CalendarDays, Settings2, UserCircle, Stethoscope, ListChecks } from 'lucide-react'; // Added Stethoscope
 
 // NAV_ITEMS is now APP_NAV_CONFIG and uses titleKey for translation
 export const APP_NAV_CONFIG: NavItemConfig[] = [
@@ -9,11 +9,6 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
     href: '/',
     icon: Sprout,
   },
-  // { // Removed Identify Plant
-  //   titleKey: 'nav.identifyPlant',
-  //   href: '/identify',
-  //   icon: ScanSearch,
-  // },
   { 
     titleKey: 'nav.diagnosePlant', 
     href: '/diagnose',
@@ -25,3 +20,5 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
     icon: CalendarDays,
   },
 ];
+
+export const APP_VERSION_CODENAME = "Sapling Kodama";
