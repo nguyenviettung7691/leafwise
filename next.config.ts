@@ -10,24 +10,20 @@ const withPWA = withPWAInit({
   swSrc: 'public/sw.js', // Specify your custom service worker
   buildExcludes: [ // Explicitly exclude these Next.js internal files from precaching
     // Matches files like /app-build-manifest.json at the root of the build output
-    /app-build-manifest\.json$/,
-    /app-route-manifest\.json$/,
+    /app-build-manifest\.json(\?.*)?$/,
+    /app-route-manifest\.json(\?.*)?$/,
     // Matches /_next/static/<buildID>/_buildManifest.js
-    // Using a more specific regex for the build ID part
-    /\/_next\/static\/[a-zA-Z0-9_-]+\/_buildManifest\.js$/,
+    // Using a more specific regex for the build ID part, allowing for optional query strings
+    /\/_next\/static\/[a-zA-Z0-9_-]+\/_buildManifest\.js(\?.*)?$/,
     // Matches /_next/static/<buildID>/_ssgManifest.js
-    /\/_next\/static\/[a-zA-Z0-9_-]+\/_ssgManifest\.js$/,
+    /\/_next\/static\/[a-zA-Z0-9_-]+\/_ssgManifest\.js(\?.*)?$/,
     // Exclude all source maps
     /\.map$/,
     // Exclude middleware manifest
-    /middleware-manifest\.json$/,
+    /middleware-manifest\.json(\?.*)?$/,
     // Exclude next font manifests
-    /next-font-manifest\.(js|json)$/,
-    // A more general exclusion as a fallback, though the above should be preferred
-    // /_buildManifest\.js$/, 
-    // /_ssgManifest\.js$/,
+    /next-font-manifest\.(js|json)(\?.*)?$/,
   ],
-  // disable: process.env.NODE_ENV === "development", // Keep enabled for testing
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/placehold\.co\/.*/i,
