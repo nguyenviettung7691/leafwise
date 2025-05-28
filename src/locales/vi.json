@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Cài đặt",
@@ -490,6 +489,7 @@
       "rotate_pot": "Xoay chậu"
     },
     "frequencyOptions": {
+      "ad-hoc": "Theo nhu cầu (Khi cần)",
       "adhoc": "Theo nhu cầu (Khi cần)",
       "daily": "Hàng ngày",
       "every_x_days": "Mỗi X ngày",
@@ -700,4 +700,3 @@
   }
 }
 
-    

@@ -118,7 +118,7 @@ export function DiagnosisUploadForm({
           </div>
 
           <Button type="submit" disabled={isLoadingDiagnosis || !isFileSelected} className="w-full text-base py-3">
-            {isLoadingDiagnosis && !previewUrl ? ( // Show loader on button only if image is still processing and no preview yet
+            {isLoadingDiagnosis ? (
               <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.uploadForm.submitButtonLoading')}</>
             ) : (
               <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.uploadForm.submitButton')}</>

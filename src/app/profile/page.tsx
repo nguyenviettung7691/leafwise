@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { UserCircle, Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle, Send, BadgeAlert } from 'lucide-react';
+import { Edit3, Save, X, Bell, Smartphone, Camera, LogOut, Loader2 as AuthLoader, Upload, Download, AlertTriangle, Send, BadgeAlert } from 'lucide-react';
 import { useState, useEffect, type FormEvent, useRef, type ChangeEvent } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -32,7 +32,6 @@ import { usePlantData } from '@/contexts/PlantDataContext';
 import { compressImage } from '@/lib/image-utils';
 import * as idbHelper from '@/lib/idb-helper';
 import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
-
 
 function blobToDataURL(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -357,7 +356,7 @@ export default function ProfilePage() {
              newPhoto.imageDataUrl = photo.url;
           }
           // Do not include the IDB key for url in the export, only the data URL.
-          if (newPhoto.url && !newPhoto.url.startsWith('data:')) delete newPhoto.url;
+          if (newPhoto.url && !newPhoto.url.startsWith('data:')) newPhoto.url = "";
           return newPhoto;
         }));
         
@@ -468,7 +467,7 @@ export default function ProfilePage() {
                   newPhotoEntry.id = newPhotoId;
                   newPhotoEntry.url = newPhotoId;
                 } else {
-                  newPhotoEntry.url = undefined; 
+                  newPhotoEntry.url = ""; 
                   newPhotoEntry.id = photoFromFile.id || `error-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
                 }
               } else if (photoFromFile.url) { // If original key was exported
@@ -615,7 +614,7 @@ export default function ProfilePage() {
                     {isAvatarLoading && !isCompressingAvatar && (
                       <Skeleton className="h-full w-full rounded-full" />
                     )}
-                    {!isAvatarLoading && !isCompressingAvatar && (
+                    {!isAvatarLoading && !isCompressingAvatar && avatarSrcToDisplay && avatarSrcToDisplay.startsWith('blob:') && (
                       <AvatarImage src={avatarSrcToDisplay} alt={t('profilePage.avatarAlt', {name: authUser.name})} data-ai-hint="person avatar"/>
                     )}
                     <AvatarFallback className="text-2xl bg-muted">
@@ -832,8 +831,9 @@ export default function ProfilePage() {
               <AlertTriangle className="h-6 w-6" /> {t('profilePage.destroyConfirmTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              <div>{t('profilePage.destroyConfirmDescription1')}</div>
-              <div className="mt-2">{t('profilePage.destroyConfirmDescription2', {email: authUser?.email || ''})}</div>
+              <span>{t('profilePage.destroyConfirmDescription1')}</span>
+              <br />
+              <span className="mt-2">{t('profilePage.destroyConfirmDescription2', {email: authUser?.email || ''})}</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-2">

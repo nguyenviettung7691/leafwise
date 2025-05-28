@@ -1,4 +1,3 @@
-
 {
   "settings": {
     "title": "Settings",
@@ -490,6 +489,7 @@
       "rotate_pot": "Rotate Pot"
     },
     "frequencyOptions": {
+      "ad-hoc": "Ad-hoc (As needed)",
       "adhoc": "Ad-hoc (As needed)",
       "daily": "Daily",
       "every_x_days": "Every X Days",
@@ -700,4 +700,3 @@
   }
 }
 
-    
