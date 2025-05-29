@@ -127,7 +127,7 @@ export function Navbar({ }: NavbarProps) {
         {!isStandalone && (
           <>
             <div className="flex items-center gap-x-6">
-              <Logo iconSize={28} textSize="text-2xl" />
+              <Logo iconSize={90} />
               <nav className="hidden md:flex items-center gap-1">
                 <NavLinks standaloneModeInternal={false} />
               </nav>

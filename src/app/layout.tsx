@@ -20,11 +20,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'LeafWise - Plant Care Management',
   description: 'Your personal plant care assistant, helping you identify, diagnose, and care for your plants with AI-powered insights.',
-  manifest: '/manifest.json',
-  icons: {
-    apple: 'https://placehold.co/192x192.png', // Ensure this points to your actual apple-touch-icon
-    icon: '/favicon.ico', // Or your main favicon
-  },
+  applicationName: 'LeafWise',
+  keywords: ['plant care', 'AI plant diagnosis', 'plant health', 'gardening', 'sustainable living'],
+  creator: 'Nguyen Viet Tung',
+  manifest: '/manifest.json'
 };
 
 // RootLayout is a Server Component
