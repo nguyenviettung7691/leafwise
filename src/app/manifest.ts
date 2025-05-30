@@ -33,7 +33,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Manually add a new plant to your collection.',
         url: '/plants/new',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/sprout.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       {
@@ -42,7 +42,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Identify a plant and diagnose its health using AI.',
         url: '/diagnose',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/stethoscope.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       {
@@ -51,7 +51,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Check your upcoming plant care tasks.',
         url: '/calendar',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/calendar-days.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
     ],

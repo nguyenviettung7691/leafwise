@@ -50,3 +50,8 @@ database-debug.log
 
 # Turbopack
 .turbo
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
