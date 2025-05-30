@@ -55,6 +55,22 @@ export default function manifest(): MetadataRoute.Manifest {
         ],
       },
     ],
+    "screenshots": [
+        {
+          "src": "/screenshot-1.png",
+          "sizes": "1603x832",
+          "type": "image/png",
+          "form_factor": "wide",
+          "label": "My Plants"
+        },
+        {
+          "src": "/screenshot-2.png",
+          "sizes": "802x1227",
+          "type": "image/png",
+          "form_factor": "narrow",
+          "label": "Plant Diagnose"
+        }
+    ],
     // The following are not standard manifest fields, but you can add them as extensions if needed
     // permissions: ['notifications', 'push'],
     // gcm_sender_id: 'LeafWise',
