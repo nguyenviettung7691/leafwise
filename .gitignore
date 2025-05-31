@@ -51,6 +51,10 @@ database-debug.log
 # Turbopack
 .turbo
 
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
 # amplify
 .amplify
 amplify_outputs*

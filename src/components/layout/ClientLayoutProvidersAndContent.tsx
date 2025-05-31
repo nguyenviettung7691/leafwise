@@ -12,7 +12,7 @@ import { ProgressBar } from '@/components/layout/ProgressBar';
 import { Toaster } from '@/components/ui/toaster';
 import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator';
 import { Amplify } from 'aws-amplify';
-import outputs from "../../../amplify_outputs.json";
+import outputs from '../../../amplify_outputs.json';
 
 // Configure Amplify client-side
 Amplify.configure(outputs, {
