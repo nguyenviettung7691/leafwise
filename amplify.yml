@@ -18,3 +18,8 @@ frontend:
     paths:
       - .next/cache/**/*
       - .npm/**/*
+rewrites:
+  - source: '/<*>'
+    target: '/not-found'
+    status: '404'
+    type: 'Rewrite' # Use 'Rewrite' or '200'

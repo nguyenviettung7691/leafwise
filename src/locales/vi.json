@@ -730,6 +730,11 @@
     "neverConnected": "Chưa kết nối",
     "checking": "Đang kiểm tra kết nối...",
     "version": "Phiên bản: {{versionName}}"
+  },
+  "notFoundPage": {
+    "title": "Không tìm thấy trang",
+    "description": "Không thể tìm thấy tài nguyên được yêu cầu.",
+    "backToHomepage": "Quay lại Trang chủ"
   }
 }
 

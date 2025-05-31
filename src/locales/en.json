@@ -730,6 +730,11 @@
     "neverConnected": "Not yet connected",
     "checking": "Checking connection...",
     "version": "Version: {{versionName}}"
+  },
+  "notFoundPage": {
+    "title": "Page Not Found",
+    "description": "Could not find the requested resource.",
+    "backToHomepage": "Return Home"
   }
 }
 
