@@ -1,25 +1,40 @@
+"use client";
 
-'use client';
-
-import type { User, UserPreferences } from '@/types';
-import type { ReactNode} from 'react';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { useLanguage } from './LanguageContext';
-import { getUserProfile, saveUserProfile, type UserProfileData } from '@/lib/idb-helper';
+import type { User } from "@/types";
+import type { ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import {
+  signIn,
+  signUp,
+  signOut,
+  getCurrentUser,
+  fetchUserAttributes, // Import fetchUserAttributes
+  updateUserAttributes, // Import updateUserAttributes
+  AuthUser, // Keep AuthUser type if needed for internal typing
+} from "@aws-amplify/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "./LanguageContext";
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => void;
-  updateUser: (updatedData: Partial<Omit<User, 'id' | 'email'>>) => Promise<void>;
+  updateUser: (updatedData: { name?: string }) => Promise<void>;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const CURRENT_USER_ID_KEY = 'currentLeafwiseUserId';
+// localStorage key can still be used to quickly check if a user was logged in
+// but the source of truth for user data will be Cognito via getCurrentUser
+const CURRENT_USER_ID_KEY = "currentLeafwiseUserId"; // Consider renaming or removing if not strictly needed
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -28,173 +43,278 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { t } = useLanguage();
 
+  // Effect to check for current user on mount
   useEffect(() => {
-    const attemptLoginFromStorage = async () => {
+    const checkCurrentUser = async () => {
       setIsLoading(true);
       try {
-        const storedUserId = localStorage.getItem(CURRENT_USER_ID_KEY);
-        if (storedUserId) {
-          const profileFromDb = await getUserProfile(storedUserId);
-          if (profileFromDb) {
-            setUser({
-              id: storedUserId, // email
-              email: storedUserId,
-              name: profileFromDb.name,
-              avatarUrl: profileFromDb.avatarUrl,
-              preferences: profileFromDb.preferences || { emailNotifications: true, pushNotifications: false },
-            });
-          } else {
-            // Profile not found in IDB, maybe inconsistent state, log out
-            localStorage.removeItem(CURRENT_USER_ID_KEY);
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to initialize user from storage/IDB", error);
-        localStorage.removeItem(CURRENT_USER_ID_KEY);
-        setUser(null);
-      }
-      setIsLoading(false);
-    };
-    attemptLoginFromStorage();
-  }, []);
+        // Use getCurrentUser to get the authenticated user from Amplify
+        const currentUser = await getCurrentUser();
+        // Fetch user attributes separately
+        const userAttributes = await fetchUserAttributes();
 
-  const login = useCallback(async (email: string, _pass: string) => {
-    setIsLoading(true);
-    // Simulate backend auth
-    await new Promise(resolve => setTimeout(resolve, 700));
+        // Map Cognito user attributes to your User type
+        setUser({
+          id: currentUser.userId, // Cognito sub
+          email: userAttributes.email || currentUser.username, // Use email from attributes or username
+          name: userAttributes.name || currentUser.username, // Use name from attributes or username
+          // avatarUrl and preferences are not available here
+        });
+        // Optionally update localStorage key with Cognito userId (sub)
+        localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId);
+      } catch (error) {
+        // No authenticated user found
+        console.log("No current authenticated user", error);
+        setUser(null);
+        localStorage.removeItem(CURRENT_USER_ID_KEY); // Clear stale key
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkCurrentUser();
+  }, []); // Empty dependency array means this runs once on mount
+
+  // Login function using Amplify Auth
+  const login = useCallback(
+    async (email: string, password: string) => {
+      setIsLoading(true);
+
+      try {
+        // Call signIn and get the SignInOutput directly
+        const signInOutput = await signIn({
+          username: email, // Cognito username is email
+          password,
+        });
+
+        // Check if sign-in was successful using the signInOutput object
+        if (!signInOutput.isSignedIn) {
+          // Handle cases where sign-in is not complete (e.g., MFA required)
+          // For this simple login flow, we'll throw an error, but you might
+          // want to handle different next steps (e.g., confirmSignIn)
+          throw new Error("Sign in failed or requires further steps.");
+        }
+        // Get the current authenticated user after successful sign-in
+        // This is needed to get user attributes like email or sub (userId)
+        const currentUser = await getCurrentUser();
+        const userAttributes = await fetchUserAttributes(); // Fetch attributes
+
+        // Map Cognito user attributes to your User type
+        setUser({
+          id: currentUser.userId, // Cognito sub
+          email: userAttributes.email || currentUser.username, // Use email from attributes
+          name: userAttributes.name || currentUser.username, // Use name from attributes
+          // avatarUrl and preferences are not available here
+        });
+
+        localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId); // Store Cognito userId (sub)
+        toast({
+          title: t("authContextToasts.loginSuccessTitle"),
+          description: t("authContextToasts.loginSuccessDescription", {
+            name: userAttributes.name || currentUser.username, // Use name from attributes for toast
+          }),
+        });
+        router.push("/"); // Redirect to homepage on success
+      } catch (error: any) {
+        console.error("Login error:", error);
+        let errorMessage = t("authErrors.generalLoginFailed"); // Default error message
+
+         if (error.name === 'UserNotFoundException' || error.name === 'NotAuthorizedException') {
+            errorMessage = t("authErrors.userNotFound"); // Use translated message
+         } else if (error.name === 'LimitExceededException') {
+            errorMessage = t("authErrors.limitExceeded"); // Use translated message
+         } else if (error.name === 'TooManyRequestsException') {
+            errorMessage = t("authErrors.tooManyRequests"); // Use translated message
+         }
+        // Add more specific error handling based on Amplify Auth errors if needed
+
+        toast({
+          title: t("common.error"),
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [router, toast, t],
+  );
+
+  // Register function using Amplify Auth
+  const register = useCallback(
+    async (name: string, email: string, password: string) => {
+      setIsLoading(true);
+
+      try {
+        // Call Amplify signUp
+        const { isSignUpComplete, userId, nextStep } = await signUp({
+          username: email, // Cognito uses username for login, which is email in your config
+          password: password,
+          options: {
+            userAttributes: {
+              email: email,
+              name: name, // Store name as a Cognito attribute
+            },
+          },
+        });
+
+        // Handle the next step (e.g., email confirmation)
+        if (nextStep.signUpStep === 'CONFIRM_SIGN_UP') {
+           toast({
+             title: t("authContextToasts.registrationSuccessTitle"),
+             description: t("authContextToasts.confirmEmailDescription"),
+           });
+           router.push(`/confirm-signup?email=${encodeURIComponent(email)}`);
+        } else if (isSignUpComplete) {
+           // If sign up is complete immediately (e.g., no confirmation required)
+           // Get the current user after successful sign-up if auto-logged in
+           const currentUser = await getCurrentUser();
+           const userAttributes = await fetchUserAttributes(); // Fetch attributes
+
+           setUser({
+             id: currentUser.userId,
+             email: userAttributes.email || currentUser.username,
+             name: userAttributes.name || currentUser.username,
+           });
+           localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId);
+
+           toast({
+             title: t("authContextToasts.registrationSuccessTitle"),
+             description: t("authContextToasts.registrationSuccessDescription", {
+               name: userAttributes.name || currentUser.username, // Use name from attributes for toast
+             }),
+           });
+           router.push("/"); // Redirect to homepage or dashboard
+        } else {
+           // Handle other potential next steps if needed
+           console.log("Sign up next step:", nextStep);
+           toast({
+             title: t("common.info"),
+             description: "Registration requires further steps.",
+           });
+        }
+      } catch (error: any) {
+        console.error("Registration error:", error);
+        let errorMessage = t("authErrors.generalRegistrationFailed"); // Default error message
+
+        if (error.name === 'UsernameExistsException') {
+           errorMessage = t("authErrors.usernameExists"); // Use translated message
+        } else if (error.name === 'InvalidPasswordException') {
+           errorMessage = t("authErrors.invalidPassword"); // Use translated message
+        } else if (error.name === 'LimitExceededException') {
+            errorMessage = t("authErrors.limitExceeded"); // Use translated message
+        } else if (error.name === 'TooManyRequestsException') {
+            errorMessage = t("authErrors.tooManyRequests"); // Use translated message
+        }
+        // Add more error types as needed (e.g., CodeMismatchException, ExpiredCodeException for confirmSignUp)
+
+        toast({
+          title: t("common.error"),
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [router, toast, t],
+  );
+
+  // Logout function using Amplify Auth
+  const logout = useCallback(async () => {
+    setIsLoading(true); // Set loading state for logout
 
     try {
-      let profileFromDb = await getUserProfile(email);
-      let userName: string;
+      await signOut(); // Call Amplify signOut
+      setUser(null);
+      localStorage.removeItem(CURRENT_USER_ID_KEY);
+      // Keep IndexedDB clearPlantImages if needed for local data cleanup
+      // await clearPlantImages(user.id); // Assuming user.id holds the email or sub
 
-      if (profileFromDb) {
-        userName = profileFromDb.name;
-        setUser({
-          id: email,
-          email: email,
-          name: profileFromDb.name,
-          avatarUrl: profileFromDb.avatarUrl,
-          preferences: profileFromDb.preferences || { emailNotifications: true, pushNotifications: false },
-        });
-      } else {
-        // First time login for this email, create a default profile in IDB
-        userName = email.split('@')[0] || 'New User';
-        const defaultProfile: UserProfileData = {
-          name: userName,
-          avatarUrl: undefined, // Or a default placeholder IDB key if you have one
-          preferences: { emailNotifications: true, pushNotifications: false },
-        };
-        await saveUserProfile(email, defaultProfile);
-        setUser({
-          id: email,
-          email: email,
-          ...defaultProfile,
-        });
-      }
-      localStorage.setItem(CURRENT_USER_ID_KEY, email);
       toast({
-        title: t('authContextToasts.loginSuccessTitle'),
-        description: t('authContextToasts.loginSuccessDescription', { name: userName })
+        title: t("authContextToasts.loggedOutTitle"),
+        description: t("authContextToasts.loggedOutDescription"),
       });
-      router.push('/');
+      router.push("/login");
     } catch (error) {
-      console.error("Login error:", error);
-      toast({ title: t('common.error'), description: "Login failed.", variant: "destructive" });
+      console.error("Logout error:", error);
+      toast({
+        title: t("common.error"),
+        description: "Failed to log out.",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Reset loading state
     }
   }, [router, toast, t]);
 
-  const register = useCallback(async (name: string, email: string, _pass: string) => {
-    setIsLoading(true);
-    // Simulate backend registration
-    await new Promise(resolve => setTimeout(resolve, 700));
-
-    try {
-      const existingProfile = await getUserProfile(email);
-      if (existingProfile) {
-        toast({ title: t('common.error'), description: "Email already registered.", variant: "destructive" });
-        setIsLoading(false);
+  // Update user attributes function using Amplify Auth
+  const updateUser = useCallback(
+    async (updatedData: { name?: string }) => { // Only allow updating name for now
+      if (!user) {
+        toast({
+          title: t("common.error"),
+          description: t("authContextToasts.errorNoUserSession"),
+          variant: "destructive",
+        });
         return;
       }
+      setIsLoading(true);
 
-      const newProfileData: UserProfileData = {
-        name: name,
-        avatarUrl: undefined,
-        preferences: { emailNotifications: true, pushNotifications: false },
-      };
-      await saveUserProfile(email, newProfileData);
-      setUser({
-        id: email,
-        email: email,
-        ...newProfileData,
-      });
-      localStorage.setItem(CURRENT_USER_ID_KEY, email);
-      toast({
-        title: t('authContextToasts.registrationSuccessTitle'),
-        description: t('authContextToasts.registrationSuccessDescription', { name: name })
-      });
-      router.push('/');
-    } catch (error) {
-      console.error("Registration error:", error);
-      toast({ title: t('common.error'), description: "Registration failed.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [router, toast, t]);
+      try {
+        // Fetch current attributes to compare
+        const userAttributes = await fetchUserAttributes();
 
-  const logout = useCallback(async () => {
-    setUser(null);
-    localStorage.removeItem(CURRENT_USER_ID_KEY);
-    toast({
-      title: t('authContextToasts.loggedOutTitle'),
-      description: t('authContextToasts.loggedOutDescription')
-    });
-    router.push('/login');
-  }, [router, toast, t]);
+        const attributesToUpdate: Record<string, string> = {};
+        // Compare with fetched attributes
+        if (updatedData.name !== undefined && updatedData.name !== userAttributes.name) {
+          attributesToUpdate.name = updatedData.name;
+        }
 
-  const updateUser = useCallback(async (updatedData: Partial<Omit<User, 'id' | 'email'>>) => {
-    if (!user) {
-      toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: "destructive" });
-      return;
-    }
-    setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 700));
+        // Update attributes in Cognito if there are any changes
+        if (Object.keys(attributesToUpdate).length > 0) {
+          // Call updateUserAttributes with the correct input structure
+          await updateUserAttributes({ userAttributes: attributesToUpdate }); // Corrected call
 
-    try {
-      const currentProfile = await getUserProfile(user.id);
-      const newProfileToSave: UserProfileData = {
-        name: updatedData.name !== undefined ? updatedData.name : (currentProfile?.name || user.name),
-        avatarUrl: updatedData.avatarUrl !== undefined ? updatedData.avatarUrl : currentProfile?.avatarUrl,
-        preferences: {
-          ...(currentProfile?.preferences || user.preferences),
-          ...updatedData.preferences,
-        },
-      };
+          // After updating, fetch the user again to ensure state is fresh
+          const updatedCognitoUser = await getCurrentUser();
+          const updatedUserAttributes = await fetchUserAttributes();
 
-      await saveUserProfile(user.id, newProfileToSave);
-      
-      setUser(prevUser => ({
-        ...prevUser!,
-        name: newProfileToSave.name,
-        avatarUrl: newProfileToSave.avatarUrl,
-        preferences: newProfileToSave.preferences,
-      }));
+           setUser({
+             id: updatedCognitoUser.userId,
+             email: updatedUserAttributes.email || updatedCognitoUser.username,
+             name: updatedUserAttributes.name || updatedCognitoUser.username,
+           });
+        } else {
+           // If no attributes were updated in Cognito, just ensure local state is consistent
+           setUser((prevUser) => ({
+             ...prevUser!,
+             ...updatedData, // Apply local updates if any (e.g., if we added non-Cognito fields back)
+           }));
+        }
 
-      toast({ title: t('authContextToasts.profileUpdatedTitle'), description: t('authContextToasts.profileUpdatedDescription') });
-    } catch (error) {
-      console.error("Update user error:", error);
-      toast({ title: t('common.error'), description: t('profilePage.toasts.profileUpdateError'), variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, toast, t]);
+        toast({
+          title: t("authContextToasts.profileUpdatedTitle"),
+          description: t("authContextToasts.profileUpdatedDescription"),
+        });
+      } catch (error) {
+        console.error("Update user error:", error);
+        // Add more specific error handling based on Amplify Auth errors if needed
+        toast({
+          title: t("common.error"),
+          description: t("profilePage.toasts.profileUpdateError"),
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, toast, t],
+  );
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateUser, isLoading }}>
+    <AuthContext.Provider
+      value={{ user, login, register, logout, updateUser, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -203,9 +323,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
-
-    

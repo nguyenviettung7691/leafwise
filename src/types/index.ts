@@ -165,12 +165,13 @@ export interface UserPreferences {
   pushNotifications?: boolean;
 }
 
+// Updated User interface based on Cognito attributes
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  preferences?: UserPreferences;
+  id: string; // This will be the Cognito 'sub' (userId)
+  name: string; // Cognito 'name' attribute
+  email: string; // Cognito 'email' attribute
+  // avatarUrl and preferences are removed as they are not standard Cognito attributes
+  // If needed, they should be stored and fetched separately, e.g., via the Data API
 }
 
 export interface GlobalCalendarTaskOccurrence {

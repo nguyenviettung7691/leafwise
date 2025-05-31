@@ -2,19 +2,19 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, ArrowLeft } from 'lucide-react'; // Added ArrowLeft
+import { LogIn, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ProgressBarLink } from '@/components/layout/ProgressBarLink'; // Added ProgressBarLink
+import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { login, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useLanguage();
@@ -59,15 +59,32 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t('loginPage.passwordLabel')}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t('loginPage.passwordPlaceholder')}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'} // Toggle type
+                  placeholder={t('loginPage.passwordPlaceholder')}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-10" // Add padding for the button
+                />
+                <Button
+                  type="button" // Important: prevent form submission
+                  variant="ghost"
+                  size="sm"
+                  className="absolute inset-y-0 right-0 flex items-center px-3"
+                  onClick={() => setShowPassword(!showPassword)} // Toggle state
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
