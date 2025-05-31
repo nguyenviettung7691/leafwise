@@ -11,8 +11,7 @@
     "paths": {
       "$amplify/*": [
         "../.amplify/generated/*"
-      ],
-      "@root/*": ["./*"]
+      ]
     }
   }
 }
