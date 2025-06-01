@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { useTheme } from 'next-themes';
 import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
 const isActive = (itemHref: string, currentPathname: string): boolean => {
@@ -53,18 +53,15 @@ export function Navbar({ }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isSettingsDialogOpen, setIsSettingsDialogOpen] = React.useState(false);
 
-  const { imageUrl: userDisplayAvatarUrl, isLoading: isAvatarLoading } = useIndexedDbImage(
-    user?.avatarUrl && !user.avatarUrl.startsWith('data:') && !user.avatarUrl.startsWith('http')
-      ? user.avatarUrl
-      : undefined,
-    user?.id
+  // Use the user's avatarS3Key from the AuthContext
+  const { imageUrl: userDisplayAvatarUrl, isLoading: isAvatarLoading } = useS3Image(
+    user?.avatarS3Key || undefined, // Pass the S3 key
+    user?.id // Pass the user ID for protected access
   );
 
-  const avatarSrc = userDisplayAvatarUrl ||
-    (user?.avatarUrl && (user.avatarUrl.startsWith('data:') || user.avatarUrl.startsWith('http'))
-      ? user.avatarUrl
-      : `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`);
-
+  // Determine the avatar source to display
+  const avatarSrc = userDisplayAvatarUrl
+    || `https://placehold.co/100x100.png?text=${(user?.name?.charAt(0) || 'U').toUpperCase()}`; // Fallback placeholder
 
   const navItems: NavItemConfig[] = React.useMemo(() => {
     return APP_NAV_CONFIG.map(item => ({
@@ -262,7 +259,7 @@ export function Navbar({ }: NavbarProps) {
                 <Avatar
                   className={cn(
                     "h-6 w-6 cursor-pointer border-2 hover:border-primary transition-colors", 
-                    isActive("/profile", pathname) ? "border-primary" : "border-transparent"
+                    isProfileActive ? "border-primary" : "border-transparent"
                   )}
                 >
                   {isAvatarLoading ? (

@@ -36,7 +36,7 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { useS3Image } from '@/hooks/useS3Image'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added
@@ -97,7 +97,7 @@ interface TaskPlantAvatarDisplayProps {
 }
 
 const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, userId, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); 
+  const { imageUrl, isLoading } = useS3Image(photoId, userId); 
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {

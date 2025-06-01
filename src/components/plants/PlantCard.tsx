@@ -11,7 +11,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
@@ -82,7 +82,7 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
   const { user } = useAuth(); // Get user from AuthContext
   const { t, dateFnsLocale } = useLanguage();
   const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(plant.primaryPhotoUrl, user?.id); // Pass userId
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {

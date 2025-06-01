@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function NewPlantPage() {
@@ -21,7 +20,8 @@ export default function NewPlantPage() {
   const { addPlant: addPlantToContext } = usePlantData();
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveNewPlant = async (data: PlantFormData) => {
+  // Update handleSaveNewPlant to accept plant data and the primary photo file
+  const handleSaveNewPlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
     if (!user?.id) {
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
       router.push('/login');
@@ -29,63 +29,37 @@ export default function NewPlantPage() {
     }
     setIsSaving(true);
 
-    const newPlantId = `plant-${Date.now()}`;
-    let idbPhotoId: string | undefined = undefined;
-
-    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
-      if (blob) {
-        idbPhotoId = `photo-${user.id}-${newPlantId}-${Date.now()}`; // Scoped photo ID
-        try {
-          await addIDBImage(user.id, idbPhotoId, blob);
-        } catch (e) {
-          console.error("Error during IndexedDB image save:", e);
-          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
-          idbPhotoId = undefined;
-        }
-      } else {
-         toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageProcessError'), variant: "destructive" });
-         idbPhotoId = undefined;
-      }
-    } else if (data.diagnosedPhotoDataUrl) {
-      if (!data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-        idbPhotoId = data.diagnosedPhotoDataUrl;
-      }
-    }
-
-    const newPlant: Plant = {
-      id: newPlantId,
+    // The PlantDataContext addPlant method handles creating the plant and uploading the image
+    // We just need to prepare the plant data (without image data/keys) and pass the file.
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: idbPhotoId,
-      photos: idbPhotoId
-        ? [{
-            id: idbPhotoId,
-            url: idbPhotoId,
-            dateTaken: new Date().toISOString(),
-            healthCondition: data.healthCondition,
-            diagnosisNotes: t('addNewPlantPage.initialDiagnosisNotes'),
-          }]
-        : [],
-      careTasks: [],
       plantingDate: new Date().toISOString(),
-      lastCaredDate: undefined,
+      // primaryPhotoUrl, photos, careTasks, lastCaredDate will be handled by the context method
     };
 
-    addPlantToContext(newPlant);
+    try {
+        // Call the context method, passing the plant data and the file
+        const createdPlant = await addPlantToContext(newPlantData as Plant, primaryPhotoFile); // Cast to Plant as context expects it
 
-    toast({
-      title: t('addNewPlantPage.toastPlantAddedTitle'),
-      description: t('addNewPlantPage.toastPlantAddedDescription', { plantName: newPlant.commonName }),
-    });
-    setIsSaving(false);
-    router.push(`/plants/${newPlantId}`);
+        toast({
+          title: t('addNewPlantPage.toastPlantAddedTitle'),
+          description: t('addNewPlantPage.toastPlantAddedDescription', { plantName: createdPlant.commonName }),
+        });
+        // Redirect using the ID returned by the context method
+        router.push(`/plants/${createdPlant.id}`);
+
+    } catch (error) {
+        console.error("Error saving new plant:", error);
+        toast({ title: t('common.error'), description: t('addNewPlantPage.toastErrorSavingPlant'), variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleCancelNewPlant = () => {

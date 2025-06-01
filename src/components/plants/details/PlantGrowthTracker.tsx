@@ -15,7 +15,7 @@ import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
@@ -60,7 +60,7 @@ interface GalleryPhotoItemProps {
 
 const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plantCommonName, userId, onPhotoClick, onToggleSelection, onOpenEditDialog }: GalleryPhotoItemProps) => {
   const { t, dateFnsLocale } = useLanguage();
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(photo.url, userId);
 
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');

@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
 import React from 'react';
 import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid, format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
@@ -71,7 +71,7 @@ export function PlantHeaderCard({
   const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const caredForDuration = getCaredForDuration(plant.plantingDate, t);
-  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useS3Image(plant.primaryPhotoUrl, user?.id); // Pass userId
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const displayPrimaryImageUrl = primaryImageUrl || `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName)}`;

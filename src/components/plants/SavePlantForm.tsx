@@ -19,7 +19,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage } from '@/lib/image-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
@@ -27,7 +27,8 @@ import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 interface SavePlantFormProps {
   initialData?: Partial<PlantFormData>;
   galleryPhotos?: PlantPhoto[];
-  onSave: (data: PlantFormData) => Promise<void>;
+  // Modified onSave signature to accept File objects
+  onSave: (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null, photosToDelete?: string[]) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
   formTitle?: string;
@@ -44,7 +45,8 @@ interface GalleryPhotoThumbnailProps {
 }
 
 const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, userId, onClick }) => {
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId);
+  // useS3Image now correctly handles S3 keys
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(photo.url, userId);
 
   return (
     <button
@@ -102,7 +104,9 @@ export function SavePlantForm({
     }),
     location: z.string().optional(),
     customNotes: z.string().optional(),
+    // primaryPhoto is now a FileList for the new upload
     primaryPhoto: typeof window !== 'undefined' ? z.instanceof(FileList).optional().nullable() : z.any().optional().nullable(),
+    // diagnosedPhotoDataUrl will store the data URL of a new upload OR the S3 key of a selected gallery photo
     diagnosedPhotoDataUrl: z.string().optional().nullable(),
   });
 
@@ -118,22 +122,22 @@ export function SavePlantForm({
       healthCondition: initialData?.healthCondition || 'unknown',
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
-      primaryPhoto: null,
-      diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
+      primaryPhoto: null, // Always reset file input part
+      diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null, // This will be the initial primaryPhotoUrl (S3 key or data URL)
     },
   });
 
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedGalleryPhotoId, setSelectedGalleryPhotoId] = useState<string | null>(null);
+   const [imagePreview, setImagePreview] = useState<string | null>(null); // Data URL of a *newly uploaded* image
+  const [selectedGalleryPhotoUrl, setSelectedGalleryPhotoUrl] = useState<string | null>(null); // S3 key of a *selected gallery* image
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { imageUrl: initialImageFromDb, isLoading: isLoadingInitialImage } = useIndexedDbImage(
-    (selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl) &&
-    !(selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)?.startsWith('data:image/') &&
-    !(selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)?.startsWith('http')
-      ? (selectedGalleryPhotoId || initialData?.diagnosedPhotoDataUrl)
-      : undefined,
+  // Hook to fetch the display URL for the currently selected/initial image
+  const { imageUrl: displayImageUrl, isLoading: isLoadingDisplayImage } = useS3Image(
+    // If there's a new image preview (data URL), use that directly.
+    // Otherwise, if a gallery photo URL is selected, use that.
+    // Otherwise, if there's an initial primary photo URL (from initialData), use that.
+    imagePreview ? undefined : (selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl),
     user?.id
   );
   
@@ -149,36 +153,69 @@ export function SavePlantForm({
       location: initialData?.location || '',
       customNotes: initialData?.customNotes || '',
       primaryPhoto: null, // Always reset file input part
-      diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null,
+      diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null, // This will be the initial primaryPhotoUrl (S3 key or data URL)
     });
 
+    // Set initial preview based on initialData.diagnosedPhotoDataUrl (which is the primaryPhotoUrl S3 key)
     if (initialData?.diagnosedPhotoDataUrl) {
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
+        // If it's a data URL (e.g., from Diagnose page before saving)
         setImagePreview(initialData.diagnosedPhotoDataUrl);
-        setSelectedGalleryPhotoId(null);
-      } else if (!initialData.diagnosedPhotoDataUrl.startsWith('http')) { 
-        // Assume it's an IDB key if not data URL or HTTP URL
-        setSelectedGalleryPhotoId(initialData.diagnosedPhotoDataUrl);
-        setImagePreview(null); 
-      } else { 
-         // It's an HTTP URL (e.g., placeholder)
+        setSelectedGalleryPhotoUrl(null);
+      } else if (initialData.diagnosedPhotoDataUrl.startsWith('http')) {
+         // If it's an external URL (e.g., placeholder)
          setImagePreview(initialData.diagnosedPhotoDataUrl);
-         setSelectedGalleryPhotoId(null);
+         setSelectedGalleryPhotoUrl(null);
+      }
+      else {
+        // Assume it's an S3 key from an existing plant
+        setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
+        setImagePreview(null);
       }
     } else {
       setImagePreview(null);
-      setSelectedGalleryPhotoId(null);
+      setSelectedGalleryPhotoUrl(null);
     }
   }, [initialData, form.reset]);
 
 
   const onSubmit = async (data: SavePlantFormValues) => {
-    const formDataToSave: PlantFormData = {
-        ...data,
-        primaryPhoto: data.primaryPhoto instanceof FileList ? data.primaryPhoto : null,
-        diagnosedPhotoDataUrl: imagePreview || selectedGalleryPhotoId || data.diagnosedPhotoDataUrl,
+    // Extract the File object from the FileList
+    const primaryPhotoFile = data.primaryPhoto && data.primaryPhoto.length > 0 ? data.primaryPhoto[0] : null;
+
+    // The form doesn't handle deleting photos or adding new gallery photos directly.
+    // This logic is handled in the Plant Detail page.
+    // We only need to pass the new primary photo file (if any) and the updated plant data.
+    // The `diagnosedPhotoDataUrl` field in the form state holds the S3 key of the selected gallery photo
+    // or the data URL of a new upload. We need to pass the *file* if it's a new upload.
+
+    // If a new file was uploaded, primaryPhotoFile will be the File object.
+    // If an existing gallery photo was selected, primaryPhotoFile will be null,
+    // and data.diagnosedPhotoDataUrl will contain the S3 key of the selected photo.
+    // If the primary photo was removed, primaryPhotoFile will be null, and data.diagnosedPhotoDataUrl will be null.
+
+    const plantDataToSave: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'> = {
+        commonName: data.commonName,
+        scientificName: data.scientificName,
+        familyCategory: data.familyCategory,
+        ageEstimateYears: data.ageEstimateYears,
+        healthCondition: data.healthCondition,
+        location: data.location,
+        customNotes: data.customNotes,
+        // primaryPhotoUrl will be set by the context method based on the file or selected URL
+        // photos and careTasks are not updated via this form
     };
-    await onSave(formDataToSave);
+
+    // Pass the updated primaryPhotoUrl (S3 key or null) to the context method
+    // This is needed in case an existing gallery photo was selected as primary,
+    // or the primary photo was removed.
+    const updatedPlantData: Partial<Plant> = {
+        ...plantDataToSave,
+        primaryPhotoUrl: primaryPhotoFile ? undefined : data.diagnosedPhotoDataUrl, // If file exists, context handles URL. Otherwise, use the selected/removed URL.
+    };
+
+    // Call the onSave prop, passing the plant data and the primary photo file
+    await onSave(updatedPlantData, primaryPhotoFile);
   };
 
   const currentFormTitle = formTitle || t('savePlantForm.formTitle');
@@ -189,27 +226,29 @@ export function SavePlantForm({
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
     setImagePreview(null); // Clear direct upload preview
-    setSelectedGalleryPhotoId(photo.url); // Set the IDB key of the selected gallery photo
+    setSelectedGalleryPhotoUrl(photo.url); // Set the S3 key of the selected gallery photo
     form.setValue('diagnosedPhotoDataUrl', photo.url, { shouldDirty: true, shouldValidate: true });
-    form.setValue('primaryPhoto', null); 
+    form.setValue('primaryPhoto', null); // Clear the file input value
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = ""; // Clear the file input element
     }
   };
 
-  let displayUrlForPreview: string | null = null;
-  if (imagePreview) { 
-    displayUrlForPreview = imagePreview;
-  } else if (selectedGalleryPhotoId) { 
-    displayUrlForPreview = initialImageFromDb; 
-  } else if (initialData?.diagnosedPhotoDataUrl && (initialData.diagnosedPhotoDataUrl.startsWith('data:image/') || initialData.diagnosedPhotoDataUrl.startsWith('http'))) {
-    displayUrlForPreview = initialData.diagnosedPhotoDataUrl;
-  } else if (initialImageFromDb) { // If initialData had an IDB key and nothing else was selected
-    displayUrlForPreview = initialImageFromDb;
+  // Determine the URL to display in the preview area
+  let previewDisplayUrl: string | null = null;
+  if (imagePreview) {
+    // If a new file was uploaded and compressed (data URL)
+    previewDisplayUrl = imagePreview;
+  } else if (selectedGalleryPhotoUrl) {
+    // If an existing gallery photo was selected (use the URL from the hook)
+    previewDisplayUrl = displayImageUrl;
+  } else if (initialData?.diagnosedPhotoDataUrl) {
+    // If there was an initial primary photo (use the URL from the hook)
+     previewDisplayUrl = displayImageUrl;
   }
 
 
-  const isDisplayLoading = (isLoadingInitialImage && (!!selectedGalleryPhotoId || (!!initialData?.diagnosedPhotoDataUrl && !initialData.diagnosedPhotoDataUrl.startsWith('data:image/') && !initialData.diagnosedPhotoDataUrl.startsWith('http'))) && !imagePreview) || isCompressing;
+  const isDisplayLoading = isLoadingDisplayImage || isCompressing;
   const uploadAreaText = isStandalone ? t('savePlantForm.uploadAreaTextPWA') : t('savePlantForm.uploadAreaText');
 
   return (
@@ -230,10 +269,10 @@ export function SavePlantForm({
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
                 <Skeleton className="w-[150px] h-[150px] rounded-md" />
               </div>
-            ) : displayUrlForPreview ? (
+            ) : previewDisplayUrl ? (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
                 <Image
-                  src={displayUrlForPreview}
+                  src={previewDisplayUrl}
                   alt={t('savePlantForm.primaryPhotoLabel')}
                   width={150}
                   height={150}
@@ -278,18 +317,12 @@ export function SavePlantForm({
                                 onBlur={onBlur}
                                 onChange={async (e) => {
                                     const files = e.target.files;
-                                    onChange(files); 
+                                    onChange(files);
                                     if (files && files[0]) {
-                                        if (files[0].size > 1 * 1024 * 1024) { 
+                                        if (files[0].size > 5 * 1024 * 1024) { // Increased max size to 5MB for initial upload
                                             form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoTooLargeError')});
                                             setImagePreview(null);
-                                            if (selectedGalleryPhotoId) {
-                                              form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoId);
-                                            } else if (initialData?.diagnosedPhotoDataUrl) {
-                                              form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
-                                            } else {
-                                              form.setValue('diagnosedPhotoDataUrl', null);
-                                            }
+                                            setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null); // Revert to previously selected/initial URL
                                             if (e.target) e.target.value = '';
                                             return;
                                         }
@@ -299,28 +332,27 @@ export function SavePlantForm({
                                         reader.onloadend = async () => {
                                           try {
                                             const originalDataUrl = reader.result as string;
-                                            const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.75, type: 'image/webp', maxWidth: 1024, maxHeight: 1024 });
-                                            setImagePreview(compressedDataUrl);
-                                            form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true});
-                                            setSelectedGalleryPhotoId(null); // Clear gallery selection if new file uploaded
+                                            // Compress to a reasonable size for display/storage
+                                            const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.8, type: 'image/webp', maxWidth: 1920, maxHeight: 1920 });
+                                            setImagePreview(compressedDataUrl); // Set the data URL for preview
+                                            form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true}); // Store data URL in form state temporarily
+                                            setSelectedGalleryPhotoUrl(null); // Clear gallery selection if new file uploaded
                                           } catch (err) {
                                             console.error("Error compressing image in SavePlantForm:", err);
                                             form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoProcessingError')});
                                             setImagePreview(null);
+                                            setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null); // Revert on error
                                           } finally {
                                             setIsCompressing(false);
                                           }
                                         };
                                         reader.readAsDataURL(files[0]);
                                     } else {
-                                        setImagePreview(null); 
-                                        if (selectedGalleryPhotoId) {
-                                            form.setValue('diagnosedPhotoDataUrl', selectedGalleryPhotoId);
-                                        } else if (initialData?.diagnosedPhotoDataUrl) {
-                                            form.setValue('diagnosedPhotoDataUrl', initialData.diagnosedPhotoDataUrl);
-                                        } else {
-                                             form.setValue('diagnosedPhotoDataUrl', null);
-                                        }
+                                        // File input was cleared
+                                        setImagePreview(null);
+                                        // Revert to previously selected gallery photo or initial primary photo
+                                        setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null);
+                                        form.setValue('diagnosedPhotoDataUrl', form.getValues('diagnosedPhotoDataUrl') || null);
                                     }
                                 }}
                             />
@@ -341,7 +373,8 @@ export function SavePlantForm({
                       <GalleryPhotoThumbnail
                         key={photo.id}
                         photo={photo}
-                        isSelected={selectedGalleryPhotoId === photo.url && !imagePreview}
+                        // Check if this gallery photo's URL matches the currently selected/initial URL
+                        isSelected={selectedGalleryPhotoUrl === photo.url && !imagePreview}
                         userId={user?.id}
                         onClick={() => handleGalleryPhotoSelect(photo)}
                       />
@@ -468,5 +501,3 @@ export function SavePlantForm({
     </Card>
   );
 }
-
-    

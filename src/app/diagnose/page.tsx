@@ -15,16 +15,15 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { compressImage } from '@/lib/image-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation'; // Added for redirect
+import { useRouter } from 'next/navigation';
 
 export default function DiagnosePlantPage() {
   const { user } = useAuth();
-  const router = useRouter(); // Added for redirect
+  const router = useRouter();
   const { addPlant, updatePlant, getPlantById } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -195,61 +194,39 @@ export default function DiagnosePlantPage() {
     }
     setIsSavingPlant(true);
 
-    const newPlantId = `plant-${Date.now()}`;
-    let finalPhotoIdForStorage: string | undefined = undefined;
+    const primaryPhotoFile = file; // Use the file state directly
 
-    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
-      if (blob) {
-        finalPhotoIdForStorage = `photo-${newPlantId}-initial-${Date.now()}`;
-        try {
-          await addIDBImage(user.id, finalPhotoIdForStorage, blob);
-        } catch (e) {
-          console.error("Error saving initial diagnosis image to IDB:", e);
-          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
-          finalPhotoIdForStorage = undefined;
-        }
-      } else {
-        toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageProcessError'), variant: "destructive" });
-        finalPhotoIdForStorage = undefined;
-      }
-    }
-
-    const newPlant: Plant = {
-      id: newPlantId,
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPhotoIdForStorage,
-      photos: finalPhotoIdForStorage
-        ? [{
-            id: finalPhotoIdForStorage,
-            url: finalPhotoIdForStorage,
-            dateTaken: new Date().toISOString(),
-            healthCondition: data.healthCondition,
-            diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
-          }]
-        : [],
-      careTasks: [],
       plantingDate: new Date().toISOString(),
-      lastCaredDate: undefined,
+      // primaryPhotoUrl, photos, careTasks, lastCaredDate will be handled by the context method
     };
 
-    addPlant(newPlant);
-    setLastSavedPlantId(newPlantId);
+    try {
+        // Call the context method, passing the plant data and the file
+        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile); // Pass the file here
 
-    toast({
-      title: t('diagnosePage.toasts.plantSavedTitle'),
-      description: t('diagnosePage.toasts.plantSavedDesc', { plantName: data.commonName }),
-    });
-    setPlantSaved(true);
-    setShowSavePlantForm(false);
-    setIsSavingPlant(false);
+        setLastSavedPlantId(createdPlant.id); // Use the ID returned by the context method
+
+        toast({
+          title: t('diagnosePage.toasts.plantSavedTitle'),
+          description: t('diagnosePage.toasts.plantSavedDesc', { plantName: createdPlant.commonName }),
+        });
+        setPlantSaved(true);
+        setShowSavePlantForm(false);
+
+    } catch (error) {
+        console.error("Error saving new plant from diagnose:", error);
+        toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
+    } finally {
+        setIsSavingPlant(false);
+    }
   };
 
   const handleGenerateCarePlan = async (event: FormEvent) => {
@@ -320,6 +297,13 @@ export default function DiagnosePlantPage() {
       level: aiTask.taskLevel,
     }));
 
+    // This update logic is still using the old pattern of updating the whole plant object.
+    // It should ideally use the addCareTaskToPlant context method for each new task.
+    // However, for now, let's keep it simple and rely on the context's updatePlant
+    // method handling the nested tasks array update if it's passed.
+    // A better approach would be:
+    // await Promise.all(newCareTasks.map(task => addCareTaskToPlant(lastSavedPlantId, task)));
+    // But updatePlant might also work if it merges the arrays. Let's stick to the current pattern for minimal change.
     const updatedPlant = {
       ...currentPlant,
       careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]

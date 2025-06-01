@@ -160,18 +160,21 @@ export interface NavItem {
   disabled?: boolean;
 }
 
+// UserPreferences model matches the Amplify Data schema
 export interface UserPreferences {
-  emailNotifications?: boolean;
-  pushNotifications?: boolean;
+  id: string; // User's Cognito sub
+  emailNotifications?: boolean | null;
+  pushNotifications?: boolean | null;
+  avatarS3Key?: string | null; // Store S3 key for avatar
 }
 
-// Updated User interface based on Cognito attributes
+// Updated User interface based on Cognito attributes and UserPreferences model
 export interface User {
   id: string; // This will be the Cognito 'sub' (userId)
   name: string; // Cognito 'name' attribute
   email: string; // Cognito 'email' attribute
-  // avatarUrl and preferences are removed as they are not standard Cognito attributes
-  // If needed, they should be stored and fetched separately, e.g., via the Data API
+  avatarS3Key?: string | null; // S3 key for avatar, stored in UserPreferences model
+  preferences?: UserPreferences | null; // User preferences, stored in UserPreferences model
 }
 
 export interface GlobalCalendarTaskOccurrence {
@@ -180,4 +183,22 @@ export interface GlobalCalendarTaskOccurrence {
   plantId: string;
   plantName: string;
   plantPrimaryPhotoUrl?: string;
+}
+
+export interface ComparePlantHealthInput {
+    currentPlantHealth: PlantHealthCondition;
+    newPhotoDiagnosisNotes?: string;
+    newPhotoHealthStatus: PlantHealthCondition;
+    languageCode?: string;
+}
+
+export interface ProactiveCarePlanReviewInput {
+    plantCommonName?: string;
+    plantScientificName?: string;
+    plantFamilyCategory?: string;
+    plantAgeEstimateYears?: number;
+    currentPlantHealth: PlantHealthCondition;
+    plantCustomNotes?: string;
+    currentCareTasks: CareTaskForAIReview[];
+    languageCode?: string;
 }

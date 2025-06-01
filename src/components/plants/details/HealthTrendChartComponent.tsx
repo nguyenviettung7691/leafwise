@@ -7,7 +7,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import type { PlantHealthCondition } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { useS3Image } from '@/hooks/useS3Image'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
@@ -57,7 +57,7 @@ const CustomChartDot = (props: any) => {
 };
 
 const TooltipImageDisplay = ({ photoId, userId }: { photoId?: string, userId?: string }) => { // Added userId
-  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId, userId); // Pass userId
+  const { imageUrl, isLoading, error } = useS3Image(photoId, userId); // Pass userId
   const { t } = useLanguage();
 
   if (!photoId) return null;

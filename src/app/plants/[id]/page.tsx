@@ -42,8 +42,7 @@ import { proactiveCarePlanReview } from '@/ai/flows/proactive-care-plan-review';
 import { addDays, addWeeks, addMonths, addYears, parseISO, format, isToday as fnsIsToday } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, deleteImage as deleteIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image'; // Use useS3Image for displaying images
 import { compressImage } from '@/lib/image-utils';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -64,7 +63,8 @@ interface DialogPhotoDisplayProps {
 }
 
 const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, userId, altText, width = 400, height = 300, className = "rounded-md object-contain max-h-[300px] mx-auto" }) => {
-  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId, userId);
+  // Use useS3Image hook to get the display URL from the S3 key
+  const { imageUrl, isLoading, error } = useS3Image(photoUrl, userId);
   const { t } = useLanguage();
 
   if (isLoading) {
@@ -99,11 +99,18 @@ export default function PlantDetailPage() {
   const { toast } = useToast();
   const { t, language, dateFnsLocale } = useLanguage();
   const id = params.id as string;
+  // Use the new context methods
   const {
     plants: contextPlants,
     getPlantById,
-    updatePlant,
-    deletePlant,
+    updatePlant, // For updating top-level plant fields like primaryPhotoUrl or healthCondition
+    deletePlant, // For deleting the entire plant
+    addPhotoToPlant, // For adding new photos
+    updatePhotoDetails, // For updating photo metadata
+    deletePhoto, // For deleting individual photos
+    addCareTaskToPlant, // For adding new care tasks
+    updateCareTask, // For updating care task details (including pause/resume)
+    deleteCareTask, // For deleting individual care tasks
     isLoading: isLoadingContextPlants
   } = usePlantData();
 
@@ -121,9 +128,10 @@ export default function PlantDetailPage() {
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutputFlow;
     healthComparisonResult?: ComparePlantHealthOutputFlowType;
     carePlanReviewResult?: ReviewCarePlanOutput;
-    newPhotoPreviewUrl?: string;
+    newPhotoPreviewUrl?: string; // This will be a data URL for the *new* photo preview
     isLoadingCarePlanReview?: boolean;
     isApplyingCarePlanChanges?: boolean;
+    newPhotoFile?: File; // Store the File object for the new photo
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
@@ -216,11 +224,17 @@ export default function PlantDetailPage() {
       if (currentPlant) {
         setPlant(currentPlant);
       } else if (!currentPlant && contextPlants.length > 0) {
+        // If contextPlants is loaded but the plant is not found, it means it doesn't exist for this user
         notFound();
+      } else if (!currentPlant && contextPlants.length === 0 && !isLoadingContextPlants) {
+         // If contextPlants is empty and loading is complete, the plant doesn't exist at all
+         notFound();
       }
-      setIsPageLoading(false);
-    }
-  }, [id, getPlantById, contextPlants, isLoadingContextPlants, notFound, setPlant, setIsPageLoading]);
+      // If isLoadingContextPlants is true, we wait for it to become false
+      if (!isLoadingContextPlants) {
+         setIsPageLoading(false);
+      }
+  }, [id, getPlantById, contextPlants, isLoadingContextPlants, notFound]);
 
 
   const handleToggleTaskPause = useCallback(async (taskId: string) => {
@@ -233,22 +247,26 @@ export default function PlantDetailPage() {
     const wasPausedBeforeUpdate = taskBeingToggled.isPaused;
 
     setLoadingTaskId(taskId);
-    await new Promise(resolve => setTimeout(resolve, 700));
 
-    const updatedTasks = plant.careTasks.map(t =>
-      t.id === taskId ? { ...t, isPaused: !t.isPaused, resumeDate: !t.isPaused ? null : (t.resumeDate || addWeeks(new Date(), 1).toISOString()) } : t
-    );
+    try {
+        // Use the context method to update the task
+        await updateCareTask(taskId, {
+            isPaused: !taskBeingToggled.isPaused,
+            resumeDate: !taskBeingToggled.isPaused ? null : (taskBeingToggled.resumeDate || addWeeks(new Date(), 1).toISOString())
+        });
 
-    const updatedPlant = { ...plant, careTasks: updatedTasks };
-    updatePlant(plant.id, updatedPlant);
-    setLoadingTaskId(null);
-
-    if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
-      const isNowPaused = !wasPausedBeforeUpdate;
-      const toastTitleKey = isNowPaused ? "plantDetail.toasts.taskPaused" : "plantDetail.toasts.taskResumed";
-      toast({ title: t(toastTitleKey, {taskName: taskNameForToast})});
+        if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
+          const isNowPaused = !wasPausedBeforeUpdate;
+          const toastTitleKey = isNowPaused ? "plantDetail.toasts.taskPaused" : "plantDetail.toasts.taskResumed";
+          toast({ title: t(toastTitleKey, {taskName: taskNameForToast})});
+        }
+    } catch (error) {
+        console.error("Error toggling task pause:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorTogglingTask'), variant: "destructive" });
+    } finally {
+        setLoadingTaskId(null);
     }
-  }, [plant, updatePlant, t, toast]);
+  }, [plant, updateCareTask, t, toast]); // Depend on updateCareTask
 
   const handleEditPlant = () => {
     router.push(`/plants/${id}/edit`);
@@ -258,22 +276,22 @@ export default function PlantDetailPage() {
     if (!plant || !user?.id) return;
     setIsDeletingPlant(true);
 
-    for (const photo of plant.photos) {
-      if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
-        try {
-          await deleteIDBImage(user.id, photo.url);
-        } catch (e) {
-          console.error(`Failed to delete image ${photo.url} from IDB for user ${user.id}:`, e);
-        }
-      }
+    try {
+        const plantNameForToast = plant.commonName || t('common.thePlant');
+        await deletePlant(id); // Call the context method
+
+        toast({
+          title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
+          description: t('plantDetail.toasts.plantDeletedDesc', {plantName: plantNameForToast}),
+        });
+        router.push('/');
+
+    } catch (error) {
+        console.error("Error deleting plant:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingPlant'), variant: "destructive" });
+    } finally {
+        setIsDeletingPlant(false);
     }
-    const plantNameForToast = plant.commonName || t('common.thePlant');
-    deletePlant(id);
-    toast({
-      title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
-      description: t('plantDetail.toasts.plantDeletedDesc', {plantName: plantNameForToast}),
-    });
-    router.push('/');
   };
 
   const handleGrowthPhotoFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -322,6 +340,7 @@ export default function PlantDetailPage() {
                     newPhotoDiagnosisResult,
                     newPhotoPreviewUrl: compressedDataUrl,
                     isLoadingCarePlanReview: false,
+                    newPhotoFile: file, // Keep the file
                 });
                 return;
             }
@@ -334,13 +353,15 @@ export default function PlantDetailPage() {
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
-            setNewPhotoDiagnosisDialogState({
+            setNewPhotoDiagnosisDialogState(prevState => ({
+                ...prevState,
                 open: true,
                 newPhotoDiagnosisResult,
                 healthComparisonResult,
                 newPhotoPreviewUrl: compressedDataUrl,
                 isLoadingCarePlanReview: true,
-            });
+                newPhotoFile: file, // Keep the file
+            }));
 
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName,
@@ -376,52 +397,45 @@ export default function PlantDetailPage() {
     };
   };
 
-  const handleAcceptHealthUpdate = (newHealth: PlantHealthCondition) => {
+  const handleAcceptHealthUpdate = async (newHealth: PlantHealthCondition) => {
     if (!plant) return;
-    const updatedPlant = { ...plant, healthCondition: newHealth };
-    updatePlant(plant.id, updatedPlant);
-    toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}))
+    // Use the context method to update the plant's health condition
+    try {
+        await updatePlant(plant.id, { healthCondition: newHealth });
+        toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
+        setNewPhotoDiagnosisDialogState(prev => ({...prev, healthComparisonResult: {...prev.healthComparisonResult!, shouldUpdateOverallHealth: false }}))
+    } catch (error) {
+        console.error("Error updating plant health:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorUpdatingHealth'), variant: "destructive" });
+    }
   };
 
   const addPhotoToJournal = async () => {
-    if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoPreviewUrl || !user?.id) return;
-
-    const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status;
-
-    let photoIdbKey: string | undefined = undefined;
-    const blob = dataURLtoBlob(newPhotoDiagnosisDialogState.newPhotoPreviewUrl);
-    if (blob) {
-        photoIdbKey = `photo-${plant.id}-journal-${Date.now()}`;
-        try {
-            await addIDBImage(user.id, photoIdbKey, blob);
-        } catch (e) {
-            console.error("Error saving journal photo to IDB:", e);
-            toast({ title: t('common.error'), description: "Failed to save journal image.", variant: "destructive" });
-            photoIdbKey = undefined;
-        }
-    } else {
-        toast({ title: t('common.error'), description: "Failed to process journal image.", variant: "destructive" });
-        photoIdbKey = undefined;
-    }
-
-    if (!photoIdbKey) {
+    if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoFile || !user?.id) {
+        toast({ title: t('common.error'), description: "Missing photo data or user info.", variant: "destructive" });
         return;
     }
 
-    const newPhoto: PlantPhoto = {
-        id: photoIdbKey,
-        url: photoIdbKey,
-        dateTaken: new Date().toISOString(),
-        healthCondition: newHealthStatusFromDiagnosis,
-        diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
-    };
+    const newHealthStatusFromDiagnosis = newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.status;
+    const photoFile = newPhotoDiagnosisDialogState.newPhotoFile;
 
-    const updatedPhotos = [newPhoto, ...(plant.photos || [])];
-    const updatedPlant = { ...plant, photos: updatedPhotos };
-    updatePlant(plant.id, updatedPlant);
-    toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
-    setNewPhotoJournaled(true);
+    try {
+        // Use the context method to add the photo. It handles S3 upload and record creation.
+        const createdPhoto = await addPhotoToPlant(plant.id, {
+            url: '', // This will be replaced by the S3 key in the context method
+            dateTaken: new Date().toISOString(), // Use current date for journal entry
+            healthCondition: newHealthStatusFromDiagnosis,
+            diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
+            notes: '', // Add empty notes field
+        }, photoFile); // Pass the File object
+
+        toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
+        setNewPhotoJournaled(true);
+
+    } catch (error) {
+        console.error("Error adding photo to journal:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorAddingPhoto'), variant: "destructive" });
+    }
   };
 
   const calculateNextDueDateFromFrequency = (frequency: string, startDate?: string): string | undefined => {
@@ -450,77 +464,79 @@ export default function PlantDetailPage() {
     return undefined;
   };
 
-  const handleApplyCarePlanChanges = () => {
+  const handleApplyCarePlanChanges = async () => {
     if (!plant || !newPhotoDiagnosisDialogState.carePlanReviewResult) return;
 
     setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: true}));
 
-    let updatedCareTasks = [...(plant.careTasks || [])];
     const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
 
-    taskModifications.forEach(mod => {
-        const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
-        if (taskIndex === -1) return;
+    try {
+        // Process task modifications
+        await Promise.all(taskModifications.map(async (mod) => {
+            const taskToModify = plant.careTasks.find(t => t.id === mod.taskId);
+            if (!taskToModify) return;
 
-        let taskToUpdate = {...updatedCareTasks[taskIndex]};
-
-        switch (mod.suggestedAction) {
-            case 'pause':
-                taskToUpdate.isPaused = true;
-                taskToUpdate.resumeDate = null;
-                break;
-            case 'resume':
-                taskToUpdate.isPaused = false;
-                break;
-            case 'remove':
-                updatedCareTasks = updatedCareTasks.filter(t => t.id !== mod.taskId);
-                return;
-            case 'update_details':
-                if (mod.updatedDetails) {
-                    const oldFrequency = taskToUpdate.frequency;
-                    taskToUpdate = {
-                        ...taskToUpdate,
-                        name: mod.updatedDetails.name || taskToUpdate.name,
-                        description: mod.updatedDetails.description || taskToUpdate.description,
-                        frequency: mod.updatedDetails.frequency || taskToUpdate.frequency,
-                        timeOfDay: mod.updatedDetails.timeOfDay || taskToUpdate.timeOfDay,
-                        level: mod.updatedDetails.level || taskToUpdate.level,
-                    };
-                    if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
-                         const baseDateForFreqRecalc = taskToUpdate.nextDueDate && parseISO(taskToUpdate.nextDueDate) > new Date(0)
-                                                        ? taskToUpdate.nextDueDate
-                                                        : new Date().toISOString();
-                         taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, baseDateForFreqRecalc);
+            switch (mod.suggestedAction) {
+                case 'pause':
+                    await updateCareTask(mod.taskId, { isPaused: true, resumeDate: null });
+                    break;
+                case 'resume':
+                    await updateCareTask(mod.taskId, { isPaused: false });
+                    break;
+                case 'remove':
+                    await deleteCareTask(mod.taskId);
+                    break;
+                case 'update_details':
+                    if (mod.updatedDetails) {
+                        const oldFrequency = taskToModify.frequency;
+                        const updatedDetails: Partial<CareTask> = {
+                            name: mod.updatedDetails.name || taskToModify.name,
+                            description: mod.updatedDetails.description || taskToModify.description,
+                            frequency: mod.updatedDetails.frequency || taskToModify.frequency,
+                            timeOfDay: mod.updatedDetails.timeOfDay || taskToModify.timeOfDay,
+                            level: mod.updatedDetails.level || taskToModify.level,
+                        };
+                        if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
+                            const baseDateForFreqRecalc = taskToModify.nextDueDate && parseISO(taskToModify.nextDueDate) > new Date(0)
+                                                            ? taskToModify.nextDueDate
+                                                            : new Date().toISOString();
+                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(updatedDetails.frequency!, baseDateForFreqRecalc);
+                        }
+                        await updateCareTask(mod.taskId, updatedDetails);
                     }
-                }
-                break;
-            default:
-                break;
-        }
-        if (updatedCareTasks.some(t => t.id === mod.taskId)) {
-            updatedCareTasks[taskIndex] = taskToUpdate;
-        }
-    });
+                    break;
+                default:
+                    break;
+            }
+        }));
 
-    newTasks.forEach((aiTask: AIGeneratedTask) => {
-        updatedCareTasks.push({
-            id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            plantId: plant.id,
-            name: aiTask.taskName,
-            description: aiTask.taskDescription,
-            frequency: aiTask.suggestedFrequency,
-            timeOfDay: aiTask.suggestedTimeOfDay,
-            level: aiTask.taskLevel,
-            isPaused: false,
-            nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
-        });
-    });
+        // Add new tasks
+        await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
+            await addCareTaskToPlant(plant.id, {
+                name: aiTask.taskName,
+                description: aiTask.taskDescription,
+                frequency: aiTask.suggestedFrequency,
+                timeOfDay: aiTask.suggestedTimeOfDay,
+                level: aiTask.taskLevel,
+                isPaused: false,
+                nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
+                lastCompleted: undefined, // New tasks start without a last completed date
+                resumeDate: null,
+            });
+        }));
 
-    const updatedPlant = {...plant, careTasks: updatedCareTasks};
-    updatePlant(plant.id, updatedPlant);
+        toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
 
-    toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
-    setNewPhotoDiagnosisDialogState(prev => ({...prev, isApplyingCarePlanChanges: false, carePlanReviewResult: undefined}));
+    } catch (error) {
+        console.error("Error applying care plan changes:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorApplyingCarePlan'), variant: "destructive" });
+    } finally {
+        setIsProactiveReviewDialogOpen(false); // Close proactive review dialog
+        setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined})); // Clear care plan review result in new photo dialog
+        setProactiveReviewResult(null); // Clear proactive review result
+        setIsApplyingProactiveReviewChanges(false);
+    }
   };
 
   const handleKeepCurrentCarePlan = () => {
@@ -537,57 +553,59 @@ export default function PlantDetailPage() {
     setTimeout(() => setSelectedGridPhoto(null), 300);
   };
 
-  const handleSetAsPrimaryPhoto = (photoUrl: string) => {
+  const handleSetAsPrimaryPhoto = async (photoUrl: string) => {
     if (!plant) return;
-    const updatedPlant = { ...plant, primaryPhotoUrl: photoUrl };
-    updatePlant(plant.id, updatedPlant);
-    toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
-    closeGridPhotoDialog();
+    // Use the context method to update the plant's primary photo URL
+    try {
+        await updatePlant(plant.id, { primaryPhotoUrl: photoUrl });
+        toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
+        closeGridPhotoDialog();
+    } catch (error) {
+        console.error("Error setting primary photo:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorSettingPrimaryPhoto'), variant: "destructive" });
+    }
   };
 
-  const handleSaveTask = (taskData: OnSaveTaskData) => {
+  const handleSaveTask = async (taskData: OnSaveTaskData) => {
     if (!plant) return;
     setIsSavingTask(true);
 
-    let updatedTasks: CareTask[];
-    let updatedPlant: Plant;
-
-    if (taskToEdit) {
-      updatedTasks = (plant.careTasks || []).map(t =>
-        t.id === taskToEdit.id ? {
-          ...taskToEdit,
-          name: taskData.name,
-          description: taskData.description,
-          frequency: taskData.frequency,
-          timeOfDay: taskData.timeOfDay,
-          level: taskData.level,
-          nextDueDate: taskData.startDate,
-        } : t
-      );
-      toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
-    } else {
-      const newTask: CareTask = {
-        id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        plantId: plant.id,
-        name: taskData.name,
-        description: taskData.description,
-        frequency: taskData.frequency,
-        timeOfDay: taskData.timeOfDay,
-        level: taskData.level,
-        isPaused: false,
-        resumeDate: null,
-        nextDueDate: taskData.startDate,
-      };
-      updatedTasks = [...(plant.careTasks || []), newTask];
-      toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: newTask.name, plantName: plant.commonName}) });
+    try {
+        if (taskToEdit) {
+            // Use the context method to update the task
+            await updateCareTask(taskToEdit.id, {
+                name: taskData.name,
+                description: taskData.description,
+                frequency: taskData.frequency,
+                timeOfDay: taskData.timeOfDay,
+                level: taskData.level,
+                nextDueDate: taskData.startDate, // Update nextDueDate from form's startDate
+            });
+            toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
+        } else {
+            // Use the context method to add a new task
+            await addCareTaskToPlant(plant.id, {
+                name: taskData.name,
+                description: taskData.description,
+                frequency: taskData.frequency,
+                timeOfDay: taskData.timeOfDay,
+                level: taskData.level,
+                isPaused: false,
+                resumeDate: null,
+                nextDueDate: taskData.startDate, // Set initial nextDueDate from form's startDate
+                lastCompleted: undefined, // New tasks start without a last completed date
+            });
+            toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: taskData.name, plantName: plant.commonName}) });
+        }
+    } catch (error) {
+        console.error("Error saving task:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorSavingTask'), variant: "destructive" });
+    } finally {
+        setIsSavingTask(false);
+        setIsTaskFormDialogOpen(false);
+        setTaskToEdit(null);
+        setInitialTaskFormData(undefined);
     }
-    updatedPlant = { ...plant, careTasks: updatedTasks };
-    updatePlant(plant.id, updatedPlant);
-
-    setIsSavingTask(false);
-    setIsTaskFormDialogOpen(false);
-    setTaskToEdit(null);
-    setInitialTaskFormData(undefined);
   };
 
   const openAddTaskDialog = () => {
@@ -620,7 +638,7 @@ export default function PlantDetailPage() {
   }, [setSelectedTaskIds]);
 
 
-  const handleDeleteSelectedTasksConfirmed = () => {
+  const handleDeleteSelectedTasksConfirmed = async () => {
     if (!plant || selectedTaskIds.size === 0) return;
 
     const tasksToDeleteNames = (plant.careTasks || [])
@@ -628,14 +646,19 @@ export default function PlantDetailPage() {
         .map(t => t.name)
         .join(', ');
 
-    const updatedTasks = (plant.careTasks || []).filter(t => !selectedTaskIds.has(t.id));
-    const updatedPlant = { ...plant, careTasks: updatedTasks };
-    updatePlant(plant.id, updatedPlant);
+    try {
+        // Use the context method to delete tasks
+        await Promise.all(Array.from(selectedTaskIds).map(taskId => deleteCareTask(taskId)));
 
-    toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
-    setShowDeleteSelectedTasksDialog(false);
-    setSelectedTaskIds(new Set());
-    if(isManagingCarePlan && updatedTasks.length === 0) setIsManagingCarePlan(false);
+        toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
+        setSelectedTaskIds(new Set());
+        setIsManagingCarePlan(false); // Exit manage mode if all tasks deleted
+        setShowDeleteSelectedTasksDialog(false);
+
+    } catch (error) {
+        console.error("Error deleting selected tasks:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingTasks'), variant: "destructive" });
+    }
   };
 
   const toggleManageCarePlanMode = useCallback(() => {
@@ -674,36 +697,24 @@ export default function PlantDetailPage() {
   const handleDeleteSelectedPhotosConfirm = async () => {
     if (!plant || selectedPhotoIds.size === 0 || !user?.id) return;
 
-    const photoIdsToDelete = Array.from(selectedPhotoIds);
-    for (const photoId of photoIdsToDelete) {
-      if (photoId && !photoId.startsWith('http') && !photoId.startsWith('data:')) {
-        await deleteIDBImage(user.id, photoId);
-      }
+    try {
+        // Use the context method to delete photos. It handles S3 deletion and record deletion.
+        await Promise.all(Array.from(selectedPhotoIds).map(photoId => deletePhoto(photoId)));
+
+        toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
+        setSelectedPhotoIds(new Set());
+        setIsManagingPhotos(false); // Exit manage mode if all photos deleted
+        setShowDeletePhotosDialog(false);
+
+    } catch (error) {
+        console.error("Error deleting selected photos:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingPhotos'), variant: "destructive" });
     }
-
-    let updatedPhotos = (plant.photos || []).filter(p => !selectedPhotoIds.has(p.id));
-    let newPrimaryPhotoUrl = plant.primaryPhotoUrl;
-
-    if (plant.primaryPhotoUrl && selectedPhotoIds.has(plant.primaryPhotoUrl)) {
-      if (updatedPhotos.length > 0) {
-        const sortedRemainingPhotos = [...updatedPhotos].sort((a,b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-        newPrimaryPhotoUrl = sortedRemainingPhotos[0].url;
-      } else {
-        newPrimaryPhotoUrl = undefined;
-      }
-    }
-
-    const updatedPlant = { ...plant, photos: updatedPhotos, primaryPhotoUrl: newPrimaryPhotoUrl };
-    updatePlant(plant.id, updatedPlant);
-
-    toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
-    setSelectedPhotoIds(new Set());
-    setIsManagingPhotos(false);
-    setShowDeletePhotosDialog(false);
   };
 
   const handleChartDotClick = (clickedDotPayload: any) => {
       if (clickedDotPayload && clickedDotPayload.id && plant) {
+        // The payload id is the photo.id (S3 key)
         const clickedPhoto = plant.photos.find(p => p.id === clickedDotPayload.id);
         if (clickedPhoto) {
           openGridPhotoDialog(clickedPhoto);
@@ -733,27 +744,26 @@ export default function PlantDetailPage() {
   const handleSaveEditedPhotoDetails = async () => {
     if (!plant || !photoToEdit) return;
     setIsSavingPhotoDetails(true);
-    await new Promise(resolve => setTimeout(resolve, 700));
 
-    const updatedPhotos = (plant.photos || []).map(p =>
-      p.id === photoToEdit.id
-        ? {
-            ...p,
+    try {
+        // Use the context method to update photo details
+        await updatePhotoDetails(photoToEdit.id, {
             dateTaken: editedPhotoDate ? editedPhotoDate.toISOString() : new Date().toISOString(),
             healthCondition: editedPhotoHealth,
             diagnosisNotes: editedPhotoDiagnosisNotes,
             notes: editedPhotoNotes,
-          }
-        : p
-    );
+        });
 
-    const updatedPlant = { ...plant, photos: updatedPhotos };
-    updatePlant(plant.id, updatedPlant);
+        toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
+        setIsEditPhotoDialogVisible(false);
+        setPhotoToEdit(null);
 
-    toast({ title: t('plantDetail.toasts.photoDetailsSaved'), description: t('plantDetail.toasts.photoDetailsSavedDesc') });
-    setIsEditPhotoDialogVisible(false);
-    setPhotoToEdit(null);
-    setIsSavingPhotoDetails(false);
+    } catch (error) {
+        console.error("Error saving photo details:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorSavingPhotoDetails'), variant: "destructive" });
+    } finally {
+        setIsSavingPhotoDetails(false);
+    }
   };
 
   const translateFrequencyDisplayLocal = useCallback((frequency: string): string => {
@@ -833,61 +843,77 @@ export default function PlantDetailPage() {
     }
   };
 
-  const handleApplyProactiveCarePlanChanges = () => {
+  const handleApplyProactiveCarePlanChanges = async () => {
     if (!plant || !proactiveReviewResult) return;
     setIsApplyingProactiveReviewChanges(true);
 
-    let updatedCareTasks = [...(plant.careTasks || [])];
     const { taskModifications, newTasks } = proactiveReviewResult;
 
-    taskModifications.forEach(mod => {
-        const taskIndex = updatedCareTasks.findIndex(t => t.id === mod.taskId);
-        if (taskIndex === -1) return;
-        let taskToUpdate = {...updatedCareTasks[taskIndex]};
-        switch (mod.suggestedAction) {
-            case 'pause': taskToUpdate.isPaused = true; taskToUpdate.resumeDate = null; break;
-            case 'resume': taskToUpdate.isPaused = false; break;
-            case 'remove': updatedCareTasks = updatedCareTasks.filter(t => t.id !== mod.taskId); return;
-            case 'update_details':
-                if (mod.updatedDetails) {
-                    const oldFrequency = taskToUpdate.frequency;
-                    taskToUpdate = {
-                        ...taskToUpdate,
-                        name: mod.updatedDetails.name || taskToUpdate.name,
-                        description: mod.updatedDetails.description || taskToUpdate.description,
-                        frequency: mod.updatedDetails.frequency || taskToUpdate.frequency,
-                        timeOfDay: mod.updatedDetails.timeOfDay || taskToUpdate.timeOfDay,
-                        level: mod.updatedDetails.level || taskToUpdate.level,
-                    };
-                    if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
-                        const baseDateForFreqRecalc = taskToUpdate.nextDueDate && parseISO(taskToUpdate.nextDueDate) > new Date(0) ? taskToUpdate.nextDueDate : new Date().toISOString();
-                        taskToUpdate.nextDueDate = calculateNextDueDateFromFrequency(taskToUpdate.frequency, baseDateForFreqRecalc);
+    try {
+        // Process task modifications using context methods
+        await Promise.all(taskModifications.map(async (mod) => {
+            const taskToModify = plant.careTasks.find(t => t.id === mod.taskId);
+            if (!taskToModify) return;
+
+            switch (mod.suggestedAction) {
+                case 'pause':
+                    await updateCareTask(mod.taskId, { isPaused: true, resumeDate: null });
+                    break;
+                case 'resume':
+                    await updateCareTask(mod.taskId, { isPaused: false });
+                    break;
+                case 'remove':
+                    await deleteCareTask(mod.taskId);
+                    break;
+                case 'update_details':
+                    if (mod.updatedDetails) {
+                        const oldFrequency = taskToModify.frequency;
+                        const updatedDetails: Partial<CareTask> = {
+                            name: mod.updatedDetails.name || taskToModify.name,
+                            description: mod.updatedDetails.description || taskToModify.description,
+                            frequency: mod.updatedDetails.frequency || taskToModify.frequency,
+                            timeOfDay: mod.updatedDetails.timeOfDay || taskToModify.timeOfDay,
+                            level: mod.updatedDetails.level || taskToModify.level,
+                        };
+                        if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
+                            const baseDateForFreqRecalc = taskToModify.nextDueDate && parseISO(taskToModify.nextDueDate) > new Date(0)
+                                                            ? taskToModify.nextDueDate
+                                                            : new Date().toISOString();
+                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(updatedDetails.frequency!, baseDateForFreqRecalc);
+                        }
+                        await updateCareTask(mod.taskId, updatedDetails);
                     }
-                }
-                break;
-        }
-        if (updatedCareTasks.some(t => t.id === mod.taskId)) {
-            updatedCareTasks[taskIndex] = taskToUpdate;
-        }
-    });
+                    break;
+                default:
+                    break;
+            }
+        }));
 
-    newTasks.forEach((aiTask: AIGeneratedTask) => {
-        updatedCareTasks.push({
-            id: `ct-${plant.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            plantId: plant.id, name: aiTask.taskName, description: aiTask.taskDescription,
-            frequency: aiTask.suggestedFrequency, timeOfDay: aiTask.suggestedTimeOfDay,
-            level: aiTask.taskLevel, isPaused: false,
-            nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
-        });
-    });
+        // Add new tasks using context method
+        await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
+            await addCareTaskToPlant(plant.id, {
+                name: aiTask.taskName,
+                description: aiTask.taskDescription,
+                frequency: aiTask.suggestedFrequency,
+                timeOfDay: aiTask.suggestedTimeOfDay,
+                level: aiTask.taskLevel,
+                isPaused: false,
+                nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
+                lastCompleted: undefined,
+                resumeDate: null,
+            });
+        }));
 
-    const updatedPlant = {...plant, careTasks: updatedCareTasks};
-    updatePlant(plant.id, updatedPlant);
+        toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
 
-    toast({ title: t('plantDetail.toasts.carePlanUpdated'), description: t('plantDetail.toasts.carePlanUpdatedDesc') });
-    setIsProactiveReviewDialogOpen(false);
-    setProactiveReviewResult(null);
-    setIsApplyingProactiveReviewChanges(false);
+    } catch (error) {
+        console.error("Error applying proactive care plan changes:", error);
+        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorApplyingCarePlan'), variant: "destructive" });
+    } finally {
+        setIsProactiveReviewDialogOpen(false);
+        setProactiveReviewResult(null);
+        setIsApplyingProactiveReviewChanges(false);
+    }
   };
 
   const handleKeepCurrentProactiveCarePlan = () => {
@@ -960,7 +986,8 @@ export default function PlantDetailPage() {
           selectedPhotoIds={selectedPhotoIds}
           onTogglePhotoSelection={handleTogglePhotoSelection}
           onDeleteSelectedPhotos={() => {
-            const primaryPhotoIsSelected = plant.primaryPhotoUrl ? selectedPhotoIds.has(plant.primaryPhotoUrl) : false;
+            // Check if the primary photo's ID is in the selectedPhotoIds set
+            const primaryPhotoIsSelected = plant.primaryPhotoUrl ? plant.photos?.some(p => p.url === plant.primaryPhotoUrl && selectedPhotoIds.has(p.id)) : false;
             setIsPrimaryPhotoSelectedForDeletion(primaryPhotoIsSelected);
             setShowDeletePhotosDialog(true);
           }}
@@ -1242,7 +1269,8 @@ export default function PlantDetailPage() {
                 </DialogHeader>
                 {selectedGridPhoto && (
                     <div className="space-y-3 py-3">
-                       <DialogPhotoDisplay photoId={selectedGridPhoto.url} userId={user?.id} altText={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}/>
+                       {/* Use DialogPhotoDisplay which uses useS3Image */}
+                       <DialogPhotoDisplay photoUrl={selectedGridPhoto.url} userId={user?.id} altText={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}/>
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
                         <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
@@ -1344,8 +1372,9 @@ export default function PlantDetailPage() {
                 {photoToEdit && (
                     <div className="space-y-4 py-4">
                         <div className="flex justify-center mb-4">
+                           {/* Use DialogPhotoDisplay which uses useS3Image */}
                            <DialogPhotoDisplay
-                              photoId={photoToEdit.url}
+                              photoUrl={photoToEdit.url}
                               userId={user?.id}
                               altText={t('plantDetail.editPhotoDialog.photoAlt', {date: formatDateForDialog(photoToEdit.dateTaken)})}
                               width={200}

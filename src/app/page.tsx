@@ -31,7 +31,6 @@ import {
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, deleteImage as deleteIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -124,7 +123,7 @@ export default function MyPlantsPage() {
         healthCondition: foundPlant.healthCondition,
         location: foundPlant.location || '',
         customNotes: foundPlant.customNotes || '',
-        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, 
+        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
       });
       setIsEditPlantDialogOpen(true);
     } else {
@@ -132,61 +131,47 @@ export default function MyPlantsPage() {
     }
   }, [plantsFromContext, t, toast]);
 
-  const handleSaveEditedPlant = async (data: PlantFormData) => {
+  // Update handleSaveEditedPlant to accept plant data and the primary photo file
+  const handleSaveEditedPlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
     if (!plantToEdit || !plantToEdit.id || !user?.id) {
        toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: 'destructive'});
        return;
     }
     setIsSavingEditedPlant(true);
 
-    let finalPrimaryPhotoId: string | undefined = plantToEdit.primaryPhotoUrl;
-    let updatedPhotosArray = [...(plantToEdit.photos || [])];
-
-    if (data.primaryPhoto && data.primaryPhoto[0] && data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
-      if (blob) {
-        const newPhotoId = `photo-${user.id}-${plantToEdit.id}-edited-${Date.now()}`;
-        try {
-          await addIDBImage(user.id, newPhotoId, blob);
-          finalPrimaryPhotoId = newPhotoId;
-          updatedPhotosArray.unshift({ 
-            id: newPhotoId, 
-            url: newPhotoId, 
-            dateTaken: new Date().toISOString(), 
-            healthCondition: data.healthCondition || 'unknown', 
-            diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') 
-          });
-        } catch (e) {
-          console.error("Error saving edited primary photo to IDB:", e);
-          toast({ title: t('common.error'), description: "Failed to save updated image.", variant: "destructive" });
-        }
-      }
-    } else if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl !== plantToEdit.primaryPhotoUrl) {
-      finalPrimaryPhotoId = data.diagnosedPhotoDataUrl; 
-    }
-
-    const updatedPlant: Plant = {
-      ...plantToEdit,
+    // Prepare updated plant data (without image data/keys)
+    const updatedPlantData: Partial<Plant> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
-      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPrimaryPhotoId,
-      photos: updatedPhotosArray,
+      // primaryPhotoUrl will be handled by the context method based on the file or selected URL
+      // photos and careTasks are not updated via this form
     };
 
-    updateContextPlant(plantToEdit.id, updatedPlant);
+    try {
+        // Call the context method, passing the plant ID, updated data, and the file
+        // The context method handles uploading the new file (if any), deleting the old one,
+        // and updating the primaryPhotoUrl field on the Plant record.
+        // It also handles the case where an existing gallery photo was selected as primary
+        // (by passing its S3 key in updatedPlantData.primaryPhotoUrl) or if the primary photo was removed.
+        await updateContextPlant(plantToEdit.id, updatedPlantData, primaryPhotoFile);
 
-    toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
+        toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
 
-    setIsSavingEditedPlant(false);
-    setIsEditPlantDialogOpen(false);
-    setPlantToEdit(null);
-    setInitialEditFormData(undefined);
+        setIsEditPlantDialogOpen(false);
+        setPlantToEdit(null);
+        setInitialEditFormData(undefined);
+
+    } catch (error) {
+        console.error("Error saving edited plant:", error);
+        toast({ title: t('common.error'), description: t('myPlantsPage.toastErrorSavingPlant'), variant: "destructive" });
+    } finally {
+        setIsSavingEditedPlant(false);
+    }
   };
 
   const handleCancelEditPlantDialog = () => {
@@ -335,16 +320,7 @@ export default function MyPlantsPage() {
     const numSelected = selectedPlantIds.size;
     if (numSelected === 0 || !user?.id) return;
 
-    const plantsToDelete = plantsFromContext.filter(p => selectedPlantIds.has(p.id));
-
-    for (const plant of plantsToDelete) {
-      for (const photo of plant.photos || []) {
-        if (photo.url && !photo.url.startsWith('http') && !photo.url.startsWith('data:')) {
-          await deleteIDBImage(user.id, photo.url);
-        }
-      }
-    }
-
+    // Call the context method to delete plants and their associated data (including S3 images)
     deleteMultiplePlants(selectedPlantIds);
 
     toast({
