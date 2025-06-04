@@ -11,16 +11,18 @@
     "**/amplify_outputs*/**": true
   },
   "files.exclude": {
-    "**/.git": true,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/CVS": true,
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-    "**/node_modules": true,
-    "**/.next": true,
     "**/.amplify": true,
-    "**/amplify_outputs*": true
+    "**/.DS_Store": true,
+    "**/.git": true,
+    "**/.hg": true,
+    "**/.next": true,
+    "**/.svn": true,
+    "**/amplify_outputs*": true,
+    "**/build": true,
+    "**/CVS": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/Thumbs.db": true
   },
   "typescript.preferences.autoImportFileExcludePatterns": [
     "**/node_modules/@types/**",
@@ -29,5 +31,12 @@
   "javascript.preferences.autoImportFileExcludePatterns": [
     "**/node_modules/@types/**",
     "**/node_modules/**"
-  ]
+  ],
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "search.exclude": {
+    "**/.amplify": true,
+    "**/.next": true,
+    "**/build": true,
+    "**/dist": true
+  }
 }
