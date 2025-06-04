@@ -1,4 +1,33 @@
 {
-    "IDX.aI.enableInlineCompletion": true,
-    "IDX.aI.enableCodebaseIndexing": true
+  "IDX.aI.enableInlineCompletion": true,
+  "IDX.aI.enableCodebaseIndexing": true,
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.hg/store/**": true,
+    "**/.next/**": true,
+    "**/.amplify/**": true,
+    "**/amplify_outputs*/**": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/.amplify": true,
+    "**/amplify_outputs*": true
+  },
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "**/node_modules/@types/**",
+    "**/node_modules/**"
+  ],
+  "javascript.preferences.autoImportFileExcludePatterns": [
+    "**/node_modules/@types/**",
+    "**/node_modules/**"
+  ]
 }

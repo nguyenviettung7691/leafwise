@@ -1,9 +1,7 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
-  // Define the Plant model
   Plant: a.model({
-    // Fields based on src/types/index.ts Plant interface
     commonName: a.string().required(),
     scientificName: a.string(),
     familyCategory: a.string(),
@@ -16,11 +14,9 @@ const schema = a.schema({
     // Relationships
     photos: a.hasMany('PlantPhoto', 'plant'), // A Plant has many PlantPhotos
     careTasks: a.hasMany('CareTask', 'plant'), // A Plant has many CareTasks
-  }).authorization((allow) => [allow.owner()]), // Owner authorization
+  }).authorization((allow) => [allow.owner()]),
 
-  // Define the PlantPhoto model
   PlantPhoto: a.model({
-    // Fields based on src/types/index.ts PlantPhoto interface
     url: a.string().required(), // This will store the S3 key
     notes: a.string(),
     dateTaken: a.string().required(), // Store date as ISO string
@@ -29,11 +25,9 @@ const schema = a.schema({
     // Relationship back to Plant
     plantId: a.id().required(),
     plant: a.belongsTo('Plant', 'plantId'),
-  }).authorization((allow) => [allow.owner()]), // Owner authorization
+  }).authorization((allow) => [allow.owner()]),
 
-  // Define the CareTask model
   CareTask: a.model({
-    // Fields based on src/types/index.ts CareTask interface
     name: a.string().required(),
     description: a.string(),
     frequency: a.string().required(),
@@ -46,16 +40,14 @@ const schema = a.schema({
     // Relationship back to Plant
     plantId: a.id().required(),
     plant: a.belongsTo('Plant', 'plantId'),
-  }).authorization((allow) => [allow.owner()]), // Owner authorization
+  }).authorization((allow) => [allow.owner()]),
 
-  // Define the UserPreferences model
   UserPreferences: a.model({
-    // Fields based on src/types/index.ts UserPreferences interface
     id: a.id().required(), // User's Cognito sub
     emailNotifications: a.boolean(),
     pushNotifications: a.boolean(),
-    avatarS3Key: a.string(), // Store S3 key for avatar
-  }).authorization((allow) => [allow.owner()]), // Owner authorization
+    avatarS3Key: a.string(),
+  }).authorization((allow) => [allow.owner()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;

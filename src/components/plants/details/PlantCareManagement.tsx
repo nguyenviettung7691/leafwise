@@ -89,6 +89,7 @@ const formatDateTime = (dateString?: string, timeString?: string, t?: (key: stri
 
 interface PlantCareManagementProps {
   plant: Plant;
+  careTasks: CareTask[];
   loadingTaskId: string | null;
   onToggleTaskPause: (taskId: string) => Promise<void>;
   onOpenEditTaskDialog: (task: CareTask) => void;
@@ -106,6 +107,7 @@ interface PlantCareManagementProps {
 
 export function PlantCareManagement({
   plant,
+  careTasks
   loadingTaskId,
   onToggleTaskPause,
   onOpenEditTaskDialog,
@@ -123,8 +125,8 @@ export function PlantCareManagement({
   const isStandalone = usePWAStandalone();
 
   const sortedTasks = useMemo(() => {
-    if (!plant.careTasks) return [];
-    return [...plant.careTasks].sort((a, b) => {
+    if (!careTasks) return [];
+    return [...careTasks].sort((a, b) => {
       if (a.isPaused && !b.isPaused) return 1;
       if (!a.isPaused && b.isPaused) return -1;
       if (!a.nextDueDate && b.nextDueDate) return 1;
@@ -137,7 +139,7 @@ export function PlantCareManagement({
         return 0;
       }
     });
-  }, [plant.careTasks]);
+  }, [careTasks]);
 
 
   return (

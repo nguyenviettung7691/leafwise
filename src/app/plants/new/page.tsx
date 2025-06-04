@@ -3,7 +3,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
-import type { PlantFormData, Plant } from '@/types';
+import type { PlantFormData, Plant, SavePlantFormValues } from '@/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,7 @@ export default function NewPlantPage() {
   const { addPlant: addPlantToContext } = usePlantData();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Update handleSaveNewPlant to accept plant data and the primary photo file
-  const handleSaveNewPlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
+  const handleSaveNewPlant = async (data: Omit<SavePlantFormValues, 'primaryPhoto'>, primaryPhotoFile?: File | null) => {
     if (!user?.id) {
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
       router.push('/login');
@@ -29,9 +28,7 @@ export default function NewPlantPage() {
     }
     setIsSaving(true);
 
-    // The PlantDataContext addPlant method handles creating the plant and uploading the image
-    // We just need to prepare the plant data (without image data/keys) and pass the file.
-    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate'> = {
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
@@ -40,12 +37,13 @@ export default function NewPlantPage() {
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
       plantingDate: new Date().toISOString(),
-      // primaryPhotoUrl, photos, careTasks, lastCaredDate will be handled by the context method
     };
 
     try {
-        // Call the context method, passing the plant data and the file
-        const createdPlant = await addPlantToContext(newPlantData as Plant, primaryPhotoFile); // Cast to Plant as context expects it
+        const createdPlant = await addPlantToContext(
+          newPlantData as Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'createdAt' | 'updatedAt'>,
+          primaryPhotoFile
+        );
 
         toast({
           title: t('addNewPlantPage.toastPlantAddedTitle'),

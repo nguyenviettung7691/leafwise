@@ -3,7 +3,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -13,18 +13,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import type { Plant, UserPreferences, PlantPhoto, CareTask, User } from '@/types'; // Import User type
-import { Loader2, LogOut, UserCircle, Settings, Trash2, Upload, Download, Bell, Mail, CheckCircle, XCircle, SaveIcon, Edit3, ImageOff, Camera } from 'lucide-react'; // Added Edit3, ImageOff, Camera
+import { Loader2, LogOut, UserCircle, Settings, Trash2, Download, Bell, Mail, SaveIcon, Edit3, Camera, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Dialog, DialogContent, DialogHeader, DialogTitle as ShadDialogTitle, DialogDescription as ShadDialogDescription, DialogClose } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTheme } from 'next-themes';
-// Removed direct Storage imports, now handled in AuthContext
-// import { uploadData } from 'aws-amplify/storage';
 import { format } from 'date-fns';
-import { useS3Image } from '@/hooks/useS3Image'; // Import useS3Image
-import { compressImage } from '@/lib/image-utils'; // Import compressImage
+import { useS3Image } from '@/hooks/useS3Image';
+import { compressImage } from '@/lib/image-utils';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { generateClient } from 'aws-amplify/data';
+import { remove } from 'aws-amplify/storage';
+import type { Schema } from '../../../amplify/data/resource';
+import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
+
+const client = generateClient<Schema>();
 
 // Placeholder for AuthLoader if it's not defined elsewhere
 const AuthLoader = ({ className }: { className?: string }) => (
@@ -63,7 +65,6 @@ export default function ProfilePage() {
 
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { theme, setTheme } = useTheme();
 
   // Hook to fetch the display URL for the user's avatar from S3
   const { imageUrl: userAvatarS3Url, isLoading: isLoadingAvatarS3 } = useS3Image(
@@ -195,9 +196,7 @@ export default function ProfilePage() {
   const handlePreferenceChange = async (preferenceKey: keyof UserPreferences, value: boolean) => {
     if (!authUser || !userPreferences) return;
 
-    let permissionGranted = notificationPermission === 'granted';
-
-    if (preferenceKey === 'pushNotifications' && value) {
+    if ((preferenceKey as any) === 'pushNotifications' && value) {
       if (notificationPermission !== 'granted') {
         const granted = await requestNotificationPermission();
         if (!granted) {
@@ -221,11 +220,11 @@ export default function ProfilePage() {
         // Local state is updated by the AuthContext after successful save
         // setUserPreferences(updatedPreferences as UserPreferences); // AuthContext handles this
 
-        toast({ title: t('common.success'), description: t('profilePage.toasts.preferenceUpdatedSuccess', { preferenceKey: t(`profilePage.preferences.${preferenceKey}`)})});
+        toast({ title: t('common.success'), description: t('profilePage.toasts.preferenceUpdatedSuccess', { preferenceKey: t(`profilePage.preferences.${String(preferenceKey)}`)})});
 
     } catch (error) {
-        console.error(`Error saving preference ${preferenceKey}:`, error);
-        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', { preferenceKey: t(`profilePage.preferences.${preferenceKey}`) }), variant: "destructive" });
+        console.error(`Error saving preference ${String(preferenceKey)}:`, error);
+        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', { preferenceKey: t(`profilePage.preferences.${String(preferenceKey)}`) }), variant: "destructive" });
         // Optionally revert the local state change on error if AuthContext doesn't handle it
     } finally {
         setIsSavingPreferences(false);
@@ -310,20 +309,33 @@ export default function ProfilePage() {
           avatarS3Key: authUser.avatarS3Key || null, // Include avatar S3 key
           preferences: authUser.preferences || null, // Include preferences
         },
-        plants: plantsToExport.map(plant => ({
-            ...plant,
-            // Ensure photo URLs are S3 keys
-            primaryPhotoUrl: plant.primaryPhotoUrl,
-            photos: plant.photos.map(photo => ({
-                ...photo,
-                url: photo.url, // This should already be the S3 key
-                // imageDataUrl is removed from export
-            })),
-            // Care tasks are already nested
-            careTasks: plant.careTasks,
-            // ageEstimate string is removed from export, use ageEstimateYears
-            ageEstimate: undefined,
-        })),
+        // Cast the plant object to the 'Plant' type to access its properties
+        plants: plantsToExport.map((clientModelPlant: any) => {
+            // Access the raw data from the client model
+            return {
+                id: clientModelPlant.id,
+                commonName: clientModelPlant.commonName,
+                scientificName: clientModelPlant.scientificName,
+                familyCategory: clientModelPlant.familyCategory,
+                ageEstimateYears: clientModelPlant.ageEstimateYears,
+                healthCondition: clientModelPlant.healthCondition,
+                location: clientModelPlant.location,
+                plantingDate: clientModelPlant.plantingDate,
+                customNotes: clientModelPlant.customNotes,
+                primaryPhotoUrl: clientModelPlant.primaryPhotoUrl,
+                photos: clientModelPlant.photos?.map((photo: any) => ({
+                    id: photo.id,
+                    url: photo.url,
+                    notes: photo.notes,
+                    dateTaken: photo.dateTaken,
+                    healthCondition: photo.healthCondition,
+                    diagnosisNotes: photo.diagnosisNotes
+                })),
+                careTasks: clientModelPlant.careTasks,
+                lastCaredDate: clientModelPlant.lastCaredDate,
+                ageEstimate: undefined,
+            };
+        }),
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -370,68 +382,114 @@ export default function ProfilePage() {
         }
 
         const plantsToImport = importData.plants;
-        const importedPlantsWithS3Keys: Plant[] = [];
+        const importedPlantsForCreation: Array<
+          Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
+            photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
+            careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
+          }
+        > = [];
 
-        // Process each plant for import
-        for (const plantData of plantsToImport) {
-            const photosToCreate: Omit<PlantPhoto, 'id'>[] = [];
-            const careTasksToCreate: Omit<CareTask, 'id'>[] = [];
+        // Define interfaces for the expected structure of imported data
+        interface ImportedPhotoData {
+            id: string;
+            url: string;
+            notes?: string | null;
+            dateTaken?: string | null;
+            healthCondition?: string | null;
+            diagnosisNotes?: string | null;
+        }
+
+        interface ImportedCareTaskData {
+            id: string;
+            name: string;
+            description?: string | null;
+            frequency: string;
+            timeOfDay?: string | null;
+            lastCompleted?: string | null;
+            nextDueDate?: string | null;
+            isPaused: boolean;
+            resumeDate?: string | null;
+            level: string;
+        }
+
+        interface ImportedPlantData {
+            id: string;
+            commonName: string;
+            scientificName?: string | null;
+            familyCategory?: string | null;
+            ageEstimateYears?: number | null;
+            healthCondition: string;
+            location?: string | null;
+            plantingDate?: string | null;
+            customNotes?: string | null;
+            primaryPhotoUrl?: string | null;
+            photos?: ImportedPhotoData[];
+            careTasks?: ImportedCareTaskData[];
+            lastCaredDate?: string | null; // Add this field
+            ageEstimate?: any; // Present in export but undefined
+        }
+
+        for (const plantData of plantsToImport as ImportedPlantData[]) { // Explicitly type plantData
+            const photosToCreate: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>[] = [];
+            const careTasksToCreate: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>[] = [];
             let primaryPhotoS3Key: string | undefined = undefined;
 
-            // Assume primaryPhotoUrl in the import file is already an S3 key or external URL
-            primaryPhotoS3Key = plantData.primaryPhotoUrl;
+            primaryPhotoS3Key = plantData.primaryPhotoUrl || undefined;
 
-            // Assume photo.url in the import file is already an S3 key or external URL
             if (plantData.photos && Array.isArray(plantData.photos)) {
                 for (const photoData of plantData.photos) {
-                     if (photoData.url) { // Check if url exists (should be S3 key or external)
-                         photosToCreate.push({
-                             url: photoData.url, // This should be the S3 key
-                             notes: photoData.notes,
-                             dateTaken: photoData.dateTaken,
-                             healthCondition: photoData.healthCondition,
-                             diagnosisNotes: photoData.diagnosisNotes,
-                         });
+                     if (photoData.url) {
+                         const photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> = {
+                              url: photoData.url,
+                              notes: photoData.notes || null,
+                              dateTaken: photoData.dateTaken || new Date().toISOString(),
+                              healthCondition: photoData.healthCondition || 'unknown',
+                              diagnosisNotes: photoData.diagnosisNotes || null,
+                          };
+                         photosToCreate.push(photo);
                     } else {
                         console.warn(`Skipping photo during import for plant ${plantData.commonName} due to missing URL.`);
                     }
                 }
             }
 
-            // Handle care tasks (assuming they were stored directly in the old format)
             if (plantData.careTasks && Array.isArray(plantData.careTasks)) {
-                 careTasksToCreate.push(...plantData.careTasks.map((task: CareTask) => ({
-                     name: task.name,
-                     description: task.description,
-                     frequency: task.frequency,
-                     timeOfDay: task.timeOfDay,
-                     lastCompleted: task.lastCompleted,
-                     nextDueDate: task.nextDueDate,
-                     isPaused: task.isPaused,
-                     resumeDate: task.resumeDate,
-                     level: task.level,
-                 })));
+                careTasksToCreate.push(
+                    ...plantData.careTasks.map((taskData: ImportedCareTaskData) => {
+                        const task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> = {
+                            name: taskData.name,
+                            description: taskData.description || null,
+                            frequency: taskData.frequency,
+                            timeOfDay: taskData.timeOfDay || null,
+                            lastCompleted: taskData.lastCompleted || null,
+                            nextDueDate: taskData.nextDueDate || null,
+                            isPaused: taskData.isPaused ?? false,
+                            resumeDate: taskData.resumeDate || null,
+                            level: taskData.level,
+                        };
+                        return task;
+                    })
+                );
             }
 
-            // Prepare the plant object in the format expected by setAllPlants.
-            // setAllPlants clears existing data and creates new records in the backend.
-            const plantToCreate: Plant = {
-                // Let the backend generate the ID
-                id: '', // ID will be generated by Amplify Data
-                commonName: plantData.commonName,
-                scientificName: plantData.scientificName,
-                familyCategory: plantData.familyCategory,
-                ageEstimateYears: plantData.ageEstimateYears,
-                healthCondition: plantData.healthCondition,
-                location: plantData.location,
-                plantingDate: plantData.plantingDate,
-                customNotes: plantData.customNotes,
-                primaryPhotoUrl: primaryPhotoS3Key, // Use the S3 key from the import file
-                photos: photosToCreate.map((p, index) => ({...p, id: `temp-photo-${index}`}) as PlantPhoto), // Assign temp IDs for photos before saving
-                careTasks: careTasksToCreate.map((t, index) => ({...t, id: `temp-task-${index}`}) as CareTask), // Assign temp IDs for tasks before saving
-                lastCaredDate: plantData.lastCaredDate,
+            const plantToCreate: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
+              photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
+              careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
+            } = {
+              commonName: plantData.commonName,
+              scientificName: plantData.scientificName || null,
+              familyCategory: plantData.familyCategory || null,
+              ageEstimateYears: plantData.ageEstimateYears || null,
+              healthCondition: plantData.healthCondition,
+              location: plantData.location || null,
+              plantingDate: plantData.plantingDate || null,
+              customNotes: plantData.customNotes || null,
+              primaryPhotoUrl: primaryPhotoS3Key,
+              photos: photosToCreate,
+              careTasks: careTasksToCreate,
             };
-            importedPlantsWithS3Keys.push(plantToCreate);
+
+            importedPlantsForCreation.push(plantToCreate);
         }
 
         // Process user data from import
@@ -440,7 +498,7 @@ export default function ProfilePage() {
             emailNotifications: importedUserData.preferences?.emailNotifications,
             pushNotifications: importedUserData.preferences?.pushNotifications,
             avatarS3Key: importedUserData.avatarS3Key, // Use the S3 key from import
-        };
+        } as Partial<UserPreferences>; // Cast the object literal
 
         // Update user profile (name, avatar S3 key, preferences)
         // Note: This will NOT re-upload the avatar image from the export file.
@@ -456,9 +514,9 @@ export default function ProfilePage() {
         });
 
         // Now call setAllPlants with the processed data
-        if (importedPlantsWithS3Keys.length > 0) {
-             await setContextPlants(importedPlantsWithS3Keys); // This method clears existing and creates new
-             toast({ title: t('profilePage.toasts.importSuccessTitle'), description: t('profilePage.toasts.importSuccessDesc', {count: importedPlantsWithS3Keys.length}) });
+        if (importedPlantsForCreation.length > 0) {
+             await setContextPlants(importedPlantsForCreation); // This method clears existing and creates new
+             toast({ title: t('profilePage.toasts.importSuccessTitle'), description: t('profilePage.toasts.importSuccessDesc', {count: importedPlantsForCreation.length}) });
         } else {
              toast({ title: t('profilePage.toasts.importNoPlantsTitle'), description: t('profilePage.toasts.importNoPlantsDesc') });
         }
@@ -493,9 +551,9 @@ export default function ProfilePage() {
         await clearAllPlantData();
 
         // Also delete user preferences and avatar from S3
-        if (authUser.preferences?.id) {
+        if (authUser.preferences) {
              try {
-                 await client.models.UserPreferences.delete({ id: authUser.preferences.id });
+                 await client.models.UserPreferences.delete({ id: authUser.id });
                  console.log(`User preferences deleted for user ${authUser.id}`);
              } catch (e) {
                  console.error(`Failed to delete user preferences for ${authUser.id}:`, e);
@@ -504,7 +562,7 @@ export default function ProfilePage() {
         }
         if (authUser.avatarS3Key) {
              try {
-                 await remove({ key: authUser.avatarS3Key, options: { accessLevel: 'protected' } });
+                 await remove({ path: authUser.avatarS3Key });
                  console.log(`User avatar deleted from S3 for user ${authUser.id}`);
              } catch (e) {
                  console.error(`Failed to delete user avatar from S3 for ${authUser.id}:`, e);
@@ -699,8 +757,8 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="email-notifications"
-                checked={userPreferences?.emailNotifications ?? false} // Default to false if null/undefined
-                onCheckedChange={(checked) => handlePreferenceChange('emailNotifications', checked)}
+                checked={(userPreferences as any)?.emailNotifications ?? false} // Default to false if null/undefined
+                onCheckedChange={(checked) => handlePreferenceChange('emailNotifications' as keyof UserPreferences, checked)}
                 disabled={isSavingPreferences || authLoading}
               />
             </div>
@@ -711,8 +769,8 @@ export default function ProfilePage() {
               </div>
               <Switch
                 id="push-notifications"
-                checked={userPreferences?.pushNotifications ?? false} // Default to false if null/undefined
-                onCheckedChange={(checked) => handlePreferenceChange('pushNotifications', checked)}
+                checked={(userPreferences as any)?.pushNotifications ?? false} // Default to false if null/undefined
+                onCheckedChange={(checked) => handlePreferenceChange('pushNotifications' as keyof UserPreferences, checked)}
                 disabled={isSavingPreferences || authLoading || notificationPermission === 'denied'} // Disable if permission denied
               />
             </div>

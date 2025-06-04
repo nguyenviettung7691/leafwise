@@ -4,8 +4,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
-import type { Plant, PlantFormData, PlantPhoto, PlantHealthCondition } from '@/types';
-import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, Edit3 } from 'lucide-react';
+import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2 } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -34,7 +33,7 @@ import { usePlantData } from '@/contexts/PlantDataContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
-
+import type { Plant, CareTask, PlantFormData, PlantHealthCondition } from '@/types';
 
 const initialFiltersState: Filters = {
   searchTerm: '',
@@ -49,11 +48,14 @@ const initialSortConfigState: SortConfig = {
   direction: 'asc',
 };
 
-const getNextCareTaskDate = (plant: Plant): Date | null => {
-  if (!plant.careTasks || plant.careTasks.length === 0) return null;
+// Modified to accept all care tasks and the plant ID
+const getNextCareTaskDate = (allCareTasks: CareTask[], plantId: string): Date | null => {
+  const plantTasks = allCareTasks.filter(task => task.plantId === plantId);
+
+  if (!plantTasks || plantTasks.length === 0) return null;
 
   // Step 1: Map tasks to potential dates, handling parsing errors
-  const parsedDates: (Date | null)[] = plant.careTasks
+  const parsedDates: (Date | null)[] = plantTasks
     .filter(task => !task.isPaused && task.nextDueDate)
     .map(task => {
       try {
@@ -75,13 +77,12 @@ const getNextCareTaskDate = (plant: Plant): Date | null => {
   return upcomingTasks.length > 0 ? upcomingTasks[0] : null;
 };
 
-
 export default function MyPlantsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { plants: plantsFromContext, isLoading: isLoadingPlants, deleteMultiplePlants, updatePlant: updateContextPlant } = usePlantData();
+  const { plants: plantsFromContext, careTasks: careTasksFromContext, plantPhotos: plantPhotosFromContext, isLoading: isLoadingPlants, deleteMultiplePlants, updatePlant: updateContextPlant } = usePlantData();
   
   const [plants, setPlants] = useState<Plant[]>([]);
   const [isNavigatingToNewPlant, setIsNavigatingToNewPlant] = useState(false);
@@ -120,10 +121,10 @@ export default function MyPlantsPage() {
         scientificName: foundPlant.scientificName || '',
         familyCategory: foundPlant.familyCategory || '',
         ageEstimateYears: foundPlant.ageEstimateYears,
-        healthCondition: foundPlant.healthCondition,
+        healthCondition: foundPlant.healthCondition as PlantHealthCondition, // Cast to frontend type if needed
         location: foundPlant.location || '',
         customNotes: foundPlant.customNotes || '',
-        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
+        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, // Assuming primaryPhotoUrl can be used as a preview source
       });
       setIsEditPlantDialogOpen(true);
     } else {
@@ -140,12 +141,12 @@ export default function MyPlantsPage() {
     setIsSavingEditedPlant(true);
 
     // Prepare updated plant data (without image data/keys)
-    const updatedPlantData: Partial<Plant> = {
+    const updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>> = { // Use Omit for input type
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
       ageEstimateYears: data.ageEstimateYears,
-      healthCondition: data.healthCondition,
+      healthCondition: data.healthCondition, // This should align with backend string type
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
       // primaryPhotoUrl will be handled by the context method based on the file or selected URL
@@ -203,9 +204,9 @@ export default function MyPlantsPage() {
 
   const ageRanges: Record<string, (age: number | undefined) => boolean> = {
     all: () => true,
-    '<1': (age) => age !== undefined && age < 1,
-    '1-3': (age) => age !== undefined && age >= 1 && age <= 3,
-    '>3': (age) => age !== undefined && age > 3,
+    '<1': (age) => age !== undefined && age !== null && age < 1, // Added null check
+    '1-3': (age) => age !== undefined && age !== null && age >= 1 && age <= 3, // Added null check
+    '>3': (age) => age !== undefined && age !== null && age > 3, // Added null check
   };
 
   const filteredAndSortedPlants = useMemo(() => {
@@ -219,7 +220,7 @@ export default function MyPlantsPage() {
         (plant.location && plant.location.toLowerCase().includes(searchTermLower)) ||
         (plant.familyCategory && plant.familyCategory.toLowerCase().includes(searchTermLower));
 
-      const matchesAge = ageRanges[filters.ageRange](plant.ageEstimateYears);
+      const matchesAge = ageRanges[filters.ageRange](plant.ageEstimateYears ?? undefined);
       const matchesLocation = filters.location ? (plant.location && plant.location.toLowerCase().includes(filters.location.toLowerCase())) : true;
       const matchesFamily = filters.familyCategory ? (plant.familyCategory && plant.familyCategory.toLowerCase().includes(filters.familyCategory.toLowerCase())) : true;
       const matchesHealth = filters.healthCondition === 'all' || plant.healthCondition === filters.healthCondition;
@@ -232,8 +233,8 @@ export default function MyPlantsPage() {
       let valB: any;
 
       if (sortConfig.key === 'nextCareDate') {
-        valA = getNextCareTaskDate(a);
-        valB = getNextCareTaskDate(b);
+        valA = getNextCareTaskDate(careTasksFromContext, a.id);
+        valB = getNextCareTaskDate(careTasksFromContext, b.id);
         if (valA === null && valB === null) return 0;
         if (valA === null) return sortConfig.direction === 'asc' ? 1 : -1;
         if (valB === null) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -265,7 +266,7 @@ export default function MyPlantsPage() {
     });
 
     return processedPlants;
-  }, [plants, filters, sortConfig]);
+  }, [plants, filters, sortConfig, careTasksFromContext]);
 
 
   const sortOptions = useMemo(() => [
@@ -276,7 +277,6 @@ export default function MyPlantsPage() {
     { value: 'familyCategory', label: t('myPlantsPage.filterSortCard.familyCategorySort') },
     { value: 'healthCondition', label: t('myPlantsPage.filterSortCard.healthConditionSort') },
     { value: 'plantingDate', label: t('myPlantsPage.filterSortCard.createdDateSort') },
-    { value: 'lastCaredDate', label: t('myPlantsPage.filterSortCard.lastCaredDateSort') },
     { value: 'nextCareDate', label: t('myPlantsPage.filterSortCard.nextCareTaskSort') },
   ], [t]);
 
@@ -320,7 +320,6 @@ export default function MyPlantsPage() {
     const numSelected = selectedPlantIds.size;
     if (numSelected === 0 || !user?.id) return;
 
-    // Call the context method to delete plants and their associated data (including S3 images)
     deleteMultiplePlants(selectedPlantIds);
 
     toast({
@@ -395,7 +394,7 @@ export default function MyPlantsPage() {
           isManaging={isManagingPlants}
           selectedPlantIds={selectedPlantIds}
           onToggleSelect={handleTogglePlantSelection}
-          onEdit={handleOpenEditPlantDialog} // Changed from handleNavigateToEditPlant
+          onEdit={handleOpenEditPlantDialog}
           isPWAStandalone={isStandalone}
         />
       )}
@@ -434,13 +433,13 @@ export default function MyPlantsPage() {
           {plantToEdit && initialEditFormData && (
             <SavePlantForm
               initialData={initialEditFormData}
-              galleryPhotos={plantToEdit.photos || []} // Ensure galleryPhotos is always an array
+              galleryPhotos={plantPhotosFromContext.filter(photo => photo.plantId === plantToEdit.id)}
               onSave={handleSaveEditedPlant}
               onCancel={handleCancelEditPlantDialog}
               isLoading={isSavingEditedPlant}
               hideInternalHeader={true}
-              formTitle={t('myPlantsPage.editPlantDialogTitle')} // Passed but not used if hideInternalHeader is true
-              formDescription={plantToEdit ? t('myPlantsPage.editPlantDialogDescription', { plantName: plantToEdit.commonName }) : ''} // Passed but not used
+              formTitle={t('myPlantsPage.editPlantDialogTitle')}
+              formDescription={plantToEdit ? t('myPlantsPage.editPlantDialogDescription', { plantName: plantToEdit.commonName }) : ''}
               submitButtonText={t('common.update')}
             />
           )}

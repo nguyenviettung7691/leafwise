@@ -13,10 +13,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlantCardProps {
   plant: Plant;
+  plantCareTasks: CareTask[];
   isManaging?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (plantId: string) => void;
@@ -78,11 +79,11 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
     }
 };
 
-export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
-  const { user } = useAuth(); // Get user from AuthContext
+export function PlantCard({ plant, plantCareTasks, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
+  const { user } = useAuth();
   const { t, dateFnsLocale } = useLanguage();
-  const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const nextUpcomingTask = getNextUpcomingTask(plantCareTasks);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(plant.primaryPhotoUrl ?? undefined, user?.id);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {
@@ -170,12 +171,12 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
             {plant.scientificName && <p className="text-sm text-muted-foreground italic mb-2">{plant.scientificName}</p>}
 
             <div className="flex items-center gap-2 mt-2">
-              {healthConditionIcons[plant.healthCondition]}
+              {healthConditionIcons[plant.healthCondition as keyof typeof healthConditionIcons] ?? healthConditionIcons.unknown}
               <Badge
                 variant="outline"
                 className={cn(
                   "capitalize",
-                  healthConditionStyles[plant.healthCondition]
+                  healthConditionStyles[plant.healthCondition as keyof typeof healthConditionStyles]
                 )}
               >
                 {healthConditionText}

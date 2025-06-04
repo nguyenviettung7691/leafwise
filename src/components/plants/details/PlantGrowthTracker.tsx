@@ -169,6 +169,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
 
 interface PlantGrowthTrackerProps {
   plant: Plant;
+  plantPhotos: PlantPhoto[];
   onOpenGridPhotoDialog: (photo: PlantPhoto) => void;
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
@@ -183,6 +184,7 @@ interface PlantGrowthTrackerProps {
 
 export function PlantGrowthTracker({
   plant,
+  plantPhotos,
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
@@ -206,8 +208,8 @@ export function PlantGrowthTracker({
   };
 
   const chartData = useMemo(() => {
-    if (!plant || !plant.photos || plant.photos.length < 1) return [];
-    return [...plant.photos]
+    if (!plantPhotos || plantPhotos.length < 1) return []; // Use plantPhotos
+    return [...plantPhotos] // Use plantPhotos
       .map(photo => ({
         id: photo.id,
         photoUrl: photo.url,
@@ -218,12 +220,12 @@ export function PlantGrowthTracker({
         healthCondition: photo.healthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plant, t, dateFnsLocale]);
+  }, [plantPhotos, t, dateFnsLocale]); // Add plantPhotos to dependencies
 
   const sortedPhotosForGallery = useMemo(() => {
-    if (!plant || !plant.photos) return [];
-    return [...plant.photos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-  }, [plant]);
+    if (!plantPhotos) return []; // Use plantPhotos
+    return [...plantPhotos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
+  }, [plantPhotos]); // Add plantPhotos to dependencies
 
   const chartConfig = {
     health: {

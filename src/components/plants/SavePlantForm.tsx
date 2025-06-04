@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { PlantFormData, PlantHealthCondition, PlantPhoto } from '@/types';
+import type { PlantFormData, PlantPhoto, SavePlantFormValues } from '@/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -28,7 +28,7 @@ interface SavePlantFormProps {
   initialData?: Partial<PlantFormData>;
   galleryPhotos?: PlantPhoto[];
   // Modified onSave signature to accept File objects
-  onSave: (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null, photosToDelete?: string[]) => Promise<void>;
+  onSave: (data: Omit<SavePlantFormValues, 'primaryPhoto'>, primaryPhotoFile?: File | null, photosToDelete?: string[]) => Promise<void>;
   onCancel: () => void;
   isLoading?: boolean;
   formTitle?: string;
@@ -137,7 +137,7 @@ export function SavePlantForm({
     // If there's a new image preview (data URL), use that directly.
     // Otherwise, if a gallery photo URL is selected, use that.
     // Otherwise, if there's an initial primary photo URL (from initialData), use that.
-    imagePreview ? undefined : (selectedGalleryPhotoUrl || initialData?.diagnosedPhotoDataUrl),
+    imagePreview ? undefined : (selectedGalleryPhotoUrl ?? initialData?.diagnosedPhotoDataUrl ?? undefined),
     user?.id
   );
   
@@ -183,18 +183,9 @@ export function SavePlantForm({
     // Extract the File object from the FileList
     const primaryPhotoFile = data.primaryPhoto && data.primaryPhoto.length > 0 ? data.primaryPhoto[0] : null;
 
-    // The form doesn't handle deleting photos or adding new gallery photos directly.
-    // This logic is handled in the Plant Detail page.
-    // We only need to pass the new primary photo file (if any) and the updated plant data.
-    // The `diagnosedPhotoDataUrl` field in the form state holds the S3 key of the selected gallery photo
-    // or the data URL of a new upload. We need to pass the *file* if it's a new upload.
-
-    // If a new file was uploaded, primaryPhotoFile will be the File object.
-    // If an existing gallery photo was selected, primaryPhotoFile will be null,
-    // and data.diagnosedPhotoDataUrl will contain the S3 key of the selected photo.
-    // If the primary photo was removed, primaryPhotoFile will be null, and data.diagnosedPhotoDataUrl will be null.
-
-    const plantDataToSave: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'> = {
+    // Prepare the data to pass to the parent's onSave function
+    // This includes all form fields except the FileList 'primaryPhoto'
+    const formDataToPass: Omit<SavePlantFormValues, 'primaryPhoto'> = {
         commonName: data.commonName,
         scientificName: data.scientificName,
         familyCategory: data.familyCategory,
@@ -202,20 +193,12 @@ export function SavePlantForm({
         healthCondition: data.healthCondition,
         location: data.location,
         customNotes: data.customNotes,
-        // primaryPhotoUrl will be set by the context method based on the file or selected URL
-        // photos and careTasks are not updated via this form
+        diagnosedPhotoDataUrl: data.diagnosedPhotoDataUrl, // Include diagnosedPhotoDataUrl
     };
 
-    // Pass the updated primaryPhotoUrl (S3 key or null) to the context method
-    // This is needed in case an existing gallery photo was selected as primary,
-    // or the primary photo was removed.
-    const updatedPlantData: Partial<Plant> = {
-        ...plantDataToSave,
-        primaryPhotoUrl: primaryPhotoFile ? undefined : data.diagnosedPhotoDataUrl, // If file exists, context handles URL. Otherwise, use the selected/removed URL.
-    };
-
-    // Call the onSave prop, passing the plant data and the primary photo file
-    await onSave(updatedPlantData, primaryPhotoFile);
+    // Call the onSave prop with the prepared data and the file
+    // The type of formDataToPass now matches the first parameter of onSave
+    await onSave(formDataToPass, primaryPhotoFile);
   };
 
   const currentFormTitle = formTitle || t('savePlantForm.formTitle');

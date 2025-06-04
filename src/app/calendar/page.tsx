@@ -9,9 +9,6 @@ import type { Plant, CareTask } from '@/types';
 import { PlantFilterControls } from '@/components/calendar/PlantFilterControls';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import dynamic from 'next/dynamic';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card for filter wrapper
-import { Filter } from 'lucide-react'; // Added Filter icon
 
 const DynamicCareCalendarView = dynamic(
   () => import('@/components/calendar/CareCalendarView').then(mod => mod.CareCalendarView),
@@ -27,7 +24,7 @@ const DynamicCareCalendarView = dynamic(
 
 export default function CalendarPage() {
   const { t } = useLanguage();
-  const { plants: contextPlants, isLoading: isLoadingContextPlants } = usePlantData();
+  const { plants: contextPlants, careTasks: contextCareTasks, isLoading: isLoadingContextPlants } = usePlantData();
 
   const [allPlants, setAllPlants] = useState<Plant[]>([]);
   const [selectedPlantIds, setSelectedPlantIds] = useState<Set<string>>(new Set());
@@ -42,12 +39,9 @@ export default function CalendarPage() {
     }
   }, [contextPlants, isLoadingContextPlants]);
 
-  const filteredPlants = useMemo(() => {
-    if (selectedPlantIds.size === allPlants.length && allPlants.length > 0) {
-      return allPlants;
-    }
-    return allPlants.filter(plant => selectedPlantIds.has(plant.id));
-  }, [allPlants, selectedPlantIds]);
+  const filteredCareTasks = useMemo(() => {
+    return contextCareTasks.filter(task => selectedPlantIds.has(task.plantId));
+  }, [contextCareTasks, selectedPlantIds]);
 
   const handleSelectedPlantIdsChange = (newSelectedIds: Set<string>) => {
     setSelectedPlantIds(newSelectedIds);
@@ -78,7 +72,6 @@ export default function CalendarPage() {
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.careCalendar')}</h1>
       </div>
 
-      {/* PlantFilterControls is now above the calendar and takes full width */}
       <div className="flex flex-col gap-6">
         <PlantFilterControls
           allPlants={allPlants}
@@ -88,7 +81,7 @@ export default function CalendarPage() {
 
         <div className="flex-grow">
           <DynamicCareCalendarView
-            plants={filteredPlants}
+            tasks={filteredCareTasks}
             currentDate={currentCalendarDate}
             onNavigatePeriod={handleNavigatePeriod}
             onTaskAction={handleTaskAction}

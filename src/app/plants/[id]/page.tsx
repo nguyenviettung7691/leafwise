@@ -1,50 +1,98 @@
 
 'use client';
 
-import Link from 'next/link';
-import { AppLayout } from '@/components/layout/AppLayout';
-import type { Plant, PlantPhoto, PlantHealthCondition, CareTask, CarePlanTaskFormData, OnSaveTaskData, ComparePlantHealthInput, ReviewCarePlanInput, ReviewCarePlanOutput, AIGeneratedTask, ProactiveCarePlanReviewInput } from '@/types';
+// React and Next.js imports
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, notFound, useRouter } from 'next/navigation';
-import NextImage from 'next/image'; // Renamed to NextImage
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive
-} from "@/components/ui/alert-dialog";
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Select as UiSelect, SelectTrigger as UiSelectTrigger, SelectValue as UiSelectValue, SelectContent as UiSelectContent, SelectItem as UiSelectItem } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ImageOff, CalendarIcon, Sparkles, ChevronLeft, SaveIcon, CheckCircle, MessageSquareWarning, Edit3, Settings2 as ManageIcon, Eye, Image as ImageIcon, ListChecks } from 'lucide-react';
+import NextImage from 'next/image';
+
+// Layout components
+import { AppLayout } from '@/components/layout/AppLayout';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 
+// Plant-specific components
 import { PlantHeaderCard } from '@/components/plants/details/PlantHeaderCard';
 import { PlantInformationGrid } from '@/components/plants/details/PlantInformationGrid';
 import { PlantCareManagement } from '@/components/plants/details/PlantCareManagement';
 import { PlantGrowthTracker } from '@/components/plants/details/PlantGrowthTracker';
+import { CarePlanTaskForm } from '@/components/plants/CarePlanTaskForm';
 
-import { Loader2 } from 'lucide-react';
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+// UI Components
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, 
+  AlertDialogTitle as AlertDialogTitlePrimitive
+} from "@/components/ui/alert-dialog";
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { 
+  Select as UiSelect, 
+  SelectTrigger as UiSelectTrigger, 
+  SelectValue as UiSelectValue, 
+  SelectContent as UiSelectContent, 
+  SelectItem as UiSelectItem 
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Icons
+import { 
+  ImageOff, 
+  CalendarIcon, 
+  Sparkles, 
+  ChevronLeft, 
+  SaveIcon, 
+  CheckCircle, 
+  MessageSquareWarning, 
+  Loader2 
+} from 'lucide-react';
+
+// Hooks and Utilities
 import { useToast } from '@/hooks/use-toast';
+import { useS3Image } from '@/hooks/useS3Image';
 import { cn } from '@/lib/utils';
+import { compressImage } from '@/lib/image-utils';
+import { 
+  addDays, 
+  addWeeks, 
+  addMonths, 
+  addYears, 
+  parseISO, 
+  format, 
+  isToday as fnsIsToday 
+} from 'date-fns';
+
+// Context
+import { useLanguage } from '@/contexts/LanguageContext';
+import { usePlantData } from '@/contexts/PlantDataContext';
+import { useAuth } from '@/contexts/AuthContext';
+
+// AI Flows
 import { diagnosePlantHealth, type DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow } from '@/ai/flows/diagnose-plant-health';
 import { comparePlantHealthAndUpdateSuggestion, type ComparePlantHealthOutput as ComparePlantHealthOutputFlowType } from '@/ai/flows/compare-plant-health';
 import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
-import { proactiveCarePlanReview } from '@/ai/flows/proactive-care-plan-review';
-import { addDays, addWeeks, addMonths, addYears, parseISO, format, isToday as fnsIsToday } from 'date-fns';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { usePlantData } from '@/contexts/PlantDataContext';
-import { useS3Image } from '@/hooks/useS3Image'; // Use useS3Image for displaying images
-import { compressImage } from '@/lib/image-utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { proactiveCarePlanReview, type ProactiveCarePlanReviewInput } from '@/ai/flows/proactive-care-plan-review';
+
+// Types
+import type { 
+  Plant, 
+  PlantPhoto, 
+  PlantHealthCondition, 
+  CareTask, 
+  CarePlanTaskFormData, 
+  OnSaveTaskData, 
+  ComparePlantHealthInput, 
+  ReviewCarePlanOutput, 
+  ReviewCarePlanInput,
+  AIGeneratedTask,
+  SavePlantFormValues
+} from '@/types';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -54,7 +102,7 @@ const healthConditionStyles: Record<PlantHealthCondition, string> = {
 };
 
 interface DialogPhotoDisplayProps {
-  photoId: string | undefined;
+  photoUrl: string | undefined
   userId?: string;
   altText: string;
   width?: number;
@@ -62,8 +110,14 @@ interface DialogPhotoDisplayProps {
   className?: string;
 }
 
-const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, userId, altText, width = 400, height = 300, className = "rounded-md object-contain max-h-[300px] mx-auto" }) => {
-  // Use useS3Image hook to get the display URL from the S3 key
+const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ 
+  photoUrl,
+  userId, 
+  altText, 
+  width = 400, 
+  height = 300, 
+  className = "rounded-md object-contain max-h-[300px] mx-auto" 
+}) => {
   const { imageUrl, isLoading, error } = useS3Image(photoUrl, userId);
   const { t } = useLanguage();
 
@@ -91,7 +145,6 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({ photoId, userId
   );
 };
 
-
 export default function PlantDetailPage() {
   const { user } = useAuth();
   const params = useParams();
@@ -99,19 +152,20 @@ export default function PlantDetailPage() {
   const { toast } = useToast();
   const { t, language, dateFnsLocale } = useLanguage();
   const id = params.id as string;
-  // Use the new context methods
+  // Get all plants, photos, and tasks from the context
   const {
-    plants: contextPlants,
-    getPlantById,
-    updatePlant, // For updating top-level plant fields like primaryPhotoUrl or healthCondition
-    deletePlant, // For deleting the entire plant
-    addPhotoToPlant, // For adding new photos
-    updatePhotoDetails, // For updating photo metadata
-    deletePhoto, // For deleting individual photos
-    addCareTaskToPlant, // For adding new care tasks
-    updateCareTask, // For updating care task details (including pause/resume)
-    deleteCareTask, // For deleting individual care tasks
-    isLoading: isLoadingContextPlants
+    plants: allContextPlants,
+    plantPhotos: allContextPlantPhotos,
+    careTasks: allContextCareTasks,
+    updatePlant,
+    deletePlant,
+    addPhotoToPlant,
+    updatePhotoDetails,
+    deletePhoto,
+    addCareTaskToPlant,
+    updateCareTask,
+    deleteCareTask,
+    isLoading: isLoadingContextData // Renamed for clarity
   } = usePlantData();
 
   const [plant, setPlant] = useState<Plant | null>(null);
@@ -122,16 +176,15 @@ export default function PlantDetailPage() {
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
   const [newPhotoJournaled, setNewPhotoJournaled] = useState(false);
 
-
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
     open: boolean;
     newPhotoDiagnosisResult?: DiagnosePlantHealthOutputFlow;
     healthComparisonResult?: ComparePlantHealthOutputFlowType;
     carePlanReviewResult?: ReviewCarePlanOutput;
-    newPhotoPreviewUrl?: string; // This will be a data URL for the *new* photo preview
+    newPhotoPreviewUrl?: string;
     isLoadingCarePlanReview?: boolean;
     isApplyingCarePlanChanges?: boolean;
-    newPhotoFile?: File; // Store the File object for the new photo
+    newPhotoFile?: File;
   }>({ open: false });
 
   const [selectedGridPhoto, setSelectedGridPhoto] = useState<PlantPhoto | null>(null);
@@ -165,82 +218,79 @@ export default function PlantDetailPage() {
   const [isLoadingProactiveReview, setIsLoadingProactiveReview] = useState(false);
   const [isApplyingProactiveReviewChanges, setIsApplyingProactiveReviewChanges] = useState(false);
 
+  // Filter photos and tasks relevant to the current plant from the global states
+  const currentPlantPhotos = useMemo(() => {
+      return allContextPlantPhotos.filter(photo => photo.plantId === id);
+  }, [allContextPlantPhotos, id]);
+
+  const currentPlantCareTasks = useMemo(() => {
+      return allContextCareTasks.filter(task => task.plantId === id);
+  }, [allContextCareTasks, id]);
 
   const transformCareTaskToFormData = useCallback((task: CareTask): CarePlanTaskFormData => {
+    const taskData = task;
+
     const formData: Partial<CarePlanTaskFormData> & { startDate?: string } = {
-      name: task.name,
-      description: task.description || '',
-      level: task.level,
-      startDate: task.nextDueDate || new Date().toISOString(),
+        name: taskData.name,
+        description: taskData.description || '',
+        level: (taskData.level === "basic" || taskData.level === "advanced") ? taskData.level : undefined,
+        startDate: taskData.nextDueDate || new Date().toISOString(),
     };
 
-    const freqLower = task.frequency.toLowerCase();
+    const freqLower = taskData.frequency.toLowerCase();
 
-    if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) formData.frequencyMode = 'adhoc';
-    else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) formData.frequencyMode = 'daily';
-    else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) formData.frequencyMode = 'weekly';
-    else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) formData.frequencyMode = 'monthly';
-    else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) formData.frequencyMode = 'yearly';
-    else {
-      const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
-      if (everyXDaysMatch) {
-        formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
-        formData.frequencyMode = 'every_x_days';
-      } else {
-        const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
-        if (everyXWeeksMatch) {
-          formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
-          formData.frequencyMode = 'every_x_weeks';
-        } else {
-          const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
-          if (everyXMonthsMatch) {
-            formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
-            formData.frequencyMode = 'every_x_months';
-          } else {
-            formData.frequencyMode = 'adhoc'; 
-            console.warn("Could not parse frequency for form:", task.frequency);
-          }
-        }
-      }
-    }
-
-    if (task.timeOfDay && (task.timeOfDay.toLowerCase() === 'all day' || task.timeOfDay.toLowerCase() === t('carePlanTaskForm.timeOfDayOptionAllDay').toLowerCase())) {
-      formData.timeOfDayOption = 'all_day';
-      formData.specificTime = '';
-    } else if (task.timeOfDay && /^\d{2}:\d{2}$/.test(task.timeOfDay)) {
-      formData.timeOfDayOption = 'specific_time';
-      formData.specificTime = task.timeOfDay;
+    if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) {
+        formData.frequencyMode = 'adhoc';
+    } else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) {
+        formData.frequencyMode = 'daily';
+    } else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) {
+        formData.frequencyMode = 'weekly';
+    } else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) {
+        formData.frequencyMode = 'monthly';
+    } else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) {
+        formData.frequencyMode = 'yearly';
     } else {
-      formData.timeOfDayOption = 'all_day'; 
-      formData.specificTime = '';
+        const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
+        if (everyXDaysMatch) {
+            formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
+            formData.frequencyMode = 'every_x_days';
+        } else {
+            const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
+            if (everyXWeeksMatch) {
+                formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
+                formData.frequencyMode = 'every_x_weeks';
+            } else {
+                const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
+                if (everyXMonthsMatch) {
+                    formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
+                    formData.frequencyMode = 'every_x_months';
+                } else {
+                    formData.frequencyMode = 'adhoc';
+                    console.warn("Could not parse frequency for form:", taskData.frequency);
+                }
+            }
+        }
     }
 
     return formData as CarePlanTaskFormData;
-  }, [t]);
+}, [t]);
 
-  useEffect(() => {
-    if (!isLoadingContextPlants) {
-      const currentPlant = getPlantById(id);
-      if (currentPlant) {
-        setPlant(currentPlant);
-      } else if (!currentPlant && contextPlants.length > 0) {
-        // If contextPlants is loaded but the plant is not found, it means it doesn't exist for this user
+useEffect(() => {
+    if (!isLoadingContextData) {
+      const foundPlant = allContextPlants.find(p => p.id === id);
+      if (foundPlant) {
+        setPlant(foundPlant);
+      } else if (allContextPlants.length > 0) {
         notFound();
-      } else if (!currentPlant && contextPlants.length === 0 && !isLoadingContextPlants) {
-         // If contextPlants is empty and loading is complete, the plant doesn't exist at all
+      } else if (allContextPlants.length === 0) {
          notFound();
       }
-      // If isLoadingContextPlants is true, we wait for it to become false
-      if (!isLoadingContextPlants) {
-         setIsPageLoading(false);
-      }
-  }, [id, getPlantById, contextPlants, isLoadingContextPlants, notFound]);
-
+      setIsPageLoading(false);
+    }
+  }, [id, allContextPlants, isLoadingContextData, notFound]);
 
   const handleToggleTaskPause = useCallback(async (taskId: string) => {
-    if (!plant) return;
-
-    const taskBeingToggled = plant.careTasks.find(t => t.id === taskId);
+    const taskBeingToggled = currentPlantCareTasks.find(t => t.id === taskId);
     if (!taskBeingToggled) return;
 
     const taskNameForToast = taskBeingToggled.name;
@@ -249,7 +299,6 @@ export default function PlantDetailPage() {
     setLoadingTaskId(taskId);
 
     try {
-        // Use the context method to update the task
         await updateCareTask(taskId, {
             isPaused: !taskBeingToggled.isPaused,
             resumeDate: !taskBeingToggled.isPaused ? null : (taskBeingToggled.resumeDate || addWeeks(new Date(), 1).toISOString())
@@ -266,7 +315,7 @@ export default function PlantDetailPage() {
     } finally {
         setLoadingTaskId(null);
     }
-  }, [plant, updateCareTask, t, toast]); // Depend on updateCareTask
+  }, [currentPlantCareTasks, updateCareTask, t, toast]);
 
   const handleEditPlant = () => {
     router.push(`/plants/${id}/edit`);
@@ -278,7 +327,7 @@ export default function PlantDetailPage() {
 
     try {
         const plantNameForToast = plant.commonName || t('common.thePlant');
-        await deletePlant(id); // Call the context method
+        await deletePlant(id);
 
         toast({
           title: t('plantDetail.toasts.plantDeletedTitle', {plantName: plantNameForToast}),
@@ -340,16 +389,16 @@ export default function PlantDetailPage() {
                     newPhotoDiagnosisResult,
                     newPhotoPreviewUrl: compressedDataUrl,
                     isLoadingCarePlanReview: false,
-                    newPhotoFile: file, // Keep the file
+                    newPhotoFile: file,
                 });
                 return;
             }
 
             const healthComparisonInput: ComparePlantHealthInput = {
-                currentPlantHealth: plant.healthCondition,
-                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis,
+                currentPlantHealth: plant.healthCondition as PlantHealthCondition,
+                newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || undefined,
                 newPhotoHealthStatus: newPhotoDiagnosisHealthStatusKey,
-                languageCode: language
+                languageCode: language || undefined,
             };
             const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
 
@@ -360,21 +409,21 @@ export default function PlantDetailPage() {
                 healthComparisonResult,
                 newPhotoPreviewUrl: compressedDataUrl,
                 isLoadingCarePlanReview: true,
-                newPhotoFile: file, // Keep the file
+                newPhotoFile: file,
             }));
 
             const carePlanReviewInput: ReviewCarePlanInput = {
-                plantCommonName: plant.commonName,
+                plantCommonName: plant.commonName || t('common.unknown'),
                 newPhotoDiagnosisNotes: newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
                 newPhotoHealthStatus: newPhotoDiagnosisHealthStatusKey,
-                currentCareTasks: (plant.careTasks || []).map(ct => ({
-                  id: ct.id,
-                  name: ct.name,
-                  description: ct.description,
-                  frequency: ct.frequency,
-                  timeOfDay: ct.timeOfDay,
-                  isPaused: ct.isPaused,
-                  level: ct.level,
+                currentCareTasks: currentPlantCareTasks.map(ct => ({
+                    id: ct.id,
+                    name: ct.name,
+                    description: ct.description ?? undefined,
+                    frequency: ct.frequency,
+                    timeOfDay: ct.timeOfDay ?? undefined,
+                    isPaused: ct.isPaused,
+                    level: ct.level === 'advanced' ? 'advanced' : 'basic',
                 })),
                 languageCode: language,
             };
@@ -399,7 +448,6 @@ export default function PlantDetailPage() {
 
   const handleAcceptHealthUpdate = async (newHealth: PlantHealthCondition) => {
     if (!plant) return;
-    // Use the context method to update the plant's health condition
     try {
         await updatePlant(plant.id, { healthCondition: newHealth });
         toast({ title: t('plantDetail.toasts.plantHealthUpdated'), description: t('plantDetail.toasts.plantHealthUpdatedDesc',{healthStatus: t(`plantDetail.healthConditions.${newHealth}`)})});
@@ -420,14 +468,13 @@ export default function PlantDetailPage() {
     const photoFile = newPhotoDiagnosisDialogState.newPhotoFile;
 
     try {
-        // Use the context method to add the photo. It handles S3 upload and record creation.
-        const createdPhoto = await addPhotoToPlant(plant.id, {
-            url: '', // This will be replaced by the S3 key in the context method
-            dateTaken: new Date().toISOString(), // Use current date for journal entry
+        await addPhotoToPlant(plant.id, {
+            url: '',
+            dateTaken: new Date().toISOString(),
             healthCondition: newHealthStatusFromDiagnosis,
             diagnosisNotes: newPhotoDiagnosisDialogState.newPhotoDiagnosisResult.healthAssessment.diagnosis || t('plantDetail.newPhotoDialog.diagnosisLabel'),
-            notes: '', // Add empty notes field
-        }, photoFile); // Pass the File object
+            notes: '',
+        }, photoFile);
 
         toast({title: t('plantDetail.toasts.photoAdded'), description: t('plantDetail.toasts.photoAddedDesc')});
         setNewPhotoJournaled(true);
@@ -472,9 +519,8 @@ export default function PlantDetailPage() {
     const { taskModifications, newTasks } = newPhotoDiagnosisDialogState.carePlanReviewResult;
 
     try {
-        // Process task modifications
         await Promise.all(taskModifications.map(async (mod) => {
-            const taskToModify = plant.careTasks.find(t => t.id === mod.taskId);
+            const taskToModify = currentPlantCareTasks.find(t => t.id === mod.taskId);
             if (!taskToModify) return;
 
             switch (mod.suggestedAction) {
@@ -511,7 +557,6 @@ export default function PlantDetailPage() {
             }
         }));
 
-        // Add new tasks
         await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
             await addCareTaskToPlant(plant.id, {
                 name: aiTask.taskName,
@@ -521,7 +566,7 @@ export default function PlantDetailPage() {
                 level: aiTask.taskLevel,
                 isPaused: false,
                 nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
-                lastCompleted: undefined, // New tasks start without a last completed date
+                lastCompleted: undefined,
                 resumeDate: null,
             });
         }));
@@ -532,9 +577,9 @@ export default function PlantDetailPage() {
         console.error("Error applying care plan changes:", error);
         toast({ title: t('common.error'), description: t('plantDetail.toasts.errorApplyingCarePlan'), variant: "destructive" });
     } finally {
-        setIsProactiveReviewDialogOpen(false); // Close proactive review dialog
-        setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined})); // Clear care plan review result in new photo dialog
-        setProactiveReviewResult(null); // Clear proactive review result
+        setIsProactiveReviewDialogOpen(false); 
+        setNewPhotoDiagnosisDialogState(prev => ({...prev, carePlanReviewResult: undefined})); 
+        setProactiveReviewResult(null); 
         setIsApplyingProactiveReviewChanges(false);
     }
   };
@@ -555,7 +600,6 @@ export default function PlantDetailPage() {
 
   const handleSetAsPrimaryPhoto = async (photoUrl: string) => {
     if (!plant) return;
-    // Use the context method to update the plant's primary photo URL
     try {
         await updatePlant(plant.id, { primaryPhotoUrl: photoUrl });
         toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
@@ -572,14 +616,13 @@ export default function PlantDetailPage() {
 
     try {
         if (taskToEdit) {
-            // Use the context method to update the task
             await updateCareTask(taskToEdit.id, {
                 name: taskData.name,
                 description: taskData.description,
                 frequency: taskData.frequency,
                 timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
-                nextDueDate: taskData.startDate, // Update nextDueDate from form's startDate
+                nextDueDate: taskData.startDate,
             });
             toast({ title: t('plantDetail.toasts.taskUpdated'), description: t('plantDetail.toasts.taskUpdatedDesc', {taskName: taskData.name}) });
         } else {
@@ -592,8 +635,8 @@ export default function PlantDetailPage() {
                 level: taskData.level,
                 isPaused: false,
                 resumeDate: null,
-                nextDueDate: taskData.startDate, // Set initial nextDueDate from form's startDate
-                lastCompleted: undefined, // New tasks start without a last completed date
+                nextDueDate: taskData.startDate,
+                lastCompleted: undefined,
             });
             toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: taskData.name, plantName: plant.commonName}) });
         }
@@ -641,18 +684,17 @@ export default function PlantDetailPage() {
   const handleDeleteSelectedTasksConfirmed = async () => {
     if (!plant || selectedTaskIds.size === 0) return;
 
-    const tasksToDeleteNames = (plant.careTasks || [])
+    const tasksToDeleteNames = currentPlantCareTasks
         .filter(t => selectedTaskIds.has(t.id))
         .map(t => t.name)
         .join(', ');
 
     try {
-        // Use the context method to delete tasks
         await Promise.all(Array.from(selectedTaskIds).map(taskId => deleteCareTask(taskId)));
 
         toast({ title: t('plantDetail.toasts.tasksDeleted'), description: t('plantDetail.toasts.tasksDeletedDesc', {taskNames: tasksToDeleteNames, count: selectedTaskIds.size}) });
         setSelectedTaskIds(new Set());
-        setIsManagingCarePlan(false); // Exit manage mode if all tasks deleted
+        setIsManagingCarePlan(false);
         setShowDeleteSelectedTasksDialog(false);
 
     } catch (error) {
@@ -698,12 +740,11 @@ export default function PlantDetailPage() {
     if (!plant || selectedPhotoIds.size === 0 || !user?.id) return;
 
     try {
-        // Use the context method to delete photos. It handles S3 deletion and record deletion.
         await Promise.all(Array.from(selectedPhotoIds).map(photoId => deletePhoto(photoId)));
 
         toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
         setSelectedPhotoIds(new Set());
-        setIsManagingPhotos(false); // Exit manage mode if all photos deleted
+        setIsManagingPhotos(false);
         setShowDeletePhotosDialog(false);
 
     } catch (error) {
@@ -712,15 +753,14 @@ export default function PlantDetailPage() {
     }
   };
 
-  const handleChartDotClick = (clickedDotPayload: any) => {
-      if (clickedDotPayload && clickedDotPayload.id && plant) {
-        // The payload id is the photo.id (S3 key)
-        const clickedPhoto = plant.photos.find(p => p.id === clickedDotPayload.id);
-        if (clickedPhoto) {
-          openGridPhotoDialog(clickedPhoto);
+    const handleChartDotClick = (clickedDotPayload: any) => {
+        if (clickedDotPayload && clickedDotPayload.id && plant) {
+            const clickedPhoto = currentPlantPhotos.find(p => p.id === clickedDotPayload.id);
+            if (clickedPhoto) {
+            openGridPhotoDialog(clickedPhoto);
+            }
         }
-      }
-  };
+    };
 
   const formatDateForDialog = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
@@ -735,7 +775,7 @@ export default function PlantDetailPage() {
   const handleOpenEditPhotoDialog = (photo: PlantPhoto) => {
     setPhotoToEdit(photo);
     setEditedPhotoDate(photo.dateTaken ? parseISO(photo.dateTaken) : new Date());
-    setEditedPhotoHealth(photo.healthCondition);
+    setEditedPhotoHealth(photo.healthCondition as PlantHealthCondition);
     setEditedPhotoDiagnosisNotes(photo.diagnosisNotes || '');
     setEditedPhotoNotes(photo.notes || '');
     setIsEditPhotoDialogVisible(true);
@@ -746,7 +786,6 @@ export default function PlantDetailPage() {
     setIsSavingPhotoDetails(true);
 
     try {
-        // Use the context method to update photo details
         await updatePhotoDetails(photoToEdit.id, {
             dateTaken: editedPhotoDate ? editedPhotoDate.toISOString() : new Date().toISOString(),
             healthCondition: editedPhotoHealth,
@@ -815,22 +854,22 @@ export default function PlantDetailPage() {
 
     try {
       const input: ProactiveCarePlanReviewInput = {
-        plantCommonName: plant.commonName,
-        plantScientificName: plant.scientificName,
-        plantFamilyCategory: plant.familyCategory,
-        plantAgeEstimateYears: plant.ageEstimateYears,
-        currentPlantHealth: plant.healthCondition,
-        plantCustomNotes: plant.customNotes,
-        currentCareTasks: (plant.careTasks || []).map(ct => ({
-          id: ct.id,
-          name: ct.name,
-          description: ct.description,
-          frequency: ct.frequency,
-          timeOfDay: ct.timeOfDay,
-          isPaused: ct.isPaused,
-          level: ct.level,
+        plantCommonName: plant.commonName || t('common.unknown'), 
+        plantScientificName: plant.scientificName || undefined,
+        plantFamilyCategory: plant.familyCategory || undefined,
+        plantAgeEstimateYears: plant.ageEstimateYears ?? undefined,
+        currentPlantHealth: plant.healthCondition as PlantHealthCondition,
+        plantCustomNotes: plant.customNotes || undefined,
+        currentCareTasks: currentPlantCareTasks.map(ct => ({
+            id: ct.id,
+            name: ct.name,
+            description: ct.description ?? undefined,
+            frequency: ct.frequency,
+            timeOfDay: ct.timeOfDay ?? undefined,
+            isPaused: ct.isPaused,
+            level: ct.level === 'advanced' ? 'advanced' : 'basic',
         })),
-        languageCode: language,
+        languageCode: language || undefined,
       };
       const result = await proactiveCarePlanReview(input);
       setProactiveReviewResult(result);
@@ -850,9 +889,8 @@ export default function PlantDetailPage() {
     const { taskModifications, newTasks } = proactiveReviewResult;
 
     try {
-        // Process task modifications using context methods
         await Promise.all(taskModifications.map(async (mod) => {
-            const taskToModify = plant.careTasks.find(t => t.id === mod.taskId);
+            const taskToModify = currentPlantCareTasks.find(t => t.id === mod.taskId);
             if (!taskToModify) return;
 
             switch (mod.suggestedAction) {
@@ -889,7 +927,6 @@ export default function PlantDetailPage() {
             }
         }));
 
-        // Add new tasks using context method
         await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
             await addCareTaskToPlant(plant.id, {
                 name: aiTask.taskName,
@@ -924,7 +961,7 @@ export default function PlantDetailPage() {
 
 
   if (isPageLoading || !plant) {
-    if (isPageLoading) {
+    if (isLoadingContextData) {
       return (
         <AppLayout>
           <div className="flex justify-center items-center h-full">
@@ -959,6 +996,7 @@ export default function PlantDetailPage() {
 
         <PlantCareManagement
           plant={plant}
+          careTasks={currentPlantCareTasks}
           loadingTaskId={loadingTaskId}
           onToggleTaskPause={handleToggleTaskPause}
           onOpenEditTaskDialog={openEditTaskDialog}
@@ -977,6 +1015,7 @@ export default function PlantDetailPage() {
 
         <PlantGrowthTracker
           plant={plant}
+          plantPhotos={currentPlantPhotos}
           onOpenGridPhotoDialog={openGridPhotoDialog}
           onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
           isDiagnosingNewPhoto={isDiagnosingNewPhoto}
@@ -986,8 +1025,9 @@ export default function PlantDetailPage() {
           selectedPhotoIds={selectedPhotoIds}
           onTogglePhotoSelection={handleTogglePhotoSelection}
           onDeleteSelectedPhotos={() => {
-            // Check if the primary photo's ID is in the selectedPhotoIds set
-            const primaryPhotoIsSelected = plant.primaryPhotoUrl ? plant.photos?.some(p => p.url === plant.primaryPhotoUrl && selectedPhotoIds.has(p.id)) : false;
+            const primaryPhotoIsSelected = plant.primaryPhotoUrl
+                ? currentPlantPhotos.some(p => p.url === plant.primaryPhotoUrl && selectedPhotoIds.has(p.id))
+                : false;
             setIsPrimaryPhotoSelectedForDeletion(primaryPhotoIsSelected);
             setShowDeletePhotosDialog(true);
           }}
@@ -998,7 +1038,7 @@ export default function PlantDetailPage() {
           ref={growthPhotoInputRef}
           className="hidden"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          capture // Added for camera input
+          capture
           onChange={handleGrowthPhotoFileChange}
         />
 
@@ -1272,7 +1312,7 @@ export default function PlantDetailPage() {
                        {/* Use DialogPhotoDisplay which uses useS3Image */}
                        <DialogPhotoDisplay photoUrl={selectedGridPhoto.url} userId={user?.id} altText={t('plantDetail.photoDetailsDialog.titleAlt', {date: selectedGridPhoto ? formatDateForDialog(selectedGridPhoto.dateTaken) : ''})}/>
                         <p><strong>{t('plantDetail.photoDetailsDialog.dateLabel')}</strong> {formatDateForDialog(selectedGridPhoto.dateTaken)}</p>
-                        <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
+                        <p><strong>{t('plantDetail.photoDetailsDialog.healthAtDiagnosisLabel')}</strong> <Badge variant="outline" className={cn("capitalize", healthConditionStyles[selectedGridPhoto.healthCondition as PlantHealthCondition])}>{t(`plantDetail.healthConditions.${selectedGridPhoto.healthCondition}`)}</Badge></p>
                         {selectedGridPhoto.diagnosisNotes && <p><strong>{t('plantDetail.photoDetailsDialog.diagnosisNotesLabel')}</strong> {selectedGridPhoto.diagnosisNotes}</p>}
                         {selectedGridPhoto.notes && <p><strong>{t('plantDetail.photoDetailsDialog.generalNotesLabel')}</strong> {selectedGridPhoto.notes}</p>}
                     </div>

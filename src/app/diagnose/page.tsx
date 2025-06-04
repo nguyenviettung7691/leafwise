@@ -24,7 +24,7 @@ import { useRouter } from 'next/navigation';
 export default function DiagnosePlantPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { addPlant, updatePlant, getPlantById } = usePlantData();
+  const { addPlant, updatePlant, getPlantById, addCareTaskToPlant } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -196,7 +196,7 @@ export default function DiagnosePlantPage() {
 
     const primaryPhotoFile = file; // Use the file state directly
 
-    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl'> = {
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
@@ -266,7 +266,7 @@ export default function DiagnosePlantPage() {
     }
   };
 
-  const handleSaveCarePlan = (plan: GenerateDetailedCarePlanOutput) => {
+  const handleSaveCarePlan = async (plan: GenerateDetailedCarePlanOutput) => {
     if (!user) { // Added user check
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
       router.push('/login');
@@ -277,17 +277,9 @@ export default function DiagnosePlantPage() {
       return;
     }
 
-    const currentPlant = getPlantById(lastSavedPlantId);
-    if (!currentPlant) {
-      toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNotFound'), variant: "destructive" });
-      return;
-    }
-
     const tasksToMap = Array.isArray(plan.generatedTasks) ? plan.generatedTasks : [];
 
-    const newCareTasks: CareTask[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
-      id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      plantId: lastSavedPlantId,
+    const newCareTasksData: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
       name: aiTask.taskName,
       description: aiTask.taskDescription,
       frequency: aiTask.suggestedFrequency,
@@ -297,23 +289,29 @@ export default function DiagnosePlantPage() {
       level: aiTask.taskLevel,
     }));
 
-    // This update logic is still using the old pattern of updating the whole plant object.
-    // It should ideally use the addCareTaskToPlant context method for each new task.
-    // However, for now, let's keep it simple and rely on the context's updatePlant
-    // method handling the nested tasks array update if it's passed.
-    // A better approach would be:
-    // await Promise.all(newCareTasks.map(task => addCareTaskToPlant(lastSavedPlantId, task)));
-    // But updatePlant might also work if it merges the arrays. Let's stick to the current pattern for minimal change.
-    const updatedPlant = {
-      ...currentPlant,
-      careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]
-    };
-    updatePlant(lastSavedPlantId, updatedPlant);
+    try {
+        // Use the addCareTaskToPlant context method for each new task
+        await Promise.all(newCareTasksData.map(taskData =>
+            addCareTaskToPlant(lastSavedPlantId, taskData)
+        ));
 
-    toast({
-      title: t('diagnosePage.toasts.carePlanSavedTitle'),
-      description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: currentPlant.commonName }),
-    });
+        // Remove the old updatePlant call
+        // const updatedPlant = {
+        //   ...currentPlant,
+        //   careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]
+        // };
+        // updatePlant(lastSavedPlantId, updatedPlant);
+
+        toast({
+          title: t('diagnosePage.toasts.carePlanSavedTitle'),
+          // Use the plant name from the diagnosis result or a fallback
+          description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: diagnosisResult?.identification.commonName || t('common.unknown') }),
+        });
+
+    } catch (error) {
+        console.error("Error saving care plan:", error);
+        toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorGeneral'), variant: "destructive" });
+    }
   };
 
   const initialPlantFormData: PlantFormData | undefined = diagnosisResult?.identification.isPlant ? {

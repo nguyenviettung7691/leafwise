@@ -1,6 +1,5 @@
 "use client";
 
-import type { User } from "@/types";
 import type { ReactNode } from "react";
 import {
   createContext,
@@ -14,18 +13,17 @@ import {
   signUp,
   signOut,
   getCurrentUser,
-  fetchUserAttributes, // Import fetchUserAttributes
-  updateUserAttributes, // Import updateUserAttributes
-  AuthUser, // Keep AuthUser type if needed for internal typing
+  fetchUserAttributes,
+  updateUserAttributes,
 } from "@aws-amplify/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "./LanguageContext";
-import { generateClient } from 'aws-amplify/data'; // Import generateClient
-import type { Schema } from '@/amplify/data/resource'; // Import Schema type
-import { uploadData, remove } from 'aws-amplify/storage'; // Import Storage remove
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
+import type { User, UserPreferences } from "@/types";
+import { uploadData, remove } from 'aws-amplify/storage';
 
-// Create an Amplify Data client instance
 const client = generateClient<Schema>();
 
 interface AuthContextType {
@@ -38,7 +36,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const CURRENT_USER_ID_KEY = "currentLeafwiseUserId";
+const CURRENT_USER_ID_KEY = "uid";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -50,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Helper function to fetch user preferences from Data backend
   const fetchUserPreferences = useCallback(async (userId: string): Promise<UserPreferences | null> => {
       try {
-          const { data: preferences } = await client.models.UserPreferences.get({ id: userId });
+          const { data: preferences } = await client.models.UserPreferences.get({ id: userId },{ authMode: 'userPool' });
           return preferences;
       } catch (error) {
           console.error(`Failed to fetch user preferences for ${userId}:`, error);
@@ -66,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                emailNotifications: true, // Default to true
                pushNotifications: false, // Default to false
                avatarS3Key: null,
-           });
-           if (errors) {
+           },{ authMode: 'userPool' });
+           if (errors || !preferences) {
                console.error(`Failed to create default user preferences for ${userId}:`, errors);
-               throw new Error(errors[0].message || "Failed to create default preferences.");
+               throw new Error(errors ? errors[0].message : "Failed to create default preferences.");
            }
            return preferences;
        } catch (error) {
@@ -317,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                  // User wants to remove the avatar
                  if (user.avatarS3Key) {
                      try {
-                         await remove({ key: user.avatarS3Key, options: { accessLevel: 'protected' } });
+                         await remove({ path: user.avatarS3Key });
                          newAvatarS3Key = null; // Set key to null after deletion
                      } catch (e) {
                          console.error("Failed to delete old avatar from S3:", e);
@@ -333,7 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                  // Delete old avatar first if it exists
                  if (user.avatarS3Key) {
                      try {
-                         await remove({ key: user.avatarS3Key, options: { accessLevel: 'protected' } });
+                         await remove({ path: user.avatarS3Key });
                      } catch (e) {
                          console.warn("Failed to delete old avatar from S3 before uploading new one:", e);
                          // Continue with upload even if old deletion fails
@@ -342,13 +340,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                  // Upload new avatar
                  try {
                      const fileExtension = updatedData.avatarFile.name.split('.').pop();
-                     const s3Key = `avatars/${user.id}/avatar-${Date.now()}.${fileExtension}`; // Unique key for avatar
-                     const { key } = await uploadData({
-                         key: s3Key,
-                         data: updatedData.avatarFile,
-                         options: { accessLevel: 'protected' }
+                     const { path } = await uploadData({
+                        path: ({identityId}) => `avatars/${identityId}/avatar-${Date.now()}.${fileExtension}`,
+                        data: updatedData.avatarFile
                      }).result;
-                     newAvatarS3Key = key; // Store the new S3 key
+                     newAvatarS3Key = path; // Store the new S3 key
                  } catch (e) {
                      console.error("Error uploading new avatar to S3:", e);
                      toast({ title: t('common.error'), description: t('profilePage.toasts.errorUploadingAvatar'), variant: "destructive" });
@@ -361,12 +357,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // 3. Update UserPreferences model
         if (updatedData.preferences !== undefined || newAvatarS3Key !== user.avatarS3Key) {
             const currentPreferences = user.preferences || await fetchUserPreferences(user.id) || await createDefaultUserPreferences(user.id); // Ensure we have current preferences
-            const preferencesToUpdate: Partial<UserPreferences> = {
-                id: user.id, // ID is required for update
-                ...currentPreferences, // Start with current preferences
+            const preferencesToUpdate = {
+                ...(currentPreferences || {}), // Spread current preferences if they exist (includes id)
                 ...updatedData.preferences, // Apply updates from input
                 avatarS3Key: newAvatarS3Key, // Apply new avatar key
-            };
+            } as const; // Use const assertion to ensure type safety
 
             // Only update if there are actual changes to preference fields or avatarS3Key
             const hasPreferenceChanges =
@@ -375,8 +370,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 (newAvatarS3Key !== user.avatarS3Key);
 
             if (hasPreferenceChanges) {
-                 const { data: updatedPreferences, errors: preferenceErrors } = await client.models.UserPreferences.update(preferencesToUpdate);
-                 if (preferenceErrors) {
+                 const { data: updatedPreferences, errors: preferenceErrors } = await client.models.UserPreferences.update(preferencesToUpdate, { authMode: 'userPool' });
+                 if (preferenceErrors || !updatedPreferences) {
                      console.error(`Error updating user preferences for ${user.id}:`, preferenceErrors);
                      toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError'), variant: "destructive" });
                      // Decide how to handle failure: revert local state, or keep partial?
