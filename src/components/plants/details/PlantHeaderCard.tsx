@@ -18,7 +18,7 @@ import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isVa
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -34,7 +34,7 @@ interface PlantHeaderCardProps {
   isDeleting: boolean;
 }
 
-const getCaredForDuration = (plantingDate?: string, t?: (key: string, replacements?: {[key: string]: string | number}) => string): string | null => {
+const getCaredForDuration = (plantingDate?: string | null, t?: (key: string, replacements?: {[key: string]: string | number}) => string): string | null => {
   if (!plantingDate || !t) return null;
   const startDate = parseISO(plantingDate);
   if (!isValid(startDate)) return null;

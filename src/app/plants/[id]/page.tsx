@@ -90,8 +90,7 @@ import type {
   ComparePlantHealthInput, 
   ReviewCarePlanOutput, 
   ReviewCarePlanInput,
-  AIGeneratedTask,
-  SavePlantFormValues
+  AIGeneratedTask
 } from '@/types';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {

@@ -1,5 +1,5 @@
 import type { Schema } from '../../amplify/data/resource';
-import { z } from 'zod'; // Import z from zod
+import { z } from 'zod';
 
 export type BackendPlant = Schema['Plant']['type'];
 export type BackendPlantPhoto = Schema['PlantPhoto']['type'];
@@ -43,12 +43,12 @@ export type SavePlantFormValues = z.infer<z.ZodObject<typeof plantFormSchemaStru
 
 export type CarePlanTaskFormData = {
   name: string;
-  description?: string | null; // Allow null
+  description?: string | undefined;
   startDate: string; // Assuming ISO string
   frequencyMode: 'adhoc' | 'daily' | 'every_x_days' | 'weekly' | 'every_x_weeks' | 'monthly' | 'every_x_months' | 'yearly'; // Frontend specific frequency representation
-  frequencyValue?: number | null; // Allow null
+  frequencyValue?: number | undefined;
   timeOfDayOption: 'specific_time' | 'all_day'; // Frontend specific time representation
-  specificTime?: string | null; // Allow null (e.g., "HH:MM")
+  specificTime?: string | undefined;
   level: 'basic' | 'advanced'; // Frontend specific level representation, maps to backend string
 };
 
@@ -72,7 +72,7 @@ export interface AITaskSuggestionDetails {
     description?: string | null;
     frequency?: string | null;
     timeOfDay?: string | null;
-    level?: 'basic' | 'advanced' | null; // Allow null
+    level?: 'basic' | 'advanced' | null;
 }
 
 export interface ExistingTaskModificationSuggestion {
@@ -80,15 +80,16 @@ export interface ExistingTaskModificationSuggestion {
     currentTaskName: string;
     suggestedAction: 'keep_as_is' | 'pause' | 'resume' | 'remove' | 'update_details';
     updatedDetails?: AITaskSuggestionDetails;
-    reasoning?: string | null; // Allow null
+    reasoning?: string | null;
 }
 
+// Update the interface to match the AI flow's Zod schema for ReviewCarePlanInput
 export interface ReviewCarePlanInput {
-    plantCommonName: string; // Changed from optional/nullable to required string
-    newPhotoDiagnosisNotes: string; // Changed from optional/nullable to required string
-    newPhotoHealthStatus: PlantHealthCondition; // Frontend specific type
-    currentCareTasks: CareTaskForAIReview[]; // Frontend specific type for AI review
-    languageCode?: string | null; // Allow null
+    plantCommonName: string;
+    newPhotoDiagnosisNotes: string;
+    newPhotoHealthStatus: PlantHealthCondition;
+    currentCareTasks: CareTaskForAIReview[];
+    languageCode?: string | undefined;
 }
 
 export interface ReviewCarePlanOutput {
@@ -102,36 +103,36 @@ export interface ReviewCarePlanOutput {
 export interface CareTaskForAIReview {
     id: string;
     name: string;
-    description?: string | null; // Allow null
+    description?: string | undefined;
     frequency: string;
-    timeOfDay?: string | null; // Allow null
+    timeOfDay?: string | undefined;
     isPaused: boolean;
-    level: 'basic' | 'advanced'; // Maps to backend string
+    level: 'basic' | 'advanced';
 }
 
 // Explicitly type the input for the Genkit flow
 export type DiagnosePlantHealthFlowInput = {
     photoDataUri: string;
-    description?: string | null; // Allow null
-    languageCode?: string | null; // Allow null
+    description?: string | null;
+    languageCode?: string | null; 
 };
 
 export type DiagnosePlantHealthFlowOutput = {
     identification: {
         isPlant: boolean;
-        commonName?: string | null; // Allow null
-        scientificName?: string | null; // Allow null
-        familyCategory?: string | null; // Allow null
-        ageEstimateYears?: number | null; // Allow null
+        commonName?: string | null;
+        scientificName?: string | null;
+        familyCategory?: string | null;
+        ageEstimateYears?: number | null;
     };
     healthAssessment: {
         isHealthy: boolean;
-        diagnosis?: string | null; // Allow null
-        confidence?: 'low' | 'medium' | 'high' | null; // Allow null
+        diagnosis?: string | null;
+        confidence?: 'low' | 'medium' | 'high' | null; 
     };
     careRecommendations: Array<{
         action: string;
-        details?: string | null; // Allow null
+        details?: string | null;
     }>;
 };
 
@@ -171,29 +172,28 @@ export interface User {
 // GlobalCalendarTaskOccurrence uses backend types
 // Use the type alias created above
 export interface GlobalCalendarTaskOccurrence {
-  originalTask: CareTask; // Use backend type alias
+  originalTask: CareTask; 
   occurrenceDate: Date;
   plantId: string;
   plantName: string;
-  plantPrimaryPhotoUrl?: string | null; // Allow null
+  plantPrimaryPhotoUrl?: string | null; 
 }
 
 export interface ComparePlantHealthInput {
     currentPlantHealth: PlantHealthCondition;
-    newPhotoDiagnosisNotes?: string | null | undefined; // Allow null
+    newPhotoDiagnosisNotes?: string | undefined;
     newPhotoHealthStatus: PlantHealthCondition;
-    languageCode?: string | null | undefined; // Allow null
+    languageCode?: string | undefined;
 }
 
-// ProactiveCarePlanReviewInput uses backend types where appropriate
-// Use the type aliases created above
+// Update the interface to match the AI flow's Zod schema for ProactiveCarePlanReviewInput
 export interface ProactiveCarePlanReviewInput {
-    plantCommonName?: string | null; // Allow null
-    plantScientificName?: string | null; // Allow null
-    plantFamilyCategory?: string | null; // Allow null
-    plantAgeEstimateYears?: number | null; // Allow null
-    currentPlantHealth: PlantHealthCondition; // Frontend specific type
-    plantCustomNotes?: string | null; // Allow null
-    currentCareTasks: CareTaskForAIReview[]; // This type is frontend specific, keep it
-    languageCode?: string | null; // Allow null
+    plantCommonName?: string | null;
+    plantScientificName?: string | null;
+    plantFamilyCategory?: string | null;
+    plantAgeEstimateYears?: number | null;
+    currentPlantHealth: PlantHealthCondition;
+    plantCustomNotes?: string | null;
+    currentCareTasks: CareTaskForAIReview[];
+    languageCode?: string | undefined;
 }

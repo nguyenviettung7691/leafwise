@@ -121,10 +121,10 @@ export default function MyPlantsPage() {
         scientificName: foundPlant.scientificName || '',
         familyCategory: foundPlant.familyCategory || '',
         ageEstimateYears: foundPlant.ageEstimateYears,
-        healthCondition: foundPlant.healthCondition as PlantHealthCondition, // Cast to frontend type if needed
+        healthCondition: foundPlant.healthCondition as PlantHealthCondition,
         location: foundPlant.location || '',
         customNotes: foundPlant.customNotes || '',
-        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, // Assuming primaryPhotoUrl can be used as a preview source
+        diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
       });
       setIsEditPlantDialogOpen(true);
     } else {
@@ -132,7 +132,6 @@ export default function MyPlantsPage() {
     }
   }, [plantsFromContext, t, toast]);
 
-  // Update handleSaveEditedPlant to accept plant data and the primary photo file
   const handleSaveEditedPlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
     if (!plantToEdit || !plantToEdit.id || !user?.id) {
        toast({ title: t('common.error'), description: t('myPlantsPage.plantNotFoundError'), variant: 'destructive'});
@@ -140,25 +139,17 @@ export default function MyPlantsPage() {
     }
     setIsSavingEditedPlant(true);
 
-    // Prepare updated plant data (without image data/keys)
-    const updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>> = { // Use Omit for input type
+    const updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
       ageEstimateYears: data.ageEstimateYears,
-      healthCondition: data.healthCondition, // This should align with backend string type
+      healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      // primaryPhotoUrl will be handled by the context method based on the file or selected URL
-      // photos and careTasks are not updated via this form
     };
 
     try {
-        // Call the context method, passing the plant ID, updated data, and the file
-        // The context method handles uploading the new file (if any), deleting the old one,
-        // and updating the primaryPhotoUrl field on the Plant record.
-        // It also handles the case where an existing gallery photo was selected as primary
-        // (by passing its S3 key in updatedPlantData.primaryPhotoUrl) or if the primary photo was removed.
         await updateContextPlant(plantToEdit.id, updatedPlantData, primaryPhotoFile);
 
         toast({ title: t('myPlantsPage.plantUpdatedToastTitle'), description: t('myPlantsPage.plantUpdatedToastDescription', { plantName: data.commonName }) });
@@ -204,9 +195,9 @@ export default function MyPlantsPage() {
 
   const ageRanges: Record<string, (age: number | undefined) => boolean> = {
     all: () => true,
-    '<1': (age) => age !== undefined && age !== null && age < 1, // Added null check
-    '1-3': (age) => age !== undefined && age !== null && age >= 1 && age <= 3, // Added null check
-    '>3': (age) => age !== undefined && age !== null && age > 3, // Added null check
+    '<1': (age) => age !== undefined && age !== null && age < 1,
+    '1-3': (age) => age !== undefined && age !== null && age >= 1 && age <= 3,
+    '>3': (age) => age !== undefined && age !== null && age > 3,
   };
 
   const filteredAndSortedPlants = useMemo(() => {
@@ -391,6 +382,7 @@ export default function MyPlantsPage() {
       ) : (
         <PlantGrid
           plants={filteredAndSortedPlants}
+          allCareTasks={careTasksFromContext}
           isManaging={isManagingPlants}
           selectedPlantIds={selectedPlantIds}
           onToggleSelect={handleTogglePlantSelection}

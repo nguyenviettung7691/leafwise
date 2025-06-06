@@ -2,14 +2,14 @@
 'use client';
 
 import type { FormEvent } from 'react';
-import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthOutput, AIGeneratedTask } from '@/types';
+import type { GenerateDetailedCarePlanOutput, DiagnosePlantHealthFlowOutput, AIGeneratedTask } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon, Sparkles } from 'lucide-react'; // Added Sparkles
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Zap, ListChecks, SaveIcon, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -18,7 +18,7 @@ import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CarePlanGeneratorProps {
-  diagnosisResult: DiagnosePlantHealthOutput | null;
+  diagnosisResult: DiagnosePlantHealthFlowOutput | null;
   isLoadingCarePlan: boolean;
   carePlanError: string | null;
   carePlanResult: GenerateDetailedCarePlanOutput | null;

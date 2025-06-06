@@ -99,10 +99,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
     const relatedPhotos = plantPhotos.filter(photo => photo.plantId === id);
     const relatedTasks = careTasks.filter(task => task.plantId === id);
 
-    // Return a composed plant object. Note: This is a frontend composition,
-    // the actual backend data structure is still separate.
-    // We use type assertion here to match the expected Plant type structure,
-    // even though the backend relationship fields are LazyLoaders.
     return {
         ...plant,
         photos: relatedPhotos,
@@ -150,7 +146,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
             console.error("Error adding plant to Amplify Data:", plantErrors);
             throw new Error(plantErrors ? plantErrors[0].message : "Failed to add plant.");
         }
-        createdPlantRecord = createdPlant as Plant; // Store the created plant record
+        createdPlantRecord = createdPlant as Plant;
 
         // 2. Upload primary photo if provided, using the created plant's ID
         if (primaryPhotoFile) {
@@ -158,7 +154,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
                 uploadedPrimaryPhotoKey = await uploadImageToS3(createdPlantRecord.id, primaryPhotoFile);
             } catch (e) {
                 console.error("Error uploading primary photo to S3:", e);
-                // Log error but continue without primary photo
                 uploadedPrimaryPhotoKey = undefined;
             }
         }
@@ -168,24 +163,22 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
              for (const file of galleryPhotoFiles) {
                 try {
                     const photoS3Key = await uploadImageToS3(createdPlantRecord.id, file);
-                    uploadedGalleryPhotoKeys.push(photoS3Key); // Track uploaded keys for potential cleanup
+                    uploadedGalleryPhotoKeys.push(photoS3Key); 
 
                     const { data: createdPhoto, errors: photoErrors } = await client.models.PlantPhoto.create({
                         plantId: createdPlantRecord.id,
-                        url: photoS3Key, // Store S3 key
-                        dateTaken: new Date().toISOString(), // Or get from file metadata if available
-                        healthCondition: newPlant.healthCondition, // Default to plant's initial health
-                        diagnosisNotes: newPlant.customNotes, // Default to plant's initial notes
+                        url: photoS3Key,
+                        dateTaken: new Date().toISOString(), 
+                        healthCondition: newPlant.healthCondition,
+                        diagnosisNotes: newPlant.customNotes,
                     }, {authMode: 'userPool'});
                     if (photoErrors || !createdPhoto) {
                         console.error("Error adding photo record to Amplify Data:", photoErrors);
-                        // Log error but continue to next photo. S3 cleanup for this photo will happen in finally block.
                     } else {
                         createdPhotoRecords.push(createdPhoto as PlantPhoto);
                     }
                 } catch (e) {
                     console.error("Error uploading gallery photo to S3:", e);
-                    // Log error but continue to next photo.
                 }
             }
         }
@@ -198,38 +191,31 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
              }, {authMode: 'userPool'});
              if (updatePhotoErrors || !updatedPlantWithPhoto) {
                  console.error("Error updating plant with primary photo URL:", updatePhotoErrors);
-                 // Log error but continue. The plant is created, just missing the primary photo URL.
              } else {
-                 // Update the createdPlantRecord with the primary photo URL
                  createdPlantRecord.primaryPhotoUrl = updatedPlantWithPhoto.primaryPhotoUrl;
              }
         }
 
         // 5. Update local state: Add the new plant and the created photos to their respective states
-        setPlantsState(prevPlants => [createdPlantRecord, ...prevPlants]);
+        setPlantsState(prevPlants => [createdPlantRecord as Plant, ...prevPlants]);
         setPlantPhotosState(prevPhotos => [...prevPhotos, ...createdPhotoRecords]);
-        // Care tasks are added separately via addCareTaskToPlant if needed after plant creation
 
-        // Return the created plant data from the backend (composed with created photos)
         const fullCreatedPlant: Plant = {
             ...createdPlantRecord,
-            photos: createdPhotoRecords, // Include the photos created in this operation
-            careTasks: [], // New plants start with no tasks added via this method
-        } as unknown as Plant; // Use unknown first for safety
+            photos: createdPhotoRecords,
+            careTasks: [],
+        } as unknown as Plant;
 
         return fullCreatedPlant;
 
     } catch (error) {
         console.error("Exception adding plant:", error);
-        // Attempt cleanup if plant record was created but subsequent steps failed
         if (createdPlantRecord) {
             console.warn(`Attempting cleanup for plant ${createdPlantRecord.id} due to subsequent errors.`);
-            // Delete S3 objects
             const keysToClean = [uploadedPrimaryPhotoKey, ...uploadedGalleryPhotoKeys].filter(Boolean) as string[];
             await Promise.all(keysToClean.map(key =>
                 remove({ path: key }).catch(e => console.error(`Cleanup failed for S3 object ${key}:`, e))
             ));
-            // Delete the plant record itself (which might cascade delete photos/tasks if configured)
             try {
                  await client.models.Plant.delete({ id: createdPlantRecord.id }, {authMode: 'userPool'});
                  console.log(`Cleaned up plant record ${createdPlantRecord.id}`);
@@ -466,41 +452,34 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
     if (currentUserId) {
       setIsLoading(true);
       try {
-        // Fetch all photos and tasks for the user to get S3 keys and IDs for cleanup
-        const userPhotos = plantPhotos.filter(photo => photo.plant?.owner === currentUserId); // Assuming owner is available on photo via relationship
-        const userTasks = careTasks.filter(task => task.plant?.owner === currentUserId); // Assuming owner is available on task via relationship
-        const userPlants = plants.filter(plant => plant.owner === currentUserId); // Assuming owner is available on plant
+        const userPhotos = plantPhotos;
+        const userTasks = careTasks;
+        const userPlants = plants;
 
-        // Collect all photo S3 keys and plant/photo/task IDs
         const photoKeysToDelete: string[] = userPhotos.map(photo => photo.url);
         const plantIdsToDelete: string[] = userPlants.map(plant => plant.id);
         const photoIdsToDelete: string[] = userPhotos.map(photo => photo.id);
         const taskIdsToDelete: string[] = userTasks.map(task => task.id);
 
 
-        // Delete images from S3 concurrently
         await Promise.all(photoKeysToDelete.map(path =>
             remove({ path }).catch(e => {
                 console.error(`Failed to delete S3 image ${path} during clearAllPlantData:`, e);
-                // Continue with other deletions even if one fails
             })
         ));
 
-        // Delete CareTask records from backend concurrently
          await Promise.all(taskIdsToDelete.map(taskId =>
              client.models.CareTask.delete({ id: taskId }, {authMode: 'userPool'}).catch(e => {
                  console.error(`Failed to delete CareTask record ${taskId} during clearAllPlantData:`, e);
              })
          ));
 
-        // Delete PlantPhoto records from backend concurrently
         await Promise.all(photoIdsToDelete.map(photoId =>
             client.models.PlantPhoto.delete({ id: photoId }, {authMode: 'userPool'}).catch(e => {
                 console.error(`Failed to delete PlantPhoto record ${photoId} during clearAllPlantData:`, e);
             })
         ));
 
-        // Delete Plant records from backend concurrently
          await Promise.all(plantIdsToDelete.map(plantId =>
              client.models.Plant.delete({ id: plantId }, {authMode: 'userPool'}).catch(e => {
                  console.error(`Failed to delete Plant record ${plantId} during clearAllPlantData:`, e);
@@ -508,7 +487,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
          ));
 
 
-        // Clear local state
         setPlantsState([]);
         setPlantPhotosState([]);
         setCareTasksState([]);
@@ -521,7 +499,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     } else {
-      // No user, or user just logged out. State already cleared.
       setPlantsState([]);
       setPlantPhotosState([]);
       setCareTasksState([]);
@@ -640,7 +617,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
   
   // --- methods for nested data ---
 
-  const addPhotoToPlant = useCallback(async (plantId: string, photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId'>, photoFile: File): Promise<PlantPhoto | undefined> => {
+  const addPhotoToPlant = useCallback(async (plantId: string, photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>, photoFile: File): Promise<PlantPhoto | undefined> => {
       if (!user) throw new Error("User not authenticated.");
       setIsLoading(true);
       try {
@@ -710,7 +687,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       }
   }, [user]);
 
-  const addCareTaskToPlant = useCallback(async (plantId: string, task: Omit<CareTask, 'id' | 'plant' | 'plantId'>): Promise<CareTask | undefined> => {
+  const addCareTaskToPlant = useCallback(async (plantId: string, task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>): Promise<CareTask | undefined> => {
       if (!user) throw new Error("User not authenticated.");
       setIsLoading(true);
       try {

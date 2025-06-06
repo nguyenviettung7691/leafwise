@@ -16,8 +16,7 @@ export function useS3Image(photoKey: string | undefined, userId?: string | undef
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    // photoKey is now the S3 key
-    if (!photoKey || !userId) { // userId might not be strictly needed for public/protected access, but good practice for scoping
+    if (!photoKey || !userId) {
       setImageUrl(null);
       setIsLoading(false);
       setError(null);
@@ -36,16 +35,9 @@ export function useS3Image(photoKey: string | undefined, userId?: string | undef
       setIsLoading(true);
       setError(null);
       try {
-        // Use Storage.getUrl to get a temporary URL for the S3 object
-        // Assuming default access level 'guest' or 'protected' based on your Amplify Storage setup
-        // If using 'protected', the key should be 'protected/userId/photoKey'
-        // If using 'private', the key should be 'private/userId/photoKey'
-        // For simplicity in this prototype, let's assume 'protected' and the key includes the user ID path.
-        // You might need to adjust the key path based on your Storage configuration.
-        // Let's assume the key stored in the model is the full path, e.g., 'protected/user123/photo-abc.webp'
-        const { url } = await getUrl({ key: photoKey, options: { accessLevel: 'protected' } }); // Adjust accessLevel if needed
+        const { url } = await getUrl({ path: photoKey });
 
-        setImageUrl(url.toString()); // Convert URL object to string
+        setImageUrl(url.toString());
 
       } catch (e: any) {
         console.error(`Failed to load image ${photoKey} from S3 for user ${userId}:`, e);
@@ -57,7 +49,7 @@ export function useS3Image(photoKey: string | undefined, userId?: string | undef
     };
 
     fetchImage();
-  }, [photoKey, userId]); // Add userId to dependencies
+  }, [photoKey, userId]);
 
   return { imageUrl, isLoading, error };
 }

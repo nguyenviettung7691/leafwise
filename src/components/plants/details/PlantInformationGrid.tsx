@@ -2,16 +2,16 @@
 'use client';
 
 import type { Plant } from '@/types';
-import { CalendarDays, MapPin, Users, Timer, FileText } from 'lucide-react'; // Added FileText for notes
+import { CalendarDays, MapPin, Users, Timer, FileText } from 'lucide-react';
 import { format, parseISO, type Locale } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PlantInformationGridProps {
   plant: Plant;
 }
 
-const formatDate = (dateString?: string, t?: (key: string) => string, locale?: Locale) => {
+const formatDate = (dateString?: string | null, t?: (key: string) => string, locale?: Locale) => {
   if (!dateString || !t) return t ? t('plantDetail.infoGrid.notApplicable') : 'N/A';
   try {
     const date = parseISO(dateString);
@@ -39,7 +39,7 @@ export function PlantInformationGrid({ plant }: PlantInformationGridProps) {
             <Timer className="h-5 w-5 text-primary mt-0.5 shrink-0" />
             <div>
               <p className="font-medium">{t('plantDetail.infoGrid.ageEstimate')}</p>
-              <p className="text-muted-foreground">{plant.ageEstimate || t('plantDetail.infoGrid.unknown')}</p>
+              <p className="text-muted-foreground">{plant.ageEstimateYears || t('plantDetail.infoGrid.unknown')}</p>
             </div>
           </div>
           <div className="flex items-start gap-3">

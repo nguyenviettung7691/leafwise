@@ -6,23 +6,21 @@ const schema = a.schema({
     scientificName: a.string(),
     familyCategory: a.string(),
     ageEstimateYears: a.integer(),
-    healthCondition: a.string().required(), // Store as string, validation happens client-side
+    healthCondition: a.string().required(),
     location: a.string(),
     plantingDate: a.string(), // Store date as ISO string
     customNotes: a.string(),
     primaryPhotoUrl: a.string(), // This will store the S3 key
-    // Relationships
-    photos: a.hasMany('PlantPhoto', 'plant'), // A Plant has many PlantPhotos
-    careTasks: a.hasMany('CareTask', 'plant'), // A Plant has many CareTasks
+    photos: a.hasMany('PlantPhoto', 'plantId'),
+    careTasks: a.hasMany('CareTask', 'plantId'),
   }).authorization((allow) => [allow.owner()]),
 
   PlantPhoto: a.model({
     url: a.string().required(), // This will store the S3 key
     notes: a.string(),
     dateTaken: a.string().required(), // Store date as ISO string
-    healthCondition: a.string().required(), // Store as string
+    healthCondition: a.string().required(),
     diagnosisNotes: a.string(),
-    // Relationship back to Plant
     plantId: a.id().required(),
     plant: a.belongsTo('Plant', 'plantId'),
   }).authorization((allow) => [allow.owner()]),
@@ -37,7 +35,6 @@ const schema = a.schema({
     isPaused: a.boolean().required(),
     resumeDate: a.string(), // Store date as ISO string
     level: a.string().required(), // Store as string
-    // Relationship back to Plant
     plantId: a.id().required(),
     plant: a.belongsTo('Plant', 'plantId'),
   }).authorization((allow) => [allow.owner()]),

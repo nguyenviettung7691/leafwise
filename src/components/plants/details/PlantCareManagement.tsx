@@ -107,7 +107,7 @@ interface PlantCareManagementProps {
 
 export function PlantCareManagement({
   plant,
-  careTasks
+  careTasks,
   loadingTaskId,
   onToggleTaskPause,
   onOpenEditTaskDialog,
@@ -200,7 +200,7 @@ export function PlantCareManagement({
                 const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
                 const isSelected = selectedTaskIds.has(task.id);
                 const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
-                const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
+                const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay ?? undefined, t);
                 const isAdvanced = task.level === 'advanced';
 
                 return (
@@ -258,7 +258,7 @@ export function PlantCareManagement({
                         {task.isPaused ? (
                           task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)!})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                         ) : (
-                          task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
+                          task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay ?? undefined, t, dateFnsLocale)}` : ''
                         )}
                       </p>
                     </div>
@@ -312,9 +312,9 @@ export function PlantCareManagement({
           isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all"
         )}
       >
-        {plant.careTasks && plant.careTasks.length > 0 && (
+        {careTasks && careTasks.length > 0 && (
           <DynamicWeeklyCareCalendarView
-            tasks={plant.careTasks}
+            tasks={careTasks}
             onEditTask={onOpenEditTaskDialog}
             onDeleteTask={onOpenDeleteTaskDialog}
           />

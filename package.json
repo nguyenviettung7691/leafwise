@@ -11,7 +11,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "aws:config": "aws configure sso",
+    "aws:login": "aws sso login",
+    "aws:sandbox": "npx ampx sandbox"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.8.0",

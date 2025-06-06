@@ -25,10 +25,10 @@ import { generateClient } from 'aws-amplify/data';
 import { remove } from 'aws-amplify/storage';
 import type { Schema } from '../../../amplify/data/resource';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 const client = generateClient<Schema>();
 
-// Placeholder for AuthLoader if it's not defined elsewhere
 const AuthLoader = ({ className }: { className?: string }) => (
   <Loader2 className={className} />
 );
@@ -52,24 +52,20 @@ export default function ProfilePage() {
     typeof window !== 'undefined' ? Notification.permission : 'default'
   );
 
-  // State for Avatar Upload
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null); // Data URL for preview
+  const [avatarFile, setAvatarFile] = useState<File | null | undefined>(undefined);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false); // State for the actual S3 upload part
-
-  // State for Preferences
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   const { toast } = useToast();
   const { t } = useLanguage();
 
-  // Hook to fetch the display URL for the user's avatar from S3
   const { imageUrl: userAvatarS3Url, isLoading: isLoadingAvatarS3 } = useS3Image(
-    authUser?.avatarS3Key || undefined, // Pass the S3 key
-    authUser?.id // Pass the user ID for protected access
+    authUser?.avatarS3Key || undefined,
+    authUser?.id
   );
 
   useEffect(() => {
@@ -91,10 +87,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (authUser) {
       setEditedName(authUser.name);
-      // Set initial preferences state from authUser context
       setUserPreferences(authUser.preferences || null);
-      // Clear any previous avatar preview when authUser changes
-      setAvatarFile(null);
+      setAvatarFile(undefined);
       setAvatarPreviewUrl(null);
     }
   }, [authUser]);
@@ -142,7 +136,7 @@ export default function ProfilePage() {
     }
     navigator.serviceWorker.controller.postMessage({
       type: 'SHOW_NOTIFICATION',
-      payload: { title, body, icon: '/icons/icon-192x192.png', tag: 'test-notification' }
+      payload: { title, body, icon: '/maskable-icon.png', tag: 'test-notification' }
     });
     toast({ title: t('profilePage.notifications.testSentTitle'), description: t('profilePage.notifications.testSentBody') });
   };
@@ -150,10 +144,9 @@ export default function ProfilePage() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // Reset edited name and avatar preview if cancelling
       if (authUser) {
         setEditedName(authUser.name);
-        setAvatarFile(null);
+        setAvatarFile(undefined);
         setAvatarPreviewUrl(null);
         if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
       }
@@ -165,29 +158,25 @@ export default function ProfilePage() {
     event.preventDefault();
     if (!authUser) return;
 
-    setIsUploadingAvatar(true); // Indicate saving/uploading is in progress
+    setIsUploadingAvatar(true);
 
     const updatedUserData: { name?: string, preferences?: Partial<UserPreferences>, avatarFile?: File | null } = {
       name: editedName,
-      // Preferences are handled by handlePreferenceChange and saved immediately or passed here if needed
-      // For now, preferences are saved on toggle, so we don't pass them here.
-      // If avatarFile is null, it means the user cleared the selection or didn't select a new one.
-      // If avatarFile is undefined, it means the avatar input was not touched.
-      // We only pass avatarFile if it's explicitly set (File or null).
-      avatarFile: avatarFile !== null ? avatarFile : (avatarPreviewUrl === null && authUser.avatarS3Key !== null ? null : undefined),
     };
 
+    if (avatarFile !== undefined) {
+        updatedUserData.avatarFile = avatarFile; // This will be either a File (new upload) or null (explicit removal)
+    }
+
     try {
-      // Call the updated updateUser context method
       await updateAuthUser(updatedUserData);
       setIsEditing(false);
-      setAvatarFile(null); // Clear the file state after successful save
-      setAvatarPreviewUrl(null); // Clear the preview state after successful save
-      if (avatarFileInputRef.current) avatarFileInputRef.current.value = ""; // Clear file input element
+      setAvatarFile(undefined);
+      setAvatarPreviewUrl(null);
+      if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
 
     } catch (error) {
       console.error("Error saving profile changes:", error);
-      // Toast is handled in AuthContext
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -200,10 +189,8 @@ export default function ProfilePage() {
       if (notificationPermission !== 'granted') {
         const granted = await requestNotificationPermission();
         if (!granted) {
-          // If permission wasn't granted, don't enable the preference
           toast({ title: t('common.info'), description: t('profilePage.notifications.permissionRequiredToEnable'), variant: "default" });
-          // The switch might visually revert due to state not changing, which is desired.
-          return; // Stop here if permission wasn't granted
+          return;
         }
       }
     }
@@ -215,7 +202,6 @@ export default function ProfilePage() {
     };
 
     try {
-        // Call the updateUser context method to save preferences
         await updateAuthUser({ preferences: updatedPreferences });
         // Local state is updated by the AuthContext after successful save
         // setUserPreferences(updatedPreferences as UserPreferences); // AuthContext handles this
@@ -234,14 +220,14 @@ export default function ProfilePage() {
   const handleAvatarFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
-      setAvatarFile(null);
+      setAvatarFile(undefined);
       setAvatarPreviewUrl(null);
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) { // Max 5MB for avatar
         toast({ variant: 'destructive', title: t('profilePage.toasts.avatarImageTooLargeTitle'), description: t('profilePage.toasts.avatarImageTooLargeDesc', { maxSize: '5MB' }) });
-        setAvatarFile(null);
+        setAvatarFile(undefined);
         setAvatarPreviewUrl(null);
         if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
         return;
@@ -249,19 +235,18 @@ export default function ProfilePage() {
 
     setAvatarFile(file);
     setIsCompressingAvatar(true);
-    setAvatarPreviewUrl(null); // Clear previous preview
+    setAvatarPreviewUrl(null);
 
     const reader = new FileReader();
     reader.onloadend = async () => {
         try {
             const originalDataUrl = reader.result as string;
-            // Compress the image before setting preview
             const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.8, type: 'image/webp', maxWidth: 200, maxHeight: 200 }); // Compress for display/upload
             setAvatarPreviewUrl(compressedDataUrl);
         } catch (err) {
             console.error("Error compressing avatar image:", err);
             toast({ title: t('common.error'), description: t('profilePage.toasts.imageCompressionError'), variant: "destructive" });
-            setAvatarFile(null);
+            setAvatarFile(undefined);
             setAvatarPreviewUrl(null);
             if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
         } finally {
@@ -272,10 +257,9 @@ export default function ProfilePage() {
   };
 
   const handleRemoveAvatar = () => {
-      setAvatarFile(null); // Indicate removal
-      setAvatarPreviewUrl(null); // Clear preview
-      if (avatarFileInputRef.current) avatarFileInputRef.current.value = ""; // Clear file input element
-      // The actual deletion/update happens when saving changes
+      setAvatarFile(null);
+      setAvatarPreviewUrl(null);
+      if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
   };
 
   const handleLogoutConfirmed = async () => {
@@ -612,10 +596,14 @@ export default function ProfilePage() {
     }
   };
 
-  // Determine the avatar source to display
-  const avatarSrcToDisplay = avatarPreviewUrl // Use the new preview if available
-    || userAvatarS3Url // Otherwise, use the S3 URL from the hook
-    || `https://placehold.co/100x100.png?text=${(authUser?.name?.charAt(0) || 'U').toUpperCase()}`; // Fallback placeholder
+  const avatarSrcToDisplay = avatarPreviewUrl // 1. New file preview (data URL)
+    || (avatarFile === null // 2. Explicitly removed?
+        ? `https://placehold.co/100x100.png?text=${(authUser?.name?.charAt(0) || 'U').toUpperCase()}` // Yes, show placeholder
+        : userAvatarS3Url // No, use existing S3 URL (if any)
+       )
+    || `https://placehold.co/100x100.png?text=${(authUser?.name?.charAt(0) || 'U').toUpperCase()}`; // 4. Final fallback placeholder
+  const showRemoveAvatarButton = isEditing && (avatarPreviewUrl !== null || authUser?.avatarS3Key !== null);
+  const isSaveDisabled = isUploadingAvatar || isCompressingAvatar || (editedName.trim() === authUser?.name.trim() && avatarFile === undefined);
 
   if (authLoading || (!authUser && !authLoading)) {
     return (
@@ -628,7 +616,6 @@ export default function ProfilePage() {
   }
   
   if (!authUser) { 
-    // Should be redirected by useEffect, but as a fallback
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-full text-muted-foreground">
@@ -651,7 +638,6 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
-               {/* User Avatar */}
                <div className="relative">
                  <Avatar className="h-24 w-24">
                     {isLoadingAvatarS3 || isCompressingAvatar ? (
@@ -682,7 +668,7 @@ export default function ProfilePage() {
                                disabled={isCompressingAvatar || isUploadingAvatar}
                            />
                        </label>
-                       {(avatarPreviewUrl !== null || authUser.avatarS3Key !== null) && (
+                       {showRemoveAvatarButton && (
                            <button
                                type="button"
                                onClick={handleRemoveAvatar}
@@ -724,7 +710,7 @@ export default function ProfilePage() {
                   <Button type="button" variant="outline" onClick={handleEditToggle} disabled={isUploadingAvatar || isCompressingAvatar}>
                     {t('common.cancel')}
                   </Button>
-                  <Button type="submit" disabled={isUploadingAvatar || isCompressingAvatar || (editedName.trim() === authUser.name.trim() && avatarFile === null && avatarPreviewUrl !== null && authUser.avatarS3Key !== null) || (editedName.trim() === authUser.name.trim() && avatarFile === null && avatarPreviewUrl === null && authUser.avatarS3Key === null) }>
+                  <Button type="submit" disabled={isSaveDisabled}>
                     {(isUploadingAvatar || isCompressingAvatar) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SaveIcon className="mr-2 h-4 w-4" />}
                     {(isUploadingAvatar || isCompressingAvatar) ? t('profilePage.toasts.savingProfile') : t('common.saveChanges')}
                   </Button>
@@ -732,10 +718,33 @@ export default function ProfilePage() {
               </form>
             )}
             {!isEditing && (
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleEditToggle}>
                   <Edit3 className="mr-2 h-4 w-4" /> {t('common.edit')}
                 </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" disabled={isLoggingOut}>
+                      {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4"/>}
+                      {t('profilePage.logoutButton')}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitlePrimitive>{t('profilePage.logoutConfirmTitle')}</AlertDialogTitlePrimitive>
+                      <AlertDialogDescription>
+                        {t('profilePage.logoutConfirmDescription')}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isLoggingOut}>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut}>
+                        {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        {t('profilePage.logoutConfirmButton')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
           </CardContent>
@@ -781,15 +790,62 @@ export default function ProfilePage() {
                     <AlertDescription>{t('profilePage.notifications.permissionPreviouslyDeniedBody')}</AlertDescription>
                 </Alert>
              )}
-             {isBadgingAPISupported && (
-                <div className="space-y-2 pt-4 border-t">
-                    <p className="text-sm font-medium">{t('profilePage.pwaFeaturesCardTitle')}</p>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={handleSetTestBadge}>{t('profilePage.setAppBadgeButton')}</Button>
-                        <Button variant="outline" size="sm" onClick={handleClearTestBadge}>{t('profilePage.clearAppBadgeButton')}</Button>
+             {/* PWA Features Section */}
+             <div className="space-y-3 pt-4 border-t">
+                <p className="text-sm font-medium">{t('profilePage.pwaFeaturesCardTitle')}</p>
+                <p className="text-xs text-muted-foreground">{t('profilePage.pwaFeaturesCardDescription')}</p>
+
+                {/* Notification Testing */}
+                <div className="space-y-2">
+                    <p className="text-xs font-medium text-foreground/80">{t('profilePage.notifications.testSectionTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{t('profilePage.notifications.currentPermissionLabel')}: <Badge variant="secondary" className="capitalize">{notificationPermission}</Badge></p>
+                    <div className="flex gap-2 flex-wrap">
+                        {notificationPermission === 'default' && (
+                            <Button variant="outline" size="sm" onClick={requestNotificationPermission}>
+                                {t('profilePage.notifications.requestPermissionButton')}
+                            </Button>
+                        )}
+                        {notificationPermission === 'granted' && (
+                            <Button variant="outline" size="sm" onClick={() => sendTestNotification(t('profilePage.notifications.testSentTitle'), t('profilePage.notifications.testSentBodySample'))}>
+                                {t('profilePage.notifications.sendTestButton')}
+                            </Button>
+                        )}
+                         {notificationPermission === 'denied' && (
+                            <Button variant="outline" size="sm" disabled>
+                                {t('profilePage.notifications.permissionBlocked')}
+                            </Button>
+                         )}
                     </div>
                 </div>
-             )}
+
+                {/* Badge Testing */}
+                {isBadgingAPISupported && (
+                    <div className="space-y-2 pt-3 border-t">
+                        <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
+                        <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.supported')}</Badge></p>
+                        <div className="flex gap-2 flex-wrap">
+                            <Button variant="outline" size="sm" onClick={handleSetTestBadge}>{t('profilePage.setAppBadgeButton')}</Button>
+                            <Button variant="outline" size="sm" onClick={handleClearTestBadge}>{t('profilePage.clearAppBadgeButton')}</Button>
+                        </div>
+                         <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 text-xs">
+                            <Info className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                            <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
+                            <AlertDescription className="text-xs">{t('profilePage.badgeTestInfo')}</AlertDescription>
+                        </Alert>
+                    </div>
+                )}
+                 {!isBadgingAPISupported && (
+                    <div className="space-y-2 pt-3 border-t">
+                        <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
+                        <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.notSupported')}</Badge></p>
+                         <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300 text-xs">
+                            <Info className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
+                            <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
+                            <AlertDescription className="text-xs">{t('profilePage.badgeNotSupported')}</AlertDescription>
+                        </Alert>
+                    </div>
+                 )}
+             </div>
           </CardContent>
         </Card>
 
@@ -861,41 +917,6 @@ export default function ProfilePage() {
                   <AlertDialogAction onClick={handleDestroyDataConfirmed} disabled={isDestroyingData || destroyEmailInput !== authUser.email} className="bg-destructive hover:bg-destructive/90">
                     {isDestroyingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     {t('profilePage.destroyConfirmButton')}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <LogOut className="h-6 w-6 text-primary" />
-              {t('profilePage.logoutTitle')}
-            </CardTitle>
-            <CardDescription>{t('profilePage.logoutDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" disabled={isLoggingOut}>
-                  {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <LogOut className="mr-2 h-4 w-4"/>}
-                  {t('profilePage.logoutButton')}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitlePrimitive>{t('profilePage.logoutConfirmTitle')}</AlertDialogTitlePrimitive>
-                  <AlertDialogDescription>
-                    {t('profilePage.logoutConfirmDescription')}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isLoggingOut}>{t('common.cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleLogoutConfirmed} disabled={isLoggingOut}>
-                    {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                    {t('profilePage.logoutConfirmButton')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

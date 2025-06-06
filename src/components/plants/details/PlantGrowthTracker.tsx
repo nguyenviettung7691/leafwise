@@ -158,7 +158,10 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
         isManagingPhotos && isSelected ? 'opacity-75' : ''
       )}>
         <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p>
-        <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
+        <Badge
+          variant="outline"
+          className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition as PlantHealthCondition]} opacity-90 group-hover:opacity-100 capitalize`}
+        >
           {t(`plantDetail.healthConditions.${photo.healthCondition}`)}
         </Badge>
       </div>
@@ -208,19 +211,19 @@ export function PlantGrowthTracker({
   };
 
   const chartData = useMemo(() => {
-    if (!plantPhotos || plantPhotos.length < 1) return []; // Use plantPhotos
-    return [...plantPhotos] // Use plantPhotos
+    if (!plantPhotos || plantPhotos.length < 1) return [];
+    return [...plantPhotos]
       .map(photo => ({
         id: photo.id,
         photoUrl: photo.url,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy', { locale: dateFnsLocale }),
         originalDate: parseISO(photo.dateTaken),
-        health: healthScoreMapping[photo.healthCondition],
+        health: healthScoreMapping[photo.healthCondition as PlantHealthCondition],
         healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition}`),
-        healthCondition: photo.healthCondition,
+        healthCondition: photo.healthCondition as PlantHealthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plantPhotos, t, dateFnsLocale]); // Add plantPhotos to dependencies
+  }, [plantPhotos, t, dateFnsLocale]);
 
   const sortedPhotosForGallery = useMemo(() => {
     if (!plantPhotos) return []; // Use plantPhotos
