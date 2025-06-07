@@ -14,8 +14,9 @@ import { format, parseISO } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
@@ -60,7 +61,7 @@ interface GalleryPhotoItemProps {
 
 const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plantCommonName, userId, onPhotoClick, onToggleSelection, onOpenEditDialog }: GalleryPhotoItemProps) => {
   const { t, dateFnsLocale } = useLanguage();
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(photo.url, userId);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(photo.url, userId);
 
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
@@ -133,6 +134,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           src={imageSrc}
           alt={`${t('plantDetail.growthTracker.photoGalleryTitle')} - ${formatDateForGallery(photo.dateTaken)}`}
           width={200} height={200}
+          placeholder="blur" blurDataURL={PLACEHOLDER_DATA_URI}
           className={cn(
             "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
             isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
@@ -158,7 +160,10 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
         isManagingPhotos && isSelected ? 'opacity-75' : ''
       )}>
         <p className="text-white text-xs truncate w-full">{formatDateForGallery(photo.dateTaken)}</p>
-        <Badge variant="outline" size="sm" className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition]} opacity-90 group-hover:opacity-100 capitalize`}>
+        <Badge
+          variant="outline"
+          className={`mt-1 text-xs ${healthConditionStyles[photo.healthCondition as PlantHealthCondition]} opacity-90 group-hover:opacity-100 capitalize`}
+        >
           {t(`plantDetail.healthConditions.${photo.healthCondition}`)}
         </Badge>
       </div>
@@ -169,6 +174,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
 
 interface PlantGrowthTrackerProps {
   plant: Plant;
+  plantPhotos: PlantPhoto[];
   onOpenGridPhotoDialog: (photo: PlantPhoto) => void;
   onTriggerNewPhotoUpload: () => void;
   isDiagnosingNewPhoto: boolean;
@@ -183,6 +189,7 @@ interface PlantGrowthTrackerProps {
 
 export function PlantGrowthTracker({
   plant,
+  plantPhotos,
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
   isDiagnosingNewPhoto,
@@ -206,24 +213,24 @@ export function PlantGrowthTracker({
   };
 
   const chartData = useMemo(() => {
-    if (!plant || !plant.photos || plant.photos.length < 1) return [];
-    return [...plant.photos]
+    if (!plantPhotos || plantPhotos.length < 1) return [];
+    return [...plantPhotos]
       .map(photo => ({
         id: photo.id,
         photoUrl: photo.url,
         date: format(parseISO(photo.dateTaken), 'MMM d, yy', { locale: dateFnsLocale }),
         originalDate: parseISO(photo.dateTaken),
-        health: healthScoreMapping[photo.healthCondition],
+        health: healthScoreMapping[photo.healthCondition as PlantHealthCondition],
         healthLabel: t(`plantDetail.healthConditions.${photo.healthCondition}`),
-        healthCondition: photo.healthCondition,
+        healthCondition: photo.healthCondition as PlantHealthCondition,
       }))
       .sort((a, b) => a.originalDate.getTime() - b.originalDate.getTime());
-  }, [plant, t, dateFnsLocale]);
+  }, [plantPhotos, t, dateFnsLocale]);
 
   const sortedPhotosForGallery = useMemo(() => {
-    if (!plant || !plant.photos) return [];
-    return [...plant.photos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
-  }, [plant]);
+    if (!plantPhotos) return []; // Use plantPhotos
+    return [...plantPhotos].sort((a, b) => parseISO(b.dateTaken).getTime() - parseISO(a.dateTaken).getTime());
+  }, [plantPhotos]); // Add plantPhotos to dependencies
 
   const chartConfig = {
     health: {

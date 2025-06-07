@@ -11,7 +11,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { PlantHealthCondition, ReviewCarePlanOutput, AIGeneratedTask, ExistingTaskModificationSuggestion } from '@/types'; // Assuming ReviewCarePlanOutput is defined in types
+import type { ReviewCarePlanOutput } from '@/types';
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 
@@ -136,7 +136,7 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     inputSchema: ProactiveCarePlanReviewInputSchema,
     outputSchema: ReviewCarePlanOutputSchema,
   },
-  async (input: ProactiveCarePlanReviewInput): Promise<ReviewCarePlanOutput> => {
+  async (input: ProactiveCarePlanReviewInput) => {
     const saneInput = {
       ...input,
       currentCareTasks: Array.isArray(input.currentCareTasks) ? input.currentCareTasks : [],
@@ -144,6 +144,42 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     const { output } = await prompt(saneInput);
     const lang = input.languageCode === 'vi' ? 'vi' : 'en';
     const defaultAssessment = lang === 'vi' ? "Đánh giá của AI không được cung cấp." : "AI assessment was not provided.";
+
+    // Helper to sanitize updatedDetails (convert null to undefined for name/description)
+    function sanitizeUpdatedDetails(details: any) {
+      if (!details) return undefined;
+      return {
+        ...details,
+        name: details.name == null ? undefined : details.name,
+        description: details.description == null ? undefined : details.description,
+        frequency: details.frequency == null ? undefined : details.frequency,
+        timeOfDay: details.timeOfDay == null ? undefined : details.timeOfDay,
+        level: details.level == null ? undefined : details.level,
+      };
+    }
+
+    // Helper to sanitize taskModifications
+    function sanitizeTaskModifications(mods: any[]) {
+      if (!Array.isArray(mods)) return [];
+      return mods.map((mod) => ({
+        ...mod,
+        updatedDetails: sanitizeUpdatedDetails(mod.updatedDetails),
+        reasoning: mod.reasoning == null ? undefined : mod.reasoning,
+      }));
+    }
+
+    // Helper to sanitize newTasks (taskName/taskDescription must not be null)
+    function sanitizeNewTasks(tasks: any[]) {
+      if (!Array.isArray(tasks)) return [];
+      return tasks.map((task) => ({
+        ...task,
+        taskName: task.taskName == null ? '' : task.taskName,
+        taskDescription: task.taskDescription == null ? '' : task.taskDescription,
+        suggestedFrequency: task.suggestedFrequency == null ? '' : task.suggestedFrequency,
+        suggestedTimeOfDay: task.suggestedTimeOfDay == null ? '' : task.suggestedTimeOfDay,
+        taskLevel: task.taskLevel == null ? 'basic' : task.taskLevel,
+      }));
+    }
 
     if (!output) {
       console.warn('Proactive Care Plan Review prompt returned null output. Returning default structure.');
@@ -155,8 +191,8 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     }
     return {
       overallAssessment: output.overallAssessment || defaultAssessment,
-      taskModifications: Array.isArray(output.taskModifications) ? output.taskModifications : [],
-      newTasks: Array.isArray(output.newTasks) ? output.newTasks : [],
+      taskModifications: sanitizeTaskModifications(output.taskModifications),
+      newTasks: sanitizeNewTasks(output.newTasks),
     };
   }
 );

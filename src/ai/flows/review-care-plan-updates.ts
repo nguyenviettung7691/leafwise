@@ -11,7 +11,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { PlantHealthCondition } from '@/types';
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 

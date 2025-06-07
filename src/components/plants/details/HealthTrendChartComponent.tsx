@@ -6,10 +6,11 @@ import Image from 'next/image';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, CartesianGrid, XAxis, YAxis, Line, Dot } from 'recharts';
 import type { PlantHealthCondition } from '@/types';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { useS3Image } from '@/hooks/useS3Image'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 const healthConditionDotColors: Record<PlantHealthCondition, string> = {
   healthy: 'hsl(var(--primary))', 
@@ -57,7 +58,7 @@ const CustomChartDot = (props: any) => {
 };
 
 const TooltipImageDisplay = ({ photoId, userId }: { photoId?: string, userId?: string }) => { // Added userId
-  const { imageUrl, isLoading, error } = useIndexedDbImage(photoId, userId); // Pass userId
+  const { imageUrl, isLoading, error } = useS3Image(photoId, userId); // Pass userId
   const { t } = useLanguage();
 
   if (!photoId) return null;
@@ -76,6 +77,8 @@ const TooltipImageDisplay = ({ photoId, userId }: { photoId?: string, userId?: s
       alt={t('plantDetail.growthTracker.photoGalleryTitle')} 
       width={64}
       height={64}
+      placeholder="blur"
+      blurDataURL={PLACEHOLDER_DATA_URI}
       className="w-16 h-16 object-cover rounded-sm my-1 mx-auto"
       data-ai-hint="plant chart thumbnail"
     />

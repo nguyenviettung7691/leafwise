@@ -10,11 +10,10 @@ import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper'; // Renamed addImage
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function EditPlantPage() {
-  const { user } = useAuth(); // Get user from AuthContext
+  const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -52,72 +51,68 @@ export default function EditPlantPage() {
     setIsLoadingPage(false);
   }, [id, getPlantById]);
 
-  const handleUpdatePlant = async (data: PlantFormData) => {
-    if (!plant || !user?.id) {
+  // Updated handleUpdatePlant to accept plant data and the primary photo file
+  const handleUpdatePlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
+    if (!plant || !plant.id || !user?.id) {
         toast({ title: t('common.error'), description: t('editPlantPage.toastErrorFindingPlant'), variant: 'destructive'});
         return;
     }
     setIsSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    let finalPrimaryPhotoId: string | undefined = plant.primaryPhotoUrl;
-    let updatedPhotos = [...plant.photos]; // Make a mutable copy
-
-    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      // New image uploaded via form, data.diagnosedPhotoDataUrl is a data URL from compressImage
-      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
-      if (blob) {
-        const newPhotoId = `photo-${plant.id}-edited-${Date.now()}`;
-        try {
-          await addIDBImage(user.id, newPhotoId, blob); // Pass userId
-          finalPrimaryPhotoId = newPhotoId; // This is the new IDB key
-          // Add new photo to gallery if it's truly new (not just re-selection of same image data)
-          // Since it's a new upload, it's always new to IDB.
-          updatedPhotos.unshift({ 
-            id: newPhotoId, // IDB key
-            url: newPhotoId, // Store IDB key
-            dateTaken: new Date().toISOString(),
-            healthCondition: data.healthCondition, 
-            diagnosisNotes: t('editPlantPage.primaryPhotoUpdatedNote') 
-          });
-        } catch (e) {
-          console.error("Error saving edited primary photo to IDB:", e);
-          toast({ title: t('common.error'), description: "Failed to save updated image.", variant: "destructive" });
-          // Keep existing finalPrimaryPhotoId if save fails
-        }
-      } else {
-        toast({ title: t('common.error'), description: "Failed to process updated image.", variant: "destructive" });
-      }
-    } else if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl !== plant.primaryPhotoUrl) {
-      // Existing gallery photo selected (data.diagnosedPhotoDataUrl is an IDB key) or placeholder selected
-      finalPrimaryPhotoId = data.diagnosedPhotoDataUrl;
-    }
-    // If data.diagnosedPhotoDataUrl is same as plant.primaryPhotoUrl, no change to finalPrimaryPhotoId needed
-    // If data.diagnosedPhotoDataUrl is null/empty (photo was removed without replacement), it will try to save null.
-    
-    const updatedPlantData: Plant = {
-      ...plant,
+    // Prepare updated plant data (without image data/keys)
+    // The SavePlantForm passes the S3 key of a selected gallery photo in data.diagnosedPhotoDataUrl
+    // if no new file was uploaded. If a new file was uploaded, primaryPhotoFile is the File object.
+    // If the primary photo was removed, primaryPhotoFile is null and data.diagnosedPhotoDataUrl is null.
+    const updatedPlantData: Partial<Plant> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
-      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPrimaryPhotoId, // This is now an IDB key or null/undefined
-      photos: updatedPhotos, // This contains photos with their 'url' as IDB keys
+      // primaryPhotoUrl will be handled by the context method based on the file or selected URL
+      // photos and careTasks are not updated via this form
     };
-  
-    updatePlant(plant.id, updatedPlantData);
 
-    toast({
-      title: t('editPlantPage.toastPlantUpdatedTitle'),
-      description: t('editPlantPage.toastPlantUpdatedDescription', { plantName: data.commonName }),
-    });
-    
-    setIsSaving(false);
-    router.push(`/plants/${id}`); 
+    try {
+        // Call the context method, passing the plant ID, updated data, and the file.
+        // The context method handles uploading the new file (if any), deleting the old one,
+        // and updating the primaryPhotoUrl field on the Plant record.
+        // It also handles the case where an existing gallery photo was selected as primary
+        // (by passing its S3 key in updatedPlantData.primaryPhotoUrl) or if the primary photo was removed.
+        // The SavePlantForm passes the S3 key in data.diagnosedPhotoDataUrl if no new file is uploaded.
+        // If a new file is uploaded, primaryPhotoFile is the File object.
+        // If the primary photo is removed, primaryPhotoFile is null and data.diagnosedPhotoDataUrl is null.
+        // The context method needs to know if a *new file* is being uploaded (primaryPhotoFile is File),
+        // if an *existing gallery photo* is being set as primary (primaryPhotoFile is null, updatedPlantData.primaryPhotoUrl is S3 key),
+        // or if the *primary photo is being removed* (primaryPhotoFile is null, updatedPlantData.primaryPhotoUrl is null).
+        // The SavePlantForm's onSave signature passes the file and the diagnosedPhotoDataUrl (which holds the S3 key or data URL).
+        // We need to pass the file and the potential new primaryPhotoUrl (S3 key or null) to the context.
+
+        // The SavePlantForm passes the S3 key of a selected gallery photo in `data.diagnosedPhotoDataUrl`
+        // when no new file is uploaded. If a new file is uploaded, `primaryPhotoFile` is the File object.
+        // If the primary photo is removed, `primaryPhotoFile` is null and `data.diagnosedPhotoDataUrl` is null.
+        // The `updatePlant` context method expects `primaryPhotoFile` for new uploads, and `updatedPlantData.primaryPhotoUrl`
+        // for setting an existing gallery photo as primary or removing the primary photo.
+
+        // So, we pass the file if it exists, and the potential new primaryPhotoUrl from the form data.
+        await updatePlant(plant.id, { ...updatedPlantData, primaryPhotoUrl: data.diagnosedPhotoDataUrl }, primaryPhotoFile);
+
+
+        toast({
+          title: t('editPlantPage.toastPlantUpdatedTitle'),
+          description: t('editPlantPage.toastPlantUpdatedDescription', { plantName: data.commonName }),
+        });
+
+        setIsSaving(false);
+        router.push(`/plants/${id}`);
+
+    } catch (error) {
+        console.error("Error saving edited plant:", error);
+        toast({ title: t('common.error'), description: t('editPlantPage.toastErrorSavingPlant'), variant: "destructive" });
+        setIsSaving(false);
+    }
   };
 
   if (isLoadingPage || !initialFormData) {

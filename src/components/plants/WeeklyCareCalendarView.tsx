@@ -116,7 +116,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
         console.error("Invalid nextDueDate for task:", task.name, task.nextDueDate, e);
         return occurrences;
       }
-      seedDate = setTimeToTaskTime(seedDate, task.timeOfDay);
+      seedDate = setTimeToTaskTime(seedDate, task.timeOfDay ?? undefined);
 
 
       if ((task.frequency || '').toLowerCase() === 'ad-hoc') {

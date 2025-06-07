@@ -89,6 +89,7 @@ const formatDateTime = (dateString?: string, timeString?: string, t?: (key: stri
 
 interface PlantCareManagementProps {
   plant: Plant;
+  careTasks: CareTask[];
   loadingTaskId: string | null;
   onToggleTaskPause: (taskId: string) => Promise<void>;
   onOpenEditTaskDialog: (task: CareTask) => void;
@@ -106,6 +107,7 @@ interface PlantCareManagementProps {
 
 export function PlantCareManagement({
   plant,
+  careTasks,
   loadingTaskId,
   onToggleTaskPause,
   onOpenEditTaskDialog,
@@ -123,8 +125,8 @@ export function PlantCareManagement({
   const isStandalone = usePWAStandalone();
 
   const sortedTasks = useMemo(() => {
-    if (!plant.careTasks) return [];
-    return [...plant.careTasks].sort((a, b) => {
+    if (!careTasks) return [];
+    return [...careTasks].sort((a, b) => {
       if (a.isPaused && !b.isPaused) return 1;
       if (!a.isPaused && b.isPaused) return -1;
       if (!a.nextDueDate && b.nextDueDate) return 1;
@@ -137,7 +139,7 @@ export function PlantCareManagement({
         return 0;
       }
     });
-  }, [plant.careTasks]);
+  }, [careTasks]);
 
 
   return (
@@ -198,7 +200,7 @@ export function PlantCareManagement({
                 const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
                 const isSelected = selectedTaskIds.has(task.id);
                 const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
-                const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay, t);
+                const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay ?? undefined, t);
                 const isAdvanced = task.level === 'advanced';
 
                 return (
@@ -256,7 +258,7 @@ export function PlantCareManagement({
                         {task.isPaused ? (
                           task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)!})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
                         ) : (
-                          task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay, t, dateFnsLocale)}` : ''
+                          task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay ?? undefined, t, dateFnsLocale)}` : ''
                         )}
                       </p>
                     </div>
@@ -310,9 +312,9 @@ export function PlantCareManagement({
           isManagingCarePlan ? "filter blur-sm opacity-60 pointer-events-none transition-all" : "transition-all"
         )}
       >
-        {plant.careTasks && plant.careTasks.length > 0 && (
+        {careTasks && careTasks.length > 0 && (
           <DynamicWeeklyCareCalendarView
-            tasks={plant.careTasks}
+            tasks={careTasks}
             onEditTask={onOpenEditTaskDialog}
             onDeleteTask={onOpenDeleteTaskDialog}
           />

@@ -15,17 +15,16 @@ import { CarePlanGenerator } from '@/components/diagnose/CarePlanGenerator';
 import { DiagnosisUploadForm } from '@/components/diagnose/DiagnosisUploadForm';
 import { addDays, addWeeks, addMonths, addYears, parseISO } from 'date-fns';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { addImage as addIDBImage, dataURLtoBlob } from '@/lib/idb-helper';
 import { compressImage } from '@/lib/image-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation'; // Added for redirect
+import { useRouter } from 'next/navigation';
 
 export default function DiagnosePlantPage() {
   const { user } = useAuth();
-  const router = useRouter(); // Added for redirect
-  const { addPlant, updatePlant, getPlantById } = usePlantData();
+  const router = useRouter();
+  const { addPlant, updatePlant, getPlantById, addCareTaskToPlant } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -195,61 +194,38 @@ export default function DiagnosePlantPage() {
     }
     setIsSavingPlant(true);
 
-    const newPlantId = `plant-${Date.now()}`;
-    let finalPhotoIdForStorage: string | undefined = undefined;
+    const primaryPhotoFile = file; // Use the file state directly
 
-    if (data.diagnosedPhotoDataUrl && data.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-      const blob = dataURLtoBlob(data.diagnosedPhotoDataUrl);
-      if (blob) {
-        finalPhotoIdForStorage = `photo-${newPlantId}-initial-${Date.now()}`;
-        try {
-          await addIDBImage(user.id, finalPhotoIdForStorage, blob);
-        } catch (e) {
-          console.error("Error saving initial diagnosis image to IDB:", e);
-          toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
-          finalPhotoIdForStorage = undefined;
-        }
-      } else {
-        toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageProcessError'), variant: "destructive" });
-        finalPhotoIdForStorage = undefined;
-      }
-    }
-
-    const newPlant: Plant = {
-      id: newPlantId,
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
-      ageEstimate: data.ageEstimateYears ? t('diagnosePage.resultDisplay.ageUnitYears', { count: data.ageEstimateYears }) : undefined,
       ageEstimateYears: data.ageEstimateYears,
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      primaryPhotoUrl: finalPhotoIdForStorage,
-      photos: finalPhotoIdForStorage
-        ? [{
-            id: finalPhotoIdForStorage,
-            url: finalPhotoIdForStorage,
-            dateTaken: new Date().toISOString(),
-            healthCondition: data.healthCondition,
-            diagnosisNotes: diagnosisResult?.identification.commonName ? t('diagnosePage.resultDisplay.initialDiagnosisNotes') : t('addNewPlantPage.initialDiagnosisNotes'),
-          }]
-        : [],
-      careTasks: [],
       plantingDate: new Date().toISOString(),
-      lastCaredDate: undefined,
+      // primaryPhotoUrl, photos, careTasks, lastCaredDate will be handled by the context method
     };
 
-    addPlant(newPlant);
-    setLastSavedPlantId(newPlantId);
+    try {
+        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile, undefined, 'diagnose');
 
-    toast({
-      title: t('diagnosePage.toasts.plantSavedTitle'),
-      description: t('diagnosePage.toasts.plantSavedDesc', { plantName: data.commonName }),
-    });
-    setPlantSaved(true);
-    setShowSavePlantForm(false);
-    setIsSavingPlant(false);
+        setLastSavedPlantId(createdPlant.id);
+
+        toast({
+          title: t('diagnosePage.toasts.plantSavedTitle'),
+          description: t('diagnosePage.toasts.plantSavedDesc', { plantName: createdPlant.commonName }),
+        });
+        setPlantSaved(true);
+        setShowSavePlantForm(false);
+
+    } catch (error) {
+        console.error("Error saving new plant from diagnose:", error);
+        toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
+    } finally {
+        setIsSavingPlant(false);
+    }
   };
 
   const handleGenerateCarePlan = async (event: FormEvent) => {
@@ -275,7 +251,7 @@ export default function DiagnosePlantPage() {
       };
       const result = await generateDetailedCarePlan(input);
       if (process.env.NODE_ENV === 'development') {
-        console.log('AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
+        console.log('[DEV] AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
       setCarePlanResult(result);
       setGeneratedPlanMode(carePlanMode);
@@ -289,7 +265,7 @@ export default function DiagnosePlantPage() {
     }
   };
 
-  const handleSaveCarePlan = (plan: GenerateDetailedCarePlanOutput) => {
+  const handleSaveCarePlan = async (plan: GenerateDetailedCarePlanOutput) => {
     if (!user) { // Added user check
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
       router.push('/login');
@@ -300,17 +276,9 @@ export default function DiagnosePlantPage() {
       return;
     }
 
-    const currentPlant = getPlantById(lastSavedPlantId);
-    if (!currentPlant) {
-      toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorNotFound'), variant: "destructive" });
-      return;
-    }
-
     const tasksToMap = Array.isArray(plan.generatedTasks) ? plan.generatedTasks : [];
 
-    const newCareTasks: CareTask[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
-      id: `cp-${lastSavedPlantId}-${aiTask.taskName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      plantId: lastSavedPlantId,
+    const newCareTasksData: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
       name: aiTask.taskName,
       description: aiTask.taskDescription,
       frequency: aiTask.suggestedFrequency,
@@ -320,16 +288,29 @@ export default function DiagnosePlantPage() {
       level: aiTask.taskLevel,
     }));
 
-    const updatedPlant = {
-      ...currentPlant,
-      careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]
-    };
-    updatePlant(lastSavedPlantId, updatedPlant);
+    try {
+        // Use the addCareTaskToPlant context method for each new task
+        await Promise.all(newCareTasksData.map(taskData =>
+            addCareTaskToPlant(lastSavedPlantId, taskData)
+        ));
 
-    toast({
-      title: t('diagnosePage.toasts.carePlanSavedTitle'),
-      description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: currentPlant.commonName }),
-    });
+        // Remove the old updatePlant call
+        // const updatedPlant = {
+        //   ...currentPlant,
+        //   careTasks: [...(currentPlant.careTasks || []), ...newCareTasks]
+        // };
+        // updatePlant(lastSavedPlantId, updatedPlant);
+
+        toast({
+          title: t('diagnosePage.toasts.carePlanSavedTitle'),
+          // Use the plant name from the diagnosis result or a fallback
+          description: t('diagnosePage.toasts.carePlanSavedDesc', { plantName: diagnosisResult?.identification.commonName || t('common.unknown') }),
+        });
+
+    } catch (error) {
+        console.error("Error saving care plan:", error);
+        toast({ title: t('common.error'), description: t('diagnosePage.toasts.saveCarePlanErrorGeneral'), variant: "destructive" });
+    }
   };
 
   const initialPlantFormData: PlantFormData | undefined = diagnosisResult?.identification.isPlant ? {

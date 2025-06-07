@@ -12,7 +12,7 @@ import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buttonVariants } from "@/components/ui/button";
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
@@ -31,7 +31,7 @@ interface PlantFilterAvatarProps {
 }
 
 const PlantFilterAvatar: React.FC<PlantFilterAvatarProps> = ({ photoId, plantName, userId, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); // Pass userId
+  const { imageUrl, isLoading } = useS3Image(photoId, userId); // Pass userId
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {

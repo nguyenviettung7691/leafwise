@@ -1,5 +1,5 @@
 
-import type { Plant } from '@/types';
+import type { Plant, CareTask } from '@/types';
 import { PlantCard } from './PlantCard';
 import { Leaf, Sparkles, PlusCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 interface PlantGridProps {
   plants: Plant[];
+  allCareTasks: CareTask[];
   isManaging?: boolean;
   selectedPlantIds?: Set<string>;
   onToggleSelect?: (plantId: string) => void;
@@ -18,6 +19,7 @@ interface PlantGridProps {
 
 export function PlantGrid({
   plants,
+  allCareTasks,
   isManaging,
   selectedPlantIds,
   onToggleSelect,
@@ -60,16 +62,20 @@ export function PlantGrid({
         ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
     )}>
-      {plants.map((plant) => (
-        <PlantCard
-          key={plant.id}
-          plant={plant}
-          isManaging={isManaging}
-          isSelected={selectedPlantIds?.has(plant.id)}
-          onToggleSelect={onToggleSelect}
-          onEdit={onEdit}
-        />
-      ))}
+      {plants.map((plant) => {
+        const plantCareTasks = allCareTasks.filter(task => task.plantId === plant.id);
+        return (
+          <PlantCard
+            key={plant.id}
+            plant={plant}
+            plantCareTasks={plantCareTasks}
+            isManaging={isManaging}
+            isSelected={selectedPlantIds?.has(plant.id)}
+            onToggleSelect={onToggleSelect}
+            onEdit={onEdit}
+          />
+        );
+      })}
     </div>
   );
 }

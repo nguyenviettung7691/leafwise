@@ -13,12 +13,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import React from 'react';
 import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid, format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -34,7 +35,7 @@ interface PlantHeaderCardProps {
   isDeleting: boolean;
 }
 
-const getCaredForDuration = (plantingDate?: string, t?: (key: string, replacements?: {[key: string]: string | number}) => string): string | null => {
+const getCaredForDuration = (plantingDate?: string | null, t?: (key: string, replacements?: {[key: string]: string | number}) => string): string | null => {
   if (!plantingDate || !t) return null;
   const startDate = parseISO(plantingDate);
   if (!isValid(startDate)) return null;
@@ -71,7 +72,7 @@ export function PlantHeaderCard({
   const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
   const caredForDuration = getCaredForDuration(plant.plantingDate, t);
-  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useS3Image(plant.primaryPhotoUrl, user?.id); // Pass userId
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const displayPrimaryImageUrl = primaryImageUrl || `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName)}`;
@@ -94,6 +95,8 @@ export function PlantHeaderCard({
                   alt={plant.commonName}
                   width={800}
                   height={450}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI}
                   className="object-cover w-full h-full"
                   data-ai-hint="plant detail"
                   priority
@@ -136,6 +139,8 @@ export function PlantHeaderCard({
                 alt={t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix', { plantName: plant.commonName })}
                 width={1200}
                 height={675}
+                placeholder="blur"
+                blurDataURL={PLACEHOLDER_DATA_URI}
                 className="rounded-md object-contain max-h-[80vh] w-full"
                 data-ai-hint="plant detail"
                 onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}

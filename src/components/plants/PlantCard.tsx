@@ -11,12 +11,14 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage';
+import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 
 interface PlantCardProps {
   plant: Plant;
+  plantCareTasks: CareTask[];
   isManaging?: boolean;
   isSelected?: boolean;
   onToggleSelect?: (plantId: string) => void;
@@ -78,11 +80,11 @@ const formatDateSimple = (dateString?: string, locale?: Locale, t?: Function) =>
     }
 };
 
-export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
-  const { user } = useAuth(); // Get user from AuthContext
+export function PlantCard({ plant, plantCareTasks, isManaging, isSelected, onToggleSelect, onEdit }: PlantCardProps) {
+  const { user } = useAuth();
   const { t, dateFnsLocale } = useLanguage();
-  const nextUpcomingTask = getNextUpcomingTask(plant.careTasks);
-  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useIndexedDbImage(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const nextUpcomingTask = getNextUpcomingTask(plantCareTasks);
+  const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(plant.primaryPhotoUrl ?? undefined, user?.id);
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isManaging && onToggleSelect) {
@@ -154,6 +156,8 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
                   alt={plant.commonName}
                   width={400}
                   height={300}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI} 
                   className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint="plant nature"
                   onError={(e) => {
@@ -170,12 +174,12 @@ export function PlantCard({ plant, isManaging, isSelected, onToggleSelect, onEdi
             {plant.scientificName && <p className="text-sm text-muted-foreground italic mb-2">{plant.scientificName}</p>}
 
             <div className="flex items-center gap-2 mt-2">
-              {healthConditionIcons[plant.healthCondition]}
+              {healthConditionIcons[plant.healthCondition as keyof typeof healthConditionIcons] ?? healthConditionIcons.unknown}
               <Badge
                 variant="outline"
                 className={cn(
                   "capitalize",
-                  healthConditionStyles[plant.healthCondition]
+                  healthConditionStyles[plant.healthCondition as keyof typeof healthConditionStyles]
                 )}
               >
                 {healthConditionText}

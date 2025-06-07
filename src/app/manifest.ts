@@ -33,7 +33,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Manually add a new plant to your collection.',
         url: '/plants/new',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/sprout.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       {
@@ -42,7 +42,7 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Identify a plant and diagnose its health using AI.',
         url: '/diagnose',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/stethoscope.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
       {
@@ -51,9 +51,25 @@ export default function manifest(): MetadataRoute.Manifest {
         description: 'Check your upcoming plant care tasks.',
         url: '/calendar',
         icons: [
-          { src: '/maskable-icon.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/calendar-days.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         ],
       },
+    ],
+    "screenshots": [
+        {
+          "src": "/screenshot-1.png",
+          "sizes": "1603x832",
+          "type": "image/png",
+          "form_factor": "wide",
+          "label": "My Plants"
+        },
+        {
+          "src": "/screenshot-2.png",
+          "sizes": "802x1227",
+          "type": "image/png",
+          "form_factor": "narrow",
+          "label": "Plant Diagnose"
+        }
     ],
     // The following are not standard manifest fields, but you can add them as extensions if needed
     // permissions: ['notifications', 'push'],

@@ -7,23 +7,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Loader2 } from 'lucide-react';
+import { UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext'; // Assuming you might want to translate
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register, isLoading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useLanguage();
+  const { toast } = useToast();
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match!"); // Replace with toast
+      toast({
+        title: t("common.error"), // Use a generic error title
+        description: t("registerPage.passwordMismatchError"), // Use the new i18n key
+        variant: "destructive",
+      });
       return;
     }
     setIsSubmitting(true);
@@ -33,6 +41,8 @@ export default function RegisterPage() {
     } catch (error) {
       console.error("Registration failed:", error);
       // Toast for error is handled in AuthContext or can be added here
+      // If AuthContext doesn't handle specific errors
+      // you might add more specific toasts here based on error.name
     } finally {
       setIsSubmitting(false);
     }
@@ -76,27 +86,61 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">{t('registerPage.passwordLabel')}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t('registerPage.passwordPlaceholder')}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'} // Toggle type
+                  placeholder={t('registerPage.passwordPlaceholder')}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-10" // Add padding for the button
+                />
+                <Button
+                  type="button" // Important: prevent form submission
+                  variant="ghost"
+                  size="sm"
+                  className="absolute inset-y-0 right-0 flex items-center px-3"
+                  onClick={() => setShowPassword(!showPassword)} // Toggle state
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">{t('registerPage.confirmPasswordLabel')}</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder={t('registerPage.confirmPasswordPlaceholder')}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'} // Toggle type
+                  placeholder={t('registerPage.confirmPasswordPlaceholder')}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="pr-10" // Add padding for the button
+                />
+                <Button
+                  type="button" // Important: prevent form submission
+                  variant="ghost"
+                  size="sm"
+                  className="absolute inset-y-0 right-0 flex items-center px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)} // Toggle state
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (

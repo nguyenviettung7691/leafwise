@@ -36,17 +36,18 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useIndexedDbImage } from '@/hooks/useIndexedDbImage'; 
+import { useS3Image } from '@/hooks/useS3Image'; 
 import { Skeleton } from '@/components/ui/skeleton'; 
 import { useAuth } from '@/contexts/AuthContext';
-import { usePWAStandalone } from '@/hooks/usePWAStandalone'; // Added
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
+import { usePlantData } from '@/contexts/PlantDataContext'; 
 
 interface DisplayableTaskOccurrence {
   originalTask: CareTask;
   occurrenceDate: Date;
   plantId: string;
   plantName: string;
-  plantPrimaryPhotoUrl?: string;
+  plantPrimaryPhotoUrl?: string | null;
 }
 
 const DEFAULT_HOURS_WEEKLY = Array.from({ length: 17 }, (_, i) => i + 7); 
@@ -83,21 +84,21 @@ const addFrequencyHelper = (date: Date, frequency: string, multiplier: number = 
 };
 
 interface CareCalendarViewProps {
-  plants: Plant[];
+  tasks: CareTask[];
   currentDate: Date;
   onNavigatePeriod: (newDate: Date) => void;
   onTaskAction: (task: CareTask, plantId: string) => void;
 }
 
 interface TaskPlantAvatarDisplayProps {
-  photoId?: string;
+  photoId?: string | null; 
   plantName: string;
   userId?: string; 
   className?: string;
 }
 
 const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId, plantName, userId, className }) => {
-  const { imageUrl, isLoading } = useIndexedDbImage(photoId, userId); 
+  const { imageUrl, isLoading } = useS3Image(photoId || undefined, userId);
   const fallbackText = plantName?.charAt(0).toUpperCase() || 'P';
 
   if (isLoading) {
@@ -118,12 +119,13 @@ const TaskPlantAvatarDisplay: React.FC<TaskPlantAvatarDisplayProps> = ({ photoId
 
 
 export function CareCalendarView({
-  plants,
+  tasks,
   currentDate,
   onNavigatePeriod,
   onTaskAction,
 }: CareCalendarViewProps) {
   const { user } = useAuth(); 
+  const { plants } = usePlantData();
   const { t, dateFnsLocale } = useLanguage();
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
   const [showOnlyHoursWithTasks, setShowOnlyHoursWithTasks] = useState(true);
@@ -203,7 +205,7 @@ export function CareCalendarView({
       } catch (e) {
         return occurrences;
       }
-      seedDate = setTimeToTaskTime(seedDate, task.timeOfDay);
+      seedDate = setTimeToTaskTime(seedDate, task.timeOfDay ?? undefined);
 
       const taskOccurrenceBase = {
         originalTask: task,
@@ -256,16 +258,21 @@ export function CareCalendarView({
     };
 
     const allOccurrences: DisplayableTaskOccurrence[] = [];
-    plants.forEach(plant => {
-      (plant.careTasks || []).forEach(task => {
+    // Iterate directly over the tasks prop
+    tasks.forEach(task => {
+      // Find the corresponding plant for this task
+      const plant = plants.find(p => p.id === task.plantId);
+      if (plant) { // Only process if the plant is found
         if (!task.isPaused || (task.isPaused && task.resumeDate && parseISO(task.resumeDate) <= rangeEnd)) {
-          allOccurrences.push(...getTaskOccurrencesInRange(task, plant, rangeStart, rangeEnd));
+           allOccurrences.push(...getTaskOccurrencesInRange(task, plant, rangeStart, rangeEnd));
         }
-      });
+      } else {
+        console.warn(`Plant not found for task ${task.id} (Plant ID: ${task.plantId}). Skipping task.`);
+      }
     });
     setDisplayedOccurrences(allOccurrences);
 
-  }, [plants, currentDate, viewMode, weekStartsOn]);
+  }, [tasks, plants, currentDate, viewMode, weekStartsOn]);
 
   const getTasksForDay = (day: Date, timeCategory?: 'daytime' | 'nighttime' | 'allday'): DisplayableTaskOccurrence[] => {
     let tasks = displayedOccurrences.filter(occurrence =>

@@ -8,7 +8,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; 
 import { Textarea } from '@/components/ui/textarea'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -92,8 +91,6 @@ export function CarePlanTaskForm({
   onSave, 
   onCancel, 
   isLoading,
-  formTitle,
-  formDescription, 
   submitButtonText 
 }: CarePlanTaskFormProps) {
   const { t } = useLanguage();
@@ -147,9 +144,9 @@ export function CarePlanTaskForm({
         case 'weekly': frequencyString = t('carePlanTaskForm.frequencyOptions.weekly'); break;
         case 'monthly': frequencyString = t('carePlanTaskForm.frequencyOptions.monthly'); break;
         case 'yearly': frequencyString = t('carePlanTaskForm.frequencyOptions.yearly'); break;
-        case 'every_x_days': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', {count: data.frequencyValue}); break;
-        case 'every_x_weeks': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', {count: data.frequencyValue}); break;
-        case 'every_x_months': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', {count: data.frequencyValue}); break;
+        case 'every_x_days': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', {count: data.frequencyValue ?? 1}); break;
+        case 'every_x_weeks': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', {count: data.frequencyValue ?? 1}); break;
+        case 'every_x_months': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', {count: data.frequencyValue ?? 1}); break;
     }
 
     const timeOfDayString = data.timeOfDayOption === 'all_day' ? t('carePlanTaskForm.timeOfDayOptionAllDay') : data.specificTime!;
@@ -198,7 +195,11 @@ export function CarePlanTaskForm({
                       aria-expanded={comboboxOpen}
                       className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                     >
-                      {field.value ? predefinedTasks.find(task => t(task.labelKey).toLowerCase() === field.value.toLowerCase())?.[t(field.value)] || field.value : t('carePlanTaskForm.taskNamePlaceholder')}
+                      {field.value
+                        ? predefinedTasks.find(task => t(task.labelKey).toLowerCase() === field.value.toLowerCase())
+                          ? t(predefinedTasks.find(task => t(task.labelKey).toLowerCase() === field.value.toLowerCase())!.labelKey)
+                          : field.value
+                        : t('carePlanTaskForm.taskNamePlaceholder')}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </FormControl>

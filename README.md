@@ -185,7 +185,7 @@ If you want to test the AI features, you'll need to run the Genkit development s
 -   `src/ai/`: Genkit AI integration.
     -   `src/ai/flows/`: Genkit flow definitions.
 -   `src/contexts/`: React Context API providers (Auth, Language, Progress, PlantData).
--   `src/hooks/`: Custom React hooks (useProgress, useIndexedDbImage, usePWAStandalone).
+-   `src/hooks/`: Custom React hooks (useProgress, useS3Image, usePWAStandalone).
 -   `src/lib/`: Utility functions, constants, mock data, IndexedDB helper, image utilities.
 -   `src/locales/`: Translation files for i18n (en.json, vi.json).
 -   `src/types/`: TypeScript type definitions.
