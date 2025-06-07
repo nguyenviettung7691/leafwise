@@ -1,6 +1,6 @@
 {
   "name": "leafwise-frontend-prototype",
-  "version": "0.2.0-sapling-kodama",
+  "version": "0.3.1-sapling-kodama",
   "private": true,
   "author": "Nguyen Viet Tung <nvtung@gmail.com>",
   "description": "LeafWise - A Next.js frontend UI prototype for a plant care management system with AI-powered diagnosis and care plan generation.",
@@ -60,6 +60,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "recharts": "^2.15.1",
+    "sharp": "^0.34.2",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "web-push": "^3.6.7",
