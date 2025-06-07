@@ -19,7 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
-import { compressImage } from '@/lib/image-utils';
+import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { generateClient } from 'aws-amplify/data';
 import { remove } from 'aws-amplify/storage';
@@ -640,8 +640,8 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4">
                <div className="relative">
                  <Avatar className="h-24 w-24">
-                    {isLoadingAvatarS3 || isCompressingAvatar ? (
-                       <Skeleton className="h-full w-full rounded-full" />
+                    {(isLoadingAvatarS3 && !avatarPreviewUrl) || isCompressingAvatar ? (
+                       <AvatarImage src={PLACEHOLDER_DATA_URI} alt="Loading avatar" className="h-full w-full rounded-full object-cover" />
                     ) : (
                        <AvatarImage src={avatarSrcToDisplay} alt={authUser.name || "User"} data-ai-hint="person avatar large" />
                     )}

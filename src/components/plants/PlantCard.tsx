@@ -14,6 +14,7 @@ import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 
 interface PlantCardProps {
   plant: Plant;
@@ -155,6 +156,8 @@ export function PlantCard({ plant, plantCareTasks, isManaging, isSelected, onTog
                   alt={plant.commonName}
                   width={400}
                   height={300}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI} 
                   className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint="plant nature"
                   onError={(e) => {

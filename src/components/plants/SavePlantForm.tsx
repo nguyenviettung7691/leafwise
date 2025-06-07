@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
-import { compressImage } from '@/lib/image-utils';
+import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
@@ -68,6 +68,8 @@ const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, is
           alt={`Gallery photo ${photo.id}`}
           width={80}
           height={80}
+          placeholder="blur"
+          blurDataURL={PLACEHOLDER_DATA_URI}
           className="object-cover w-full h-full"
           data-ai-hint="plant gallery thumbnail"
           onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80.png?text=Error';}}
@@ -259,6 +261,8 @@ export function SavePlantForm({
                   alt={t('savePlantForm.primaryPhotoLabel')}
                   width={150}
                   height={150}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI}
                   className="rounded-md object-contain max-h-[150px] shadow-md"
                   data-ai-hint="plant user-provided"
                   onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/150x150.png?text=Error';}}

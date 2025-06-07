@@ -12,6 +12,7 @@ import { Loader2, Sparkles, Stethoscope, Camera } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 
 interface DiagnosisUploadFormProps {
   isLoadingDiagnosis: boolean;
@@ -98,6 +99,8 @@ export function DiagnosisUploadForm({
                 alt={t('diagnosePage.resultDisplay.imageAlt')}
                 width={250}
                 height={250}
+                placeholder="blur"
+                blurDataURL={PLACEHOLDER_DATA_URI}
                 className="rounded-md object-contain max-h-[250px] shadow-md"
                 data-ai-hint="plant user-uploaded"
               />

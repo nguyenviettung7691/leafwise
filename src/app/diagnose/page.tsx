@@ -252,7 +252,7 @@ export default function DiagnosePlantPage() {
       };
       const result = await generateDetailedCarePlan(input);
       if (process.env.NODE_ENV === 'development') {
-        console.log('AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
+        console.log('[DEV] AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
       setCarePlanResult(result);
       setGeneratedPlanMode(carePlanMode);

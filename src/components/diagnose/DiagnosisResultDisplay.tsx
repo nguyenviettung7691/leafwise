@@ -10,8 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Info, SaveIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
-
 
 interface DiagnosisResultDisplayProps {
   diagnosisResult: DiagnosePlantHealthOutput;
@@ -84,6 +84,8 @@ export function DiagnosisResultDisplay({
                   alt={t('diagnosePage.resultDisplay.imageAlt')}
                   width={200}
                   height={200}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI}
                   className="rounded-md object-contain max-h-[200px] shadow-md"
                   data-ai-hint="plant diagnosed"
                 />

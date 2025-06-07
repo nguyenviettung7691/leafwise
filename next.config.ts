@@ -18,8 +18,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        // Use wildcards for the dynamic parts of the hostname
-        hostname: 'amplify-*-*-*-*.s3.*.amazonaws.com',
+        hostname: '*.s3.*.amazonaws.com',
         port: '',
         pathname: '/**',
       },

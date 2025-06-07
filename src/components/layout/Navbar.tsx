@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { APP_NAV_CONFIG } from '@/lib/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import React from 'react';
 import {
   Dialog,

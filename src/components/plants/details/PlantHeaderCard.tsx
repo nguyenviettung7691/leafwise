@@ -13,6 +13,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import React from 'react';
 import { differenceInDays, differenceInMonths, differenceInYears, parseISO, isValid, format } from 'date-fns';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -94,6 +95,8 @@ export function PlantHeaderCard({
                   alt={plant.commonName}
                   width={800}
                   height={450}
+                  placeholder="blur"
+                  blurDataURL={PLACEHOLDER_DATA_URI}
                   className="object-cover w-full h-full"
                   data-ai-hint="plant detail"
                   priority
@@ -136,6 +139,8 @@ export function PlantHeaderCard({
                 alt={t('plantDetail.headerCard.fullSizePhotoTitleAltSuffix', { plantName: plant.commonName })}
                 width={1200}
                 height={675}
+                placeholder="blur"
+                blurDataURL={PLACEHOLDER_DATA_URI}
                 className="rounded-md object-contain max-h-[80vh] w-full"
                 data-ai-hint="plant detail"
                 onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}

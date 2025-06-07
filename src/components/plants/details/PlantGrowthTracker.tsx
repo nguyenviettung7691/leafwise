@@ -14,6 +14,7 @@ import { format, parseISO } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
 import dynamic from 'next/dynamic';
@@ -133,6 +134,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
           src={imageSrc}
           alt={`${t('plantDetail.growthTracker.photoGalleryTitle')} - ${formatDateForGallery(photo.dateTaken)}`}
           width={200} height={200}
+          placeholder="blur" blurDataURL={PLACEHOLDER_DATA_URI}
           className={cn(
             "rounded-md object-cover w-full h-full shadow-sm transition-all duration-200",
             isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',

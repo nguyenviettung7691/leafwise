@@ -57,7 +57,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useS3Image } from '@/hooks/useS3Image';
 import { cn } from '@/lib/utils';
-import { compressImage } from '@/lib/image-utils';
+import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { 
   addDays, 
   addWeeks, 
@@ -139,6 +139,8 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({
       width={width}
       height={height}
       className={className}
+      placeholder="blur"
+      blurDataURL={PLACEHOLDER_DATA_URI}
       data-ai-hint="plant detail"
     />
   );
@@ -1057,7 +1059,13 @@ useEffect(() => {
 
                 <div className="space-y-4 py-4">
                     {newPhotoDiagnosisDialogState.newPhotoPreviewUrl && (
-                         <NextImage src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl} alt={t('plantDetail.newPhotoDialog.latestDiagnosisTitle')} width={200} height={200} className="rounded-md mx-auto shadow-md object-contain max-h-[200px]" data-ai-hint="plant user-uploaded"/>
+                         <NextImage
+                         src={newPhotoDiagnosisDialogState.newPhotoPreviewUrl}
+                         alt={t('plantDetail.newPhotoDialog.latestDiagnosisTitle')}
+                         width={200} height={200}
+                         placeholder="blur" blurDataURL={PLACEHOLDER_DATA_URI}
+                         className="rounded-md mx-auto shadow-md object-contain max-h-[200px]"
+                         data-ai-hint="plant user-uploaded"/>
                     )}
 
                     {newPhotoDiagnosisDialogState.newPhotoDiagnosisResult && (
