@@ -370,13 +370,14 @@
       "noResult": "Không thể truy xuất đánh giá của AI vào lúc này."
     },
     "photoDetailsDialog": {
-      "title": "Chi tiết ảnh - {{date}}",
+      "title": "Chi tiết ảnh",
+      "description": "Chi tiết cho ảnh cây này.",
+      "titleAlt": "Ảnh từ {{date}}",
       "dateLabel": "Ngày:",
       "healthAtDiagnosisLabel": "Sức khỏe lúc chẩn đoán:",
       "diagnosisNotesLabel": "Ghi chú chẩn đoán:",
       "generalNotesLabel": "Ghi chú chung:",
-      "setAsPrimaryButton": "Đặt làm ảnh chính",
-      "titleAlt": "{{plantName}} - Ảnh từ {{date}}"
+      "setAsPrimaryButton": "Đặt làm ảnh chính"
     },
     "taskFormDialog": {
       "addTitle": "Thêm công việc chăm sóc mới",

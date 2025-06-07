@@ -370,13 +370,14 @@
       "noResult": "Could not retrieve AI review at this time."
     },
     "photoDetailsDialog": {
-      "title": "Photo Details - {{date}}",
-      "dateLabel": "Date:",
+      "title": "Photo Details",
+      "description": "Details for this plant photo.",
+      "titleAlt": "Photo taken on {{date}}",
+      "dateLabel": "Date Taken:",
       "healthAtDiagnosisLabel": "Health at Diagnosis:",
       "diagnosisNotesLabel": "Diagnosis Notes:",
       "generalNotesLabel": "General Notes:",
-      "setAsPrimaryButton": "Set as Primary Photo",
-      "titleAlt": "{{plantName}} - Photo from {{date}}"
+      "setAsPrimaryButton": "Set as Primary Photo"
     },
     "taskFormDialog": {
       "addTitle": "Add New Care Plan Task",

@@ -209,10 +209,9 @@ export default function DiagnosePlantPage() {
     };
 
     try {
-        // Call the context method, passing the plant data and the file
-        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile); // Pass the file here
+        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile, undefined, 'diagnose');
 
-        setLastSavedPlantId(createdPlant.id); // Use the ID returned by the context method
+        setLastSavedPlantId(createdPlant.id);
 
         toast({
           title: t('diagnosePage.toasts.plantSavedTitle'),

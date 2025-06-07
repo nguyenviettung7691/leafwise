@@ -19,7 +19,7 @@ interface PlantDataContextType {
   careTasks: CareTask[];
   isLoading: boolean;
   getPlantById: (id: string) => Plant | undefined;
-  addPlant: (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[]) => Promise<Plant>;
+  addPlant: (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[], source?: 'manual' | 'diagnose') => Promise<Plant>;
   updatePlant: (plantId: string, updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, primaryPhotoFile?: File | null) => Promise<Plant | undefined>;
   deletePlant: (plantId: string) => Promise<void>;
   deleteMultiplePlants: (plantIds: Set<string>) => Promise<void>;
@@ -115,7 +115,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       return path;
   }, []);
 
-  const addPlant = useCallback(async (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[]): Promise<Plant> => {
+  const addPlant = useCallback(async (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[], source?: 'manual' | 'diagnose'): Promise<Plant> => {
     if (!user) {
       throw new Error("User not authenticated.");
     }
@@ -152,6 +152,25 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         if (primaryPhotoFile) {
             try {
                 uploadedPrimaryPhotoKey = await uploadImageToS3(createdPlantRecord.id, primaryPhotoFile);
+
+                const photoDiagnosisNotes = source === 'diagnose'
+                    ? t('diagnosePage.resultDisplay.initialDiagnosisNotes')
+                    : t('addNewPlantPage.initialDiagnosisNotes');
+
+                const { data: createdPrimaryPhoto, errors: primaryPhotoErrors } = await client.models.PlantPhoto.create({
+                    plantId: createdPlantRecord.id,
+                    url: uploadedPrimaryPhotoKey,
+                    dateTaken: new Date().toISOString(),
+                    healthCondition: newPlant.healthCondition,
+                    diagnosisNotes: photoDiagnosisNotes,
+                    notes: '',
+                }, {authMode: 'userPool'});
+
+                if (primaryPhotoErrors || !createdPrimaryPhoto) {
+                    console.error("Error adding primary photo record to Amplify Data:", primaryPhotoErrors);
+                } else {
+                    createdPhotoRecords.push(createdPrimaryPhoto as PlantPhoto); // Add to gallery photos list
+                }
             } catch (e) {
                 console.error("Error uploading primary photo to S3:", e);
                 uploadedPrimaryPhotoKey = undefined;
@@ -228,7 +247,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }
 
-  }, [user, uploadImageToS3, remove]);
+  }, [user, uploadImageToS3, remove, t]);
 
   const deletePhoto = useCallback(async (photoId: string): Promise<void> => {
       if (!user) throw new Error("User not authenticated.");

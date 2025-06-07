@@ -17,7 +17,7 @@ export default function NewPlantPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { addPlant: addPlantToContext } = usePlantData();
+  const { addPlant } = usePlantData();
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveNewPlant = async (data: Omit<SavePlantFormValues, 'primaryPhoto'>, primaryPhotoFile?: File | null) => {
@@ -40,9 +40,11 @@ export default function NewPlantPage() {
     };
 
     try {
-        const createdPlant = await addPlantToContext(
+        const createdPlant = await addPlant(
           newPlantData as Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'createdAt' | 'updatedAt'>,
-          primaryPhotoFile
+          primaryPhotoFile,
+          undefined,
+          'manual'
         );
 
         toast({
