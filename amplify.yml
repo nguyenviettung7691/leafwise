@@ -3,16 +3,17 @@ backend:
   phases:
     preBuild:
       commands:
+        - npm cache clean --force
+        - npm config set registry https://registry.npmjs.org/
+        - npm install -g npm@latest
+        - npm --version
         - npm ci --cache .npm --prefer-offline
-        - npm rebuild @parcel/watcher --build-from-source
+        - npm rebuild @parcel/watcher --build-from-source || true
     build:
       commands:
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
-    preBuild:
-      commands:
-        - npm ci --cache .npm --prefer-offline
     build:
       commands:
         - env | grep -e NEXT_PUBLIC_ >> .env.production
