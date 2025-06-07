@@ -1,0 +1,22 @@
+name: "Custom CodeQL Config"
+
+paths-ignore:
+  # Ignore common test file patterns
+  - "**/*.spec.ts"
+  - "**/*.test.ts"
+  - "**/*.spec.js"
+  - "**/*.test.js"
+  - "**/__tests__/**"
+
+  # Ignore build output or generated code
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/out/**"
+
+  # Ignore scripts or tooling code
+  - "**/scripts/**"
+  - "**/tools/**"
+
+  # Ignore temporary or experimental files
+  - "**/*.tmp.*"
+  - "**/experimental/**"
