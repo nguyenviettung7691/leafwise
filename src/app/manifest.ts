@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#F5F5F5',
     theme_color: '#32CD32',
     orientation: 'portrait-primary',
-    id: "0.3.2-sapling-kodama",
+    id: "0.3.3-sapling-kodama",
     icons: [
         {
             "purpose": "maskable",
