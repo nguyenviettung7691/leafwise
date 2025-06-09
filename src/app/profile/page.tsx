@@ -479,7 +479,6 @@ export default function ProfilePage() {
         // Process user data from import
         const importedUserData = importData.user;
         const importedPreferences: Partial<UserPreferences> = {
-            emailNotifications: importedUserData.preferences?.emailNotifications,
             pushNotifications: importedUserData.preferences?.pushNotifications,
             avatarS3Key: importedUserData.avatarS3Key, // Use the S3 key from import
         } as Partial<UserPreferences>; // Cast the object literal
@@ -759,18 +758,6 @@ export default function ProfilePage() {
             <CardDescription>{t('profilePage.preferencesCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-primary" />
-                <Label htmlFor="email-notifications" className="text-base font-medium">{t('profilePage.preferences.emailNotifications')}</Label>
-              </div>
-              <Switch
-                id="email-notifications"
-                checked={(userPreferences as any)?.emailNotifications ?? false} // Default to false if null/undefined
-                onCheckedChange={(checked) => handlePreferenceChange('emailNotifications' as keyof UserPreferences, checked)}
-                disabled={isSavingPreferences || authLoading}
-              />
-            </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell className="h-5 w-5 text-primary" />

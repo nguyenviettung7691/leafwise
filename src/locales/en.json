@@ -572,7 +572,6 @@
     "saveChanges": "Save Changes",
     "preferencesCardTitle": "Preferences",
     "preferencesCardDescription": "Manage your application settings.",
-    "emailNotificationsLabel": "Email Notifications",
     "pushNotificationsLabel": "Push Notifications",
     "preferencesDisclaimer": "Profile changes and preferences are saved to your browser's local storage and IndexedDB.",
     "dataManagementTitle": "Data Management",
@@ -618,7 +617,6 @@
     "badgeClearedSuccess": "App badge cleared successfully!",
     "badgeClearedError": "Failed to clear app badge.",
     "preferences": {
-      "emailNotifications": "Email Notifications",
       "pushNotifications": "Push Notifications"
     },
     "notifications": {

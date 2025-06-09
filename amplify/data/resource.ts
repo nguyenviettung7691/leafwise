@@ -41,7 +41,6 @@ const schema = a.schema({
 
   UserPreferences: a.model({
     id: a.id().required(), // User's Cognito sub
-    emailNotifications: a.boolean(),
     pushNotifications: a.boolean(),
     avatarS3Key: a.string(),
   }).authorization((allow) => [allow.owner()]),

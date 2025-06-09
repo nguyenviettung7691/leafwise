@@ -61,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        try {
            const { data: preferences, errors } = await client.models.UserPreferences.create({
                id: userId,
-               emailNotifications: true, // Default to true
                pushNotifications: false, // Default to false
                avatarS3Key: null,
            },{ authMode: 'userPool' });
@@ -365,7 +364,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // Only update if there are actual changes to preference fields or avatarS3Key
             const hasPreferenceChanges =
-                (updatedData.preferences?.emailNotifications !== undefined && updatedData.preferences.emailNotifications !== currentPreferences.emailNotifications) ||
                 (updatedData.preferences?.pushNotifications !== undefined && updatedData.preferences.pushNotifications !== currentPreferences.pushNotifications) ||
                 (newAvatarS3Key !== user.avatarS3Key);
 
