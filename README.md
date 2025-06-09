@@ -78,7 +78,7 @@ This project is currently an **advanced frontend UI prototype**. This means:
 -   **Profile Page**:
     -   Displays user name, email, and avatar.
     -   **Edit Profile**: Allows changing name and avatar (avatar stored in IDB, profile in IDB).
-    -   **Preferences**: Toggles for Email Notifications and Push Notifications (saved to user profile in IDB). Push notification switch includes permission request flow.
+    -   **Preferences**: Toggles for Push Notifications (saved to user profile in IDB). Push notification switch includes permission request flow.
     -   **Data Management**:
         -   Export all personal data (profile and plants, including base64 encoded images) to a JSON file.
         -   Import data from a JSON file to restore profile and plants (images are saved back to IDB).

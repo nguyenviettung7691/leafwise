@@ -572,7 +572,6 @@
     "saveChanges": "Lưu thay đổi",
     "preferencesCardTitle": "Tùy chọn",
     "preferencesCardDescription": "Quản lý cài đặt ứng dụng của bạn.",
-    "emailNotificationsLabel": "Thông báo qua Email",
     "pushNotificationsLabel": "Thông báo đẩy",
     "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu vào bộ nhớ cục bộ của trình duyệt và IndexedDB.",
     "dataManagementTitle": "Quản lý dữ liệu",
@@ -619,7 +618,6 @@
     "badgeClearedSuccess": "Đã xóa huy hiệu ứng dụng thành công!",
     "badgeClearedError": "Không thể xóa huy hiệu ứng dụng.",
     "preferences": {
-      "emailNotifications": "Thông báo qua Email",
       "pushNotifications": "Thông báo đẩy"
     },
     "notifications": {
