@@ -444,7 +444,7 @@
       "errorProactiveReview": "Đã xảy ra lỗi khi đánh giá kế hoạch chăm sóc."
     },
     "footer": {
-      "lastUpdated": "Cập nhật lần cuối: {{date}} (Mô phỏng - phản ánh tương tác cuối cùng)"
+      "lastUpdated": "Cập nhật lần cuối: {{date}}"
     }
   },
   "plantCard": {
