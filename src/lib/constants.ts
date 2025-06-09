@@ -1,6 +1,6 @@
 
 import type { NavItemConfig } from '@/types';
-import { Sprout, ScanSearch, CalendarDays, Settings2, UserCircle, Stethoscope, ListChecks } from 'lucide-react'; // Added Stethoscope
+import { Sprout, CalendarDays, Stethoscope } from 'lucide-react';
 
 // NAV_ITEMS is now APP_NAV_CONFIG and uses titleKey for translation
 export const APP_NAV_CONFIG: NavItemConfig[] = [
@@ -21,4 +21,4 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
   },
 ];
 
-export const APP_VERSION_CODENAME = "Sapling Kodama";
+export const APP_VERSION_CODENAME = "0.3.4-sapling-kodama";

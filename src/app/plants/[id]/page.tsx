@@ -65,7 +65,8 @@ import {
   addYears, 
   parseISO, 
   format, 
-  isToday as fnsIsToday 
+  isValid,
+  max
 } from 'date-fns';
 
 // Context
@@ -219,7 +220,6 @@ export default function PlantDetailPage() {
   const [isLoadingProactiveReview, setIsLoadingProactiveReview] = useState(false);
   const [isApplyingProactiveReviewChanges, setIsApplyingProactiveReviewChanges] = useState(false);
 
-  // Filter photos and tasks relevant to the current plant from the global states
   const currentPlantPhotos = useMemo(() => {
       return allContextPlantPhotos.filter(photo => photo.plantId === id);
   }, [allContextPlantPhotos, id]);
@@ -227,6 +227,52 @@ export default function PlantDetailPage() {
   const currentPlantCareTasks = useMemo(() => {
       return allContextCareTasks.filter(task => task.plantId === id);
   }, [allContextCareTasks, id]);
+
+  const latestUpdatedDate = useMemo(() => {
+    let latestDate: Date | null = null;
+
+    // Check plant's updatedAt
+    if (plant?.updatedAt) {
+      try {
+        const plantUpdatedAt = parseISO(plant.updatedAt);
+        if (isValid(plantUpdatedAt)) {
+          latestDate = plantUpdatedAt;
+        }
+      } catch (e) {
+        console.error("Error parsing plant updatedAt:", plant.updatedAt, e);
+      }
+    }
+
+    // Check photos' updatedAt
+    currentPlantPhotos.forEach(photo => {
+      if (photo.updatedAt) {
+        try {
+          const photoUpdatedAt = parseISO(photo.updatedAt);
+          if (isValid(photoUpdatedAt)) {
+            latestDate = latestDate ? max([latestDate, photoUpdatedAt]) : photoUpdatedAt;
+          }
+        } catch (e) {
+           console.error("Error parsing photo updatedAt:", photo.updatedAt, e);
+        }
+      }
+    });
+
+    // Check tasks' updatedAt
+    currentPlantCareTasks.forEach(task => {
+      if (task.updatedAt) {
+        try {
+          const taskUpdatedAt = parseISO(task.updatedAt);
+          if (isValid(taskUpdatedAt)) {
+            latestDate = latestDate ? max([latestDate, taskUpdatedAt]) : taskUpdatedAt;
+          }
+        } catch (e) {
+           console.error("Error parsing task updatedAt:", task.updatedAt, e);
+        }
+      }
+    });
+
+    return latestDate;
+  }, [plant, currentPlantPhotos, currentPlantCareTasks]);
 
   const transformCareTaskToFormData = useCallback((task: CareTask): CarePlanTaskFormData => {
     const taskData = task;
@@ -271,6 +317,15 @@ export default function PlantDetailPage() {
                 }
             }
         }
+    }
+
+    const timeOfDay = taskData.timeOfDay;
+    if (timeOfDay && timeOfDay.toLowerCase() !== 'all day' && /^\d{2}:\d{2}$/.test(timeOfDay)) {
+        formData.timeOfDayOption = 'specific_time';
+        formData.specificTime = timeOfDay;
+    } else {
+        formData.timeOfDayOption = 'all_day';
+        formData.specificTime = '';
     }
 
     return formData as CarePlanTaskFormData;
@@ -1501,7 +1556,7 @@ useEffect(() => {
         </Dialog>
 
         <CardFooter className="mt-6 border-t pt-4">
-             <p className="text-xs text-muted-foreground">{t('plantDetail.footer.lastUpdated', {date: formatDateForDialog(new Date().toISOString())})}</p>
+            <p className="text-xs text-muted-foreground">{t('plantDetail.footer.lastUpdated', {date: latestUpdatedDate ? formatDateForDialog(latestUpdatedDate.toISOString()) : t('common.notApplicable')})}</p>
         </CardFooter>
       </div>
     </AppLayout>

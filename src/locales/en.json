@@ -444,7 +444,7 @@
       "errorProactiveReview": "An error occurred while reviewing the care plan."
     },
     "footer": {
-      "lastUpdated": "Last updated: {{date}} (Simulated - reflects last interaction)"
+      "lastUpdated": "Last updated: {{date}}"
     }
   },
   "plantCard": {

@@ -1,5 +1,5 @@
-// src/app/manifest.ts
 import { type MetadataRoute } from 'next';
+import { APP_VERSION_CODENAME } from '@/lib/constants';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#F5F5F5',
     theme_color: '#32CD32',
     orientation: 'portrait-primary',
-    id: "0.3.3-sapling-kodama",
+    id: APP_VERSION_CODENAME,
     icons: [
         {
             "purpose": "maskable",
