@@ -11,6 +11,7 @@ import { ProgressProvider } from '@/contexts/ProgressContext';
 import { ProgressBar } from '@/components/layout/ProgressBar';
 import { Toaster } from '@/components/ui/toaster';
 import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator';
+import { InstallPrompt } from '@/components/layout/InstallPrompt';
 import { Amplify } from 'aws-amplify';
 import outputs from '../../../amplify_outputs.json';
 
@@ -29,6 +30,20 @@ export function ClientLayoutProvidersAndContent({ children }: { children: ReactN
     }
   }, [language]);
 
+  // Manually register the service worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
+
   return (
     <ThemeProvider
       attribute="class"
@@ -43,6 +58,7 @@ export function ClientLayoutProvidersAndContent({ children }: { children: ReactN
             {children}
             <Toaster />
             <NetworkStatusIndicator />
+            <InstallPrompt />
           </ProgressProvider>
         </PlantDataProvider>
       </AuthProvider>

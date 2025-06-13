@@ -43,6 +43,17 @@ const schema = a.schema({
     id: a.id().required(), // User's Cognito sub
     pushNotifications: a.boolean(),
     avatarS3Key: a.string(),
+    notifyDaysBefore: a.integer(),
+    notifyTimeUnit: a.string(), // 'days' or 'weeks'
+    notifySpecificTime: a.string(), // HH:MM
+  }).authorization((allow) => [allow.owner()]),
+
+  PushSubscription: a.model({
+    id: a.id().required(), // Use user ID as the ID for a 1:1 relationship or unique identifier
+    endpoint: a.string().required(),
+    p256dh: a.string().required(), // Key from the subscription object
+    auth: a.string().required(), // Key from the subscription object
+    userId: a.id().required(), // Link to the user
   }).authorization((allow) => [allow.owner()]),
 });
 

@@ -295,7 +295,6 @@ export function SavePlantForm({
                                 type="file"
                                 className="hidden"
                                 accept="image/png, image/jpeg, image/gif, image/webp"
-                                capture
                                 name={name}
                                 ref={(e) => {
                                   formRefSetter(e);

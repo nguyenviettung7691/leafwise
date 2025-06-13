@@ -6,17 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import { Loader2, LogOut, UserCircle, Settings, Trash2, Download, Bell, Mail, SaveIcon, Edit3, Camera, Info } from 'lucide-react';
+import { Loader2, LogOut, UserCircle, Settings, Trash2, Download, SaveIcon, Edit3, Camera, Info, ImageUp } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
@@ -26,6 +24,7 @@ import { remove } from 'aws-amplify/storage';
 import type { Schema } from '../../../amplify/data/resource';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { PushNotificationManager } from '@/components/profile/PushNotificationManager';
 
 const client = generateClient<Schema>();
 
@@ -48,17 +47,13 @@ export default function ProfilePage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isBadgingAPISupported, setIsBadgingAPISupported] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
-    typeof window !== 'undefined' ? Notification.permission : 'default'
-  );
 
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const [avatarFile, setAvatarFile] = useState<File | null | undefined>(undefined);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [isCompressingAvatar, setIsCompressingAvatar] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
-  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
 
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -70,7 +65,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setNotificationPermission(Notification.permission);
       if ('setAppBadge' in navigator && 'clearAppBadge' in navigator) {
         setIsBadgingAPISupported(true);
       }
@@ -87,60 +81,10 @@ export default function ProfilePage() {
   useEffect(() => {
     if (authUser) {
       setEditedName(authUser.name);
-      setUserPreferences(authUser.preferences || null);
       setAvatarFile(undefined);
       setAvatarPreviewUrl(null);
     }
   }, [authUser]);
-
-  const requestNotificationPermission = async (): Promise<boolean> => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      toast({ title: t('common.error'), description: t('profilePage.notifications.browserNotSupported'), variant: "destructive" });
-      return false;
-    }
-    if (Notification.permission === 'granted') {
-      setNotificationPermission('granted');
-      return true;
-    }
-    if (Notification.permission === 'denied') {
-      setNotificationPermission('denied');
-      toast({ title: t('profilePage.notifications.permissionPreviouslyDeniedTitle'), description: t('profilePage.notifications.permissionPreviouslyDeniedBody'), variant: "default" });
-      return false;
-    }
-
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-      if (permission === 'granted') {
-        sendTestNotification(t('profilePage.notifications.welcomeTitle'), t('profilePage.notifications.welcomeBody'));
-        return true;
-      } else {
-        toast({ title: t('profilePage.notifications.permissionDeniedTitle'), description: t('profilePage.notifications.permissionDeniedBody'), variant: "default" });
-        return false;
-      }
-    } catch (error) {
-        console.error("Error requesting notification permission:", error);
-        toast({ title: t('common.error'), description: "Failed to request notification permission.", variant: "destructive"});
-        return false;
-    }
-  };
-
-  const sendTestNotification = (title: string, body: string) => {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
-      toast({ title: t('common.error'), description: t('profilePage.notifications.serviceWorkerNotActive'), variant: "destructive" });
-      return;
-    }
-    if (Notification.permission !== 'granted') {
-       toast({ title: t('common.error'), description: t('profilePage.notifications.permissionNotGranted'), variant: "destructive" });
-      return;
-    }
-    navigator.serviceWorker.controller.postMessage({
-      type: 'SHOW_NOTIFICATION',
-      payload: { title, body, icon: '/maskable-icon.png', tag: 'test-notification' }
-    });
-    toast({ title: t('profilePage.notifications.testSentTitle'), description: t('profilePage.notifications.testSentBody') });
-  };
-
 
   const handleEditToggle = () => {
     if (isEditing) {
@@ -149,6 +93,7 @@ export default function ProfilePage() {
         setAvatarFile(undefined);
         setAvatarPreviewUrl(null);
         if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+        if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
       }
     }
     setIsEditing(!isEditing);
@@ -174,46 +119,12 @@ export default function ProfilePage() {
       setAvatarFile(undefined);
       setAvatarPreviewUrl(null);
       if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
 
     } catch (error) {
       console.error("Error saving profile changes:", error);
     } finally {
       setIsUploadingAvatar(false);
-    }
-  };
-
-  const handlePreferenceChange = async (preferenceKey: keyof UserPreferences, value: boolean) => {
-    if (!authUser || !userPreferences) return;
-
-    if ((preferenceKey as any) === 'pushNotifications' && value) {
-      if (notificationPermission !== 'granted') {
-        const granted = await requestNotificationPermission();
-        if (!granted) {
-          toast({ title: t('common.info'), description: t('profilePage.notifications.permissionRequiredToEnable'), variant: "default" });
-          return;
-        }
-      }
-    }
-
-    setIsSavingPreferences(true);
-    const updatedPreferences: Partial<UserPreferences> = {
-        ...userPreferences, // Start with current preferences
-        [preferenceKey]: value, // Apply the change
-    };
-
-    try {
-        await updateAuthUser({ preferences: updatedPreferences });
-        // Local state is updated by the AuthContext after successful save
-        // setUserPreferences(updatedPreferences as UserPreferences); // AuthContext handles this
-
-        toast({ title: t('common.success'), description: t('profilePage.toasts.preferenceUpdatedSuccess', { preferenceKey: t(`profilePage.preferences.${String(preferenceKey)}`)})});
-
-    } catch (error) {
-        console.error(`Error saving preference ${String(preferenceKey)}:`, error);
-        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', { preferenceKey: t(`profilePage.preferences.${String(preferenceKey)}`) }), variant: "destructive" });
-        // Optionally revert the local state change on error if AuthContext doesn't handle it
-    } finally {
-        setIsSavingPreferences(false);
     }
   };
 
@@ -230,6 +141,7 @@ export default function ProfilePage() {
         setAvatarFile(undefined);
         setAvatarPreviewUrl(null);
         if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+        if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
         return;
     }
 
@@ -249,6 +161,7 @@ export default function ProfilePage() {
             setAvatarFile(undefined);
             setAvatarPreviewUrl(null);
             if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+            if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
         } finally {
             setIsCompressingAvatar(false);
         }
@@ -260,6 +173,7 @@ export default function ProfilePage() {
       setAvatarFile(null);
       setAvatarPreviewUrl(null);
       if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
   };
 
   const handleLogoutConfirmed = async () => {
@@ -636,64 +550,70 @@ export default function ProfilePage() {
             <CardDescription>{t('profilePage.profileInformationDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-               <div className="relative">
-                 <Avatar className="h-24 w-24">
-                    {(isLoadingAvatarS3 && !avatarPreviewUrl) || isCompressingAvatar ? (
+            {!isEditing ? (
+              <div className="flex items-center gap-4">
+                <Avatar className="h-24 w-24">
+                  {(isLoadingAvatarS3 && !avatarPreviewUrl) ? (
                        <AvatarImage src={PLACEHOLDER_DATA_URI} alt="Loading avatar" className="h-full w-full rounded-full object-cover" />
                     ) : (
-                       <AvatarImage src={avatarSrcToDisplay} alt={authUser.name || "User"} data-ai-hint="person avatar large" />
-                    )}
-                    <AvatarFallback className="text-4xl bg-muted">
-                      {(authUser.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isEditing && (
-                    <div className="absolute bottom-0 right-0 flex items-center gap-1">
-                       <label
-                           htmlFor="avatar-upload-input"
-                           className="cursor-pointer p-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                           aria-label={t('profilePage.uploadAvatarAria')}
-                       >
-                           <Camera className="h-4 w-4" />
-                           <Input
-                               id="avatar-upload-input"
-                               type="file"
-                               className="hidden"
-                               accept="image/png, image/jpeg, image/gif, image/webp"
-                               capture // Allow taking a picture
-                               ref={avatarFileInputRef}
-                               onChange={handleAvatarFileChange}
-                               disabled={isCompressingAvatar || isUploadingAvatar}
-                           />
-                       </label>
-                       {showRemoveAvatarButton && (
-                           <button
-                               type="button"
-                               onClick={handleRemoveAvatar}
-                               className="p-1 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-                               aria-label={t('profilePage.removeAvatarAria')}
-                               disabled={isCompressingAvatar || isUploadingAvatar}
-                           >
-                               <Trash2 className="h-4 w-4" />
-                           </button>
-                       )}
-                    </div>
+                    <>
+                      <AvatarImage src={avatarSrcToDisplay} alt={authUser.name || "User"} data-ai-hint="person avatar large" />
+                      <AvatarFallback className="text-4xl bg-muted">
+                        {(authUser.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </>
                   )}
-               </div>
-
-              {isEditing ? (
-                 <div className="flex-1">
-                    <p className="text-muted-foreground text-sm">{t('profilePage.avatarEditableHint')}</p>
-                 </div>
-              ) : (
+                </Avatar>
                 <div className="flex-1">
                   <p className="text-sm font-medium">{t('profilePage.nameLabel')}</p>
                   <p className="text-lg font-semibold">{authUser.name}</p>
                 </div>
-              )}
-            </div>
-            {isEditing && (
+              </div>
+            ) : (
+              // Editing mode: Hint text, then Avatar and controls
+              <div className="space-y-3">
+                <div className="flex items-center gap-4"> {/* Avatar and buttons side-by-side */}
+                  <Avatar className="h-24 w-24">
+                      {(isLoadingAvatarS3 && !avatarPreviewUrl) || isCompressingAvatar ? (
+                         <AvatarImage src={PLACEHOLDER_DATA_URI} alt="Loading avatar" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                         <>
+                          <AvatarImage src={avatarSrcToDisplay} alt={authUser.name || "User"} data-ai-hint="person avatar large" />
+                          <AvatarFallback className="text-4xl bg-muted">
+                            {(authUser.name || "U").split(' ').map(n => n[0]).join('').toUpperCase()}
+                          </AvatarFallback>
+                        </>
+                      )}
+                  </Avatar>
+                  <div className="flex items-center gap-2"> {/* Buttons container */}
+                    <label
+                      htmlFor="avatar-gallery-input"
+                      className="cursor-pointer p-2 md:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      aria-label={t('profilePage.uploadGalleryAriaLabel')}
+                    >
+                      <ImageUp className="h-5 w-5 md:h-6 md:w-6" />
+                      <Input id="avatar-gallery-input" type="file" className="hidden" accept="image/png, image/jpeg, image/gif, image/webp" ref={galleryFileInputRef} onChange={handleAvatarFileChange} disabled={isCompressingAvatar || isUploadingAvatar} />
+                    </label>
+                    <label
+                         htmlFor="avatar-camera-input"
+                         className="cursor-pointer p-2 md:p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                         aria-label={t('profilePage.takePictureAriaLabel')}
+                    >
+                         <Camera className="h-5 w-5 md:h-6 md:w-6" />
+                         <Input id="avatar-camera-input" type="file" className="hidden" accept="image/png, image/jpeg, image/gif, image/webp" capture ref={avatarFileInputRef} onChange={handleAvatarFileChange} disabled={isCompressingAvatar || isUploadingAvatar} />
+                    </label>
+                    {showRemoveAvatarButton && (
+                         <button type="button" onClick={handleRemoveAvatar} className="p-2 md:p-2.5 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors" aria-label={t('profilePage.removeAvatarAria')} disabled={isCompressingAvatar || isUploadingAvatar}>
+                             <Trash2 className="h-5 w-5 md:h-6 md:w-6" />
+                         </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Name input form (when editing) OR Edit/Logout buttons (when not editing) */}
+            {isEditing ? (
               <form onSubmit={handleSaveChanges} className="space-y-4">
                 <div>
                   <Label htmlFor="edited-name">{t('profilePage.nameLabel')}</Label>
@@ -701,7 +621,6 @@ export default function ProfilePage() {
                     id="edited-name"
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    placeholder={t('profilePage.namePlaceholder')}
                     disabled={isUploadingAvatar || isCompressingAvatar}
                   />
                 </div>
@@ -715,8 +634,7 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               </form>
-            )}
-            {!isEditing && (
+            ) : (
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={handleEditToggle}>
                   <Edit3 className="mr-2 h-4 w-4" /> {t('common.edit')}
@@ -749,92 +667,7 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Settings className="h-6 w-6 text-primary" />
-              {t('profilePage.preferencesCardTitle')}
-            </CardTitle>
-            <CardDescription>{t('profilePage.preferencesCardDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-primary" />
-                <Label htmlFor="push-notifications" className="text-base font-medium">{t('profilePage.preferences.pushNotifications')}</Label>
-              </div>
-              <Switch
-                id="push-notifications"
-                checked={(userPreferences as any)?.pushNotifications ?? false} // Default to false if null/undefined
-                onCheckedChange={(checked) => handlePreferenceChange('pushNotifications' as keyof UserPreferences, checked)}
-                disabled={isSavingPreferences || authLoading || notificationPermission === 'denied'} // Disable if permission denied
-              />
-            </div>
-             {notificationPermission === 'denied' && (
-                <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300">
-                    <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                    <AlertTitle>{t('profilePage.notifications.permissionPreviouslyDeniedTitle')}</AlertTitle>
-                    <AlertDescription>{t('profilePage.notifications.permissionPreviouslyDeniedBody')}</AlertDescription>
-                </Alert>
-             )}
-             {/* PWA Features Section */}
-             <div className="space-y-3 pt-4 border-t">
-                <p className="text-sm font-medium">{t('profilePage.pwaFeaturesCardTitle')}</p>
-                <p className="text-xs text-muted-foreground">{t('profilePage.pwaFeaturesCardDescription')}</p>
-
-                {/* Notification Testing */}
-                <div className="space-y-2">
-                    <p className="text-xs font-medium text-foreground/80">{t('profilePage.notifications.testSectionTitle')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profilePage.notifications.currentPermissionLabel')}: <Badge variant="secondary" className="capitalize">{notificationPermission}</Badge></p>
-                    <div className="flex gap-2 flex-wrap">
-                        {notificationPermission === 'default' && (
-                            <Button variant="outline" size="sm" onClick={requestNotificationPermission}>
-                                {t('profilePage.notifications.requestPermissionButton')}
-                            </Button>
-                        )}
-                        {notificationPermission === 'granted' && (
-                            <Button variant="outline" size="sm" onClick={() => sendTestNotification(t('profilePage.notifications.testSentTitle'), t('profilePage.notifications.testSentBodySample'))}>
-                                {t('profilePage.notifications.sendTestButton')}
-                            </Button>
-                        )}
-                         {notificationPermission === 'denied' && (
-                            <Button variant="outline" size="sm" disabled>
-                                {t('profilePage.notifications.permissionBlocked')}
-                            </Button>
-                         )}
-                    </div>
-                </div>
-
-                {/* Badge Testing */}
-                {isBadgingAPISupported && (
-                    <div className="space-y-2 pt-3 border-t">
-                        <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
-                        <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.supported')}</Badge></p>
-                        <div className="flex gap-2 flex-wrap">
-                            <Button variant="outline" size="sm" onClick={handleSetTestBadge}>{t('profilePage.setAppBadgeButton')}</Button>
-                            <Button variant="outline" size="sm" onClick={handleClearTestBadge}>{t('profilePage.clearAppBadgeButton')}</Button>
-                        </div>
-                         <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 text-xs">
-                            <Info className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                            <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
-                            <AlertDescription className="text-xs">{t('profilePage.badgeTestInfo')}</AlertDescription>
-                        </Alert>
-                    </div>
-                )}
-                 {!isBadgingAPISupported && (
-                    <div className="space-y-2 pt-3 border-t">
-                        <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
-                        <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.notSupported')}</Badge></p>
-                         <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300 text-xs">
-                            <Info className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
-                            <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
-                            <AlertDescription className="text-xs">{t('profilePage.badgeNotSupported')}</AlertDescription>
-                        </Alert>
-                    </div>
-                 )}
-             </div>
-          </CardContent>
-        </Card>
+        <PushNotificationManager />
 
         <Card>
           <CardHeader>
@@ -908,6 +741,45 @@ export default function ProfilePage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Settings className="h-6 w-6 text-primary" /> {/* Re-using Settings icon */}
+              {t('profilePage.pwaFeaturesCardTitle')}
+            </CardTitle>
+            <CardDescription>{t('profilePage.pwaFeaturesCardDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Badge Testing */}
+            {isBadgingAPISupported && (
+                <div className="space-y-2 pt-3 border-t">
+                    <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
+                    <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.supported')}</Badge></p>
+                    <div className="flex gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" onClick={handleSetTestBadge}>{t('profilePage.setAppBadgeButton')}</Button>
+                        <Button variant="outline" size="sm" onClick={handleClearTestBadge}>{t('profilePage.clearAppBadgeButton')}</Button>
+                    </div>
+                      <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 text-xs">
+                        <Info className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                        <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
+                        <AlertDescription className="text-xs">{t('profilePage.badgeTestInfo')}</AlertDescription>
+                    </Alert>
+                </div>
+            )}
+            {!isBadgingAPISupported && (
+              <div className="space-y-2 pt-3 border-t">
+                  <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
+                  <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.notSupported')}</Badge></p>
+                    <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300 text-xs">
+                      <Info className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
+                      <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
+                      <AlertDescription className="text-xs">{t('profilePage.badgeNotSupported')}</AlertDescription>
+                  </Alert>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

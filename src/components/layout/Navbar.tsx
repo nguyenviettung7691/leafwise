@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { APP_NAV_CONFIG } from '@/lib/constants';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
-import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import React from 'react';
 import {
   Dialog,
@@ -25,8 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Switch } from '@/components/ui/switch';
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { Settings, LogIn, Menu, Palette, Languages, UserCircle } from 'lucide-react';
 import { ProgressBarLink } from './ProgressBarLink';
@@ -193,20 +191,24 @@ export function Navbar({ }: NavbarProps) {
                         </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-6 py-4">
-                        <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
-                          <div className='flex items-center gap-3'>
+                        <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+                          <div className="flex items-center gap-3 mb-2">
                             <Palette className="h-5 w-5 text-primary" />
-                            <Label htmlFor="themePreference-dialog-top" className="text-base font-medium">
-                              {t('settings.darkMode')}
+                            <Label htmlFor="theme-select-dialog-top" className="text-base font-medium">
+                              {t('settings.themeTitle')}
                             </Label>
                           </div>
-                          <Switch
-                            id="themePreference-dialog-top"
-                            checked={theme === 'dark'}
-                            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                            aria-label={t('settings.darkMode')}
-                            disabled={authIsLoading}
-                          />
+                          <Select value={theme} onValueChange={(value) => setTheme(value)}>
+                            <SelectTrigger id="theme-select-dialog-top" className="w-full">
+                              <SelectValue placeholder={t('settings.themeTitle')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="light">{t('settings.themeLight')}</SelectItem>
+                              <SelectItem value="dark">{t('settings.themeDark')}</SelectItem>
+                              <SelectItem value="system">{t('settings.themeSystem')}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">{t('settings.themeDescription')}</p>
                         </div>
                         <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                           <div className="flex items-center gap-3 mb-2">
@@ -304,20 +306,24 @@ export function Navbar({ }: NavbarProps) {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/20">
-                    <div className='flex items-center gap-3'>
+                  <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+                    <div className="flex items-center gap-3 mb-2">
                       <Palette className="h-5 w-5 text-primary" />
-                      <Label htmlFor="themePreference-dialog-standalone" className="text-base font-medium">
-                        {t('settings.darkMode')}
+                      <Label htmlFor="theme-select-dialog-standalone" className="text-base font-medium">
+                        {t('settings.themeTitle')}
                       </Label>
                     </div>
-                    <Switch
-                      id="themePreference-dialog-standalone"
-                      checked={theme === 'dark'}
-                      onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                      aria-label={t('settings.darkMode')}
-                      disabled={authIsLoading}
-                    />
+                    <Select value={theme} onValueChange={(value) => setTheme(value)}>
+                      <SelectTrigger id="theme-select-dialog-standalone" className="w-full">
+                        <SelectValue placeholder={t('settings.themeTitle')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="light">{t('settings.themeLight')}</SelectItem>
+                        <SelectItem value="dark">{t('settings.themeDark')}</SelectItem>
+                        <SelectItem value="system">{t('settings.themeSystem')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">{t('settings.themeDescription')}</p>
                   </div>
                   <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
                     <div className="flex items-center gap-3 mb-2">

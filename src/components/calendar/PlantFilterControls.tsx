@@ -10,12 +10,12 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ListChecks, ListX, Filter } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'; 
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { buttonVariants } from "@/components/ui/button";
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlantFilterControlsProps {
   allPlants: Plant[];
@@ -150,7 +150,7 @@ export function PlantFilterControls({
           <AccordionContent className="border-t p-0">
             <div className="p-3">
               {allPlants.length > 0 ? (
-                <ScrollArea className="w-full rounded-md" orientation="horizontal">
+                <ScrollArea className="w-full rounded-md">
                   <div className="flex space-x-3 px-1 pt-1 pb-2"> 
                     {allPlants.map(plant => (
                       <TooltipProvider key={plant.id} delayDuration={200}>
@@ -166,7 +166,7 @@ export function PlantFilterControls({
                               aria-pressed={selectedPlantIds.has(plant.id)}
                             >
                               <Avatar className="h-10 w-10">
-                                <PlantFilterAvatar photoId={plant.primaryPhotoUrl} plantName={plant.commonName} userId={user?.id} className="h-10 w-10" /> 
+                                <PlantFilterAvatar photoId={plant.primaryPhotoUrl || undefined} plantName={plant.commonName} userId={user?.id} className="h-10 w-10" /> 
                               </Avatar>
                             </button>
                           </TooltipTrigger>
