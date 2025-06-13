@@ -21,4 +21,4 @@ export const APP_NAV_CONFIG: NavItemConfig[] = [
   },
 ];
 
-export const APP_VERSION_CODENAME = "0.3.5-sapling-kodama";
+export const APP_VERSION_CODENAME = "0.3.6-sapling-kodama";

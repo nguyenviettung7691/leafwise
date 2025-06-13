@@ -36,7 +36,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const CURRENT_USER_ID_KEY = "uid";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -60,9 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const createDefaultUserPreferences = useCallback(async (userId: string): Promise<UserPreferences> => {
        try {
            const { data: preferences, errors } = await client.models.UserPreferences.create({
-               id: userId,
-               pushNotifications: false, // Default to false
-               avatarS3Key: null,
+              id: userId,
+              pushNotifications: false,
+              avatarS3Key: null,
+              notifyDaysBefore: 1,
+              notifyTimeUnit: 'days',
+              notifySpecificTime: '09:00',
            },{ authMode: 'userPool' });
            if (errors || !preferences) {
                console.error(`Failed to create default user preferences for ${userId}:`, errors);
@@ -83,9 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await getCurrentUser();
         const userAttributes = await fetchUserAttributes();
 
-        // Fetch user preferences
         let userPreferences = await fetchUserPreferences(currentUser.userId);
-        // If preferences don't exist, create them
         if (!userPreferences) {
              userPreferences = await createDefaultUserPreferences(currentUser.userId);
         }
@@ -94,22 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: currentUser.userId,
           email: userAttributes.email || currentUser.username,
           name: userAttributes.name || currentUser.username,
-          avatarS3Key: userPreferences?.avatarS3Key, // Get avatar S3 key from preferences
-          preferences: userPreferences, // Store preferences object
+          avatarS3Key: userPreferences?.avatarS3Key,
+          preferences: userPreferences,
         });
-        localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId);
       } catch (error) {
         console.log("No current authenticated user", error);
         setUser(null);
-        localStorage.removeItem(CURRENT_USER_ID_KEY);
       } finally {
         setIsLoading(false);
       }
     };
     checkCurrentUser();
-  }, [fetchUserPreferences, createDefaultUserPreferences]); // Add helper functions to dependencies
+  }, [fetchUserPreferences, createDefaultUserPreferences]);
 
-  // Login function using Amplify Auth
   const login = useCallback(
     async (email: string, password: string) => {
       setIsLoading(true);
@@ -130,7 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await getCurrentUser();
         const userAttributes = await fetchUserAttributes();
 
-        // Fetch user preferences after login
         let userPreferences = await fetchUserPreferences(currentUser.userId);
          if (!userPreferences) {
              userPreferences = await createDefaultUserPreferences(currentUser.userId);
@@ -144,7 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           preferences: userPreferences,
         });
 
-        localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId);
         toast({
           title: t("authContextToasts.loginSuccessTitle"),
           description: t("authContextToasts.loginSuccessDescription", {
@@ -174,10 +169,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     },
-    [router, toast, t, fetchUserPreferences, createDefaultUserPreferences], // Add helper functions to dependencies
+    [router, toast, t, fetchUserPreferences, createDefaultUserPreferences],
   );
 
-  // Register function using Amplify Auth
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       setIsLoading(true);
@@ -204,7 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
            const currentUser = await getCurrentUser();
            const userAttributes = await fetchUserAttributes();
 
-           // Create default preferences for the new user
            const userPreferences = await createDefaultUserPreferences(currentUser.userId);
 
            setUser({
@@ -214,7 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
              avatarS3Key: userPreferences?.avatarS3Key,
              preferences: userPreferences,
            });
-           localStorage.setItem(CURRENT_USER_ID_KEY, currentUser.userId);
 
            toast({
              title: t("authContextToasts.registrationSuccessTitle"),
@@ -254,17 +246,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       }
     },
-    [router, toast, t, createDefaultUserPreferences], // Add createDefaultUserPreferences to dependencies
+    [router, toast, t, createDefaultUserPreferences],
   );
 
-  // Logout function using Amplify Auth
   const logout = useCallback(async () => {
-    setIsLoading(true); // Set loading state for logout
+    setIsLoading(true);
 
     try {
-      await signOut(); // Call Amplify signOut
+      await signOut();
       setUser(null);
-      localStorage.removeItem(CURRENT_USER_ID_KEY);
 
       toast({
         title: t("authContextToasts.loggedOutTitle"),
@@ -365,7 +355,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Only update if there are actual changes to preference fields or avatarS3Key
             const hasPreferenceChanges =
                 (updatedData.preferences?.pushNotifications !== undefined && updatedData.preferences.pushNotifications !== currentPreferences.pushNotifications) ||
-                (newAvatarS3Key !== user.avatarS3Key);
+                (newAvatarS3Key !== user.avatarS3Key) ||
+                (updatedData.preferences?.notifyDaysBefore !== undefined && updatedData.preferences.notifyDaysBefore !== currentPreferences.notifyDaysBefore) ||
+                (updatedData.preferences?.notifyTimeUnit !== undefined && updatedData.preferences.notifyTimeUnit !== currentPreferences.notifyTimeUnit) ||
+                (updatedData.preferences?.notifySpecificTime !== undefined && updatedData.preferences.notifySpecificTime !== currentPreferences.notifySpecificTime);
 
             if (hasPreferenceChanges) {
                  const { data: updatedPreferences, errors: preferenceErrors } = await client.models.UserPreferences.update(preferencesToUpdate, { authMode: 'userPool' });

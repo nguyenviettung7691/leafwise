@@ -1094,7 +1094,6 @@ useEffect(() => {
           ref={growthPhotoInputRef}
           className="hidden"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          capture
           onChange={handleGrowthPhotoFileChange}
         />
 

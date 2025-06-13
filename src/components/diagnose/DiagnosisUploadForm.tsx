@@ -75,7 +75,6 @@ export function DiagnosisUploadForm({
                   type="file"
                   className="hidden"
                   accept="image/jpeg,image/png,image/gif,image/webp"
-                  capture
                   onChange={onFileChange}
                 />
               </label>
@@ -85,7 +84,6 @@ export function DiagnosisUploadForm({
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
-                capture
                 onChange={onFileChange}
                 className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
               />

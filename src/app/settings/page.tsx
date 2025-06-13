@@ -2,14 +2,15 @@
 'use client';
 
 import { AppLayout } from '@/components/layout/AppLayout';
-// APP_NAV_CONFIG is no longer passed as a prop
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings as SettingsIcon, Languages } from 'lucide-react'; // Renamed Settings to SettingsIcon, added Languages
+import { Settings as SettingsIcon, Languages, Palette } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useLanguage } from '@/contexts/LanguageContext'; // New import
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from 'next-themes';
 
 export default function SettingsPage() {
+  const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
 
   return (
@@ -25,6 +26,26 @@ export default function SettingsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
+            <div className="flex items-center gap-3 mb-2">
+              <Palette className="h-5 w-5 text-primary" />
+              <Label htmlFor="theme-select-page" className="text-base font-medium">
+                {t('settings.themeTitle')}
+              </Label>
+            </div>
+            <Select value={theme} onValueChange={(value) => setTheme(value)}>
+              <SelectTrigger id="theme-select-page" className="w-full md:w-[280px]">
+                <SelectValue placeholder={t('settings.themeTitle')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">{t('settings.themeLight')}</SelectItem>
+                <SelectItem value="dark">{t('settings.themeDark')}</SelectItem>
+                <SelectItem value="system">{t('settings.themeSystem')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t('settings.themeDescription')}</p>
+          </div>
+          
           <div className="space-y-3 p-4 border rounded-lg bg-secondary/20">
             <div className="flex items-center gap-3 mb-2">
               <Languages className="h-5 w-5 text-primary" />

@@ -60,7 +60,7 @@ export function NetworkStatusIndicator() {
 
   return (
     <div className={cn(
-      "fixed left-4 z-50",
+      "fixed right-4 z-50",
       isStandalone ? "bottom-20" : "bottom-4" 
     )}>
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>

@@ -1,10 +1,12 @@
 import type { Schema } from '../../amplify/data/resource';
 import { z } from 'zod';
+import { LucideProps } from 'lucide-react';
 
 export type BackendPlant = Schema['Plant']['type'];
 export type BackendPlantPhoto = Schema['PlantPhoto']['type'];
 export type BackendCareTask = Schema['CareTask']['type'];
 export type BackendUserPreferences = Schema['UserPreferences']['type'];
+export type BackendPushSubscription = Schema['PushSubscription']['type'];
 
 export type Plant = BackendPlant & {
   lastCaredDate?: string | null;
@@ -12,6 +14,7 @@ export type Plant = BackendPlant & {
 export type PlantPhoto = BackendPlantPhoto;
 export type CareTask = BackendCareTask;
 export type UserPreferences = BackendUserPreferences;
+export type PushSubscription = BackendPushSubscription;
 
 export type PlantHealthCondition = 'healthy' | 'needs_attention' | 'sick' | 'unknown';
 
@@ -147,8 +150,9 @@ export type OnSaveTaskData = {
 
 export interface NavItemConfig {
   titleKey: string;
+  title?: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string, size?: number }> | React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
   disabled?: boolean;
 }
 

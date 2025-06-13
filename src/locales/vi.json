@@ -3,8 +3,13 @@
     "title": "Cài đặt",
     "description": "Quản lý các tùy chọn ứng dụng của bạn.",
     "language": "Ngôn ngữ",
-    "featureInProgress": "Nhiều cài đặt hơn sắp ra mắt! <br/> Hãy kiểm tra lại để biết các cập nhật.",
-    "darkMode": "Chế độ tối"
+    "darkMode": "Chế độ tối",
+    "themeTitle": "Chủ đề",
+    "themeDescription": "Chọn cách LeafWise hiển thị trên thiết bị của bạn.",
+    "themeLight": "Sáng",
+    "themeDark": "Tối",
+    "themeSystem": "Hệ thống",
+    "featureInProgress": "Nhiều cài đặt hơn sắp ra mắt! <br/> Hãy kiểm tra lại để biết các cập nhật."
   },
   "nav": {
     "myPlants": "Cây của tôi",
@@ -54,7 +59,9 @@
     "saveChanges": "Lưu thay đổi",
     "supported": "Được hỗ trợ",
     "notSupported": "Không được hỗ trợ",
-    "info": "Thông tin"
+    "info": "Thông tin",
+    "days": "Ngày",
+    "weeks": "Tuần"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -566,6 +573,8 @@
     "profileInformationDescription": "Cập nhật tên và ảnh đại diện của bạn.",
     "avatarEditableHint": "Nhấn vào biểu tượng máy ảnh để thay đổi ảnh đại diện của bạn.",
     "uploadAvatarAria": "Tải lên ảnh đại diện mới",
+    "takePictureAriaLabel": "Chụp hình mới cho ảnh đại diện",
+    "uploadGalleryAriaLabel": "Tải lên ảnh đại diện từ thư viện",
     "removeAvatarAria": "Xóa ảnh đại diện hiện tại",
     "nameLabel": "Tên",
     "namePlaceholder": "Tùng Nguyễn",
@@ -621,6 +630,7 @@
       "pushNotifications": "Thông báo đẩy"
     },
     "notifications": {
+      "browserNotSupportedTitle": "Trình duyệt không được hỗ trợ",
       "browserNotSupported": "Trình duyệt này không hỗ trợ thông báo trên máy tính.",
       "permissionPreviouslyDeniedTitle": "Quyền bị từ chối",
       "permissionPreviouslyDeniedBody": "Quyền thông báo đã bị từ chối trước đó. Vui lòng bật trong cài đặt trình duyệt của bạn để nhận lời nhắc.",
@@ -638,7 +648,17 @@
       "requestPermissionButton": "Yêu cầu quyền",
       "sendTestButton": "Gửi thông báo thử",
       "permissionBlocked": "Thông báo bị chặn bởi cài đặt trình duyệt.",
-      "permissionRequiredToEnable": "Cần có quyền thông báo để bật thông báo đẩy. Vui lòng cấp quyền trước."
+      "permissionRequiredToEnable": "Cần có quyền thông báo để bật thông báo đẩy. Vui lòng cấp quyền trước.",
+      "notSubscribedTitle": "Chưa đăng ký",
+      "notSubscribedBody": "Bạn đã bật thông báo đẩy trong tùy chọn, nhưng trình duyệt của bạn chưa đăng ký. Vui lòng đảm bảo trình duyệt của bạn cho phép thông báo và thử tắt rồi bật lại công tắc.",
+      "sectionDescription": "Nhận lời nhắc cho các công việc chăm sóc cây sắp tới.",
+      "timingSettingsLabel": "Thời gian thông báo",
+      "timingSettingsDescription": "Cấu hình thời điểm bạn muốn nhận lời nhắc trước khi công việc đến hạn.",
+      "notifyBeforeLabel": "Thông báo cho tôi",
+      "atTimeLabel": "lúc",
+      "testMessagePlaceholder": "Nhập tin nhắn thử (tùy chọn)",
+      "successfullyUnsubscribed": "Đã hủy đăng ký thông báo đẩy thành công.",
+      "successfullySubscribed": "Đã đăng ký thông báo đẩy thành công."
     },
     "toasts": {
       "savingProfile": "Đang lưu hồ sơ...",
