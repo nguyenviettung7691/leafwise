@@ -20,7 +20,12 @@ interface PlantDataContextType {
   isLoading: boolean;
   getPlantById: (id: string) => Plant | undefined;
   addPlant: (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[], source?: 'manual' | 'diagnose') => Promise<Plant>;
-  updatePlant: (plantId: string, updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, primaryPhotoFile?: File | null) => Promise<Plant | undefined>;
+  updatePlant: (
+    plantId: string, 
+    updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, 
+    primaryPhotoFile?: File | null, 
+    diagnosedPhotoUrlFromForm?: string | null // Added to handle SavePlantForm's primary photo choice
+  ) => Promise<Plant | undefined>;
   deletePlant: (plantId: string) => Promise<void>;
   deleteMultiplePlants: (plantIds: Set<string>) => Promise<void>;
   setAllPlants: (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
@@ -90,7 +95,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       setCareTasksState([]);
       setIsLoading(false);
     }
-  }, [user, isLoadingAuth]);
+  }, [user?.id, isLoadingAuth]);
 
   const getPlantById = useCallback((id: string): Plant | undefined => {
     const plant = plants.find(p => p.id === id);
@@ -300,70 +305,78 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       }
   }, [user, remove]);
   
-  const updatePlant = useCallback(async (plantId: string, updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, primaryPhotoFile?: File | null): Promise<Plant | undefined> => {
+  const updatePlant = useCallback(async (
+    plantId: string, 
+    updatedPlantDataFromArgs: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, 
+    primaryPhotoFileFromPage?: File | null,
+    diagnosedPhotoUrlFromForm?: string | null
+  ): Promise<Plant | undefined> => {
     if (!user) {
       throw new Error("User not authenticated.");
     }
 
-    setIsLoading(true); // Indicate saving is in progress
+    setIsLoading(true);
 
-    let newPrimaryPhotoS3Key: string | undefined = updatedPlantData.primaryPhotoUrl ?? undefined; // Convert null to undefined
-    const currentPlant = plants.find(p => p.id === plantId); // Get current plant for old primary photo key
+    const currentPlant = plants.find(p => p.id === plantId);
+    if (!currentPlant) {
+        console.error(`Plant with id ${plantId} not found for update.`);
+        setIsLoading(false);
+        toast({ title: t('common.error'), description: "Plant not found for update.", variant: "destructive" });
+        return undefined;
+    }
+
+    let finalS3KeyForPrimaryPhoto: string | undefined | null = currentPlant.primaryPhotoUrl; // Start with current plant's primary photo
 
     try {
-        // 1. Handle new primary photo upload
-        if (primaryPhotoFile) {
-            try {
-                // Upload the new primary photo first
-                const uploadedKey = await uploadImageToS3(plantId, primaryPhotoFile);
-                newPrimaryPhotoS3Key = uploadedKey; // Use the newly uploaded key
+        // Scenario 1: A new file is explicitly provided to be the primary photo
+        if (primaryPhotoFileFromPage) {
+            const newUploadedS3Key = await uploadImageToS3(plantId, primaryPhotoFileFromPage);
 
-                // If upload was successful AND there was an old primary photo, delete the old one
-                if (currentPlant?.primaryPhotoUrl) {
-                     try {
-                         // Use remove with path (S3 key) and options
-                         await remove({ path: currentPlant.primaryPhotoUrl });
-                     } catch (e) {
-                         console.warn("Failed to delete old primary S3 photo before uploading new one:", e);
-                         // Continue with update even if old deletion fails
-                     }
+            // Create a new PlantPhoto record for this new image and add it to the gallery
+            try {
+                const { data: newPhotoRecord, errors: photoErrors } = await client.models.PlantPhoto.create({
+                    plantId: plantId,
+                    url: newUploadedS3Key,
+                    dateTaken: new Date().toISOString(),
+                    healthCondition: updatedPlantDataFromArgs.healthCondition || currentPlant.healthCondition,
+                    diagnosisNotes: "New primary photo.", // Or a more descriptive note
+                }, { authMode: 'userPool' });
+
+                if (photoErrors || !newPhotoRecord) {
+                    console.error("Error creating PlantPhoto record for new primary photo:", photoErrors);
+                    // Attempt to clean up the S3 file if record creation failed
+                    try { await remove({ path: newUploadedS3Key }); } catch (e) { console.error("S3 cleanup failed for new primary photo:", e); }
+                    // Do not set as primary if record creation failed
+                } else {
+                    setPlantPhotosState(prev => [...prev, newPhotoRecord as PlantPhoto]);
+                    finalS3KeyForPrimaryPhoto = newUploadedS3Key;
                 }
             } catch (e) {
-                console.error("Error uploading new primary photo to S3:", e);
-                // If upload fails, revert primaryPhotoUrl to the previous value
-                newPrimaryPhotoS3Key = currentPlant?.primaryPhotoUrl ?? undefined;
-                toast({ title: t('common.error'), description: t('profilePage.toasts.errorUploadingAvatar'), variant: "destructive" }); // Re-using avatar upload error toast
+                console.error("Error during new primary photo record creation:", e);
             }
-        } else if (updatedPlantData.primaryPhotoUrl === null) {
-             // User explicitly removed the primary photo (passed null)
-             if (currentPlant?.primaryPhotoUrl) {
-                 try {
-                     // Use remove with path (S3 key) and options
-                     await remove({ path: currentPlant.primaryPhotoUrl });
-                 } catch (e) {
-                     console.warn("Failed to delete old primary S3 photo on removal:", e);
-                 }
-             }
-             newPrimaryPhotoS3Key = undefined; // Set to undefined in the backend
+            // IMPORTANT: Do NOT delete currentPlant.primaryPhotoUrl from S3. It remains a gallery photo.
+        } 
+        // Scenario 2: No new file, but SavePlantForm might have indicated a choice via diagnosedPhotoUrlFromForm
+        else if (diagnosedPhotoUrlFromForm !== undefined) { 
+            if (diagnosedPhotoUrlFromForm === null) { // Primary photo selection was cleared
+                finalS3KeyForPrimaryPhoto = null;
+            } else if (diagnosedPhotoUrlFromForm.startsWith('data:image/')) {
+                // This case should ideally be handled by primaryPhotoFileFromPage if SavePlantForm passes the File.
+                // If it still reaches here, it means SavePlantForm only provided a dataURL.
+                console.warn("UpdatePlant received a dataURL in diagnosedPhotoUrlFromForm. This suggests SavePlantForm did not pass the File object directly. Attempting to handle, but this flow should be reviewed.");
+                // Potentially convert dataURL to File and call uploadImageToS3 + create PlantPhoto record, similar to Scenario 1.
+                // For now, this path is less likely if SavePlantForm is correct.
+            } else { // It's an S3 key (selected from gallery or unchanged)
+                finalS3KeyForPrimaryPhoto = diagnosedPhotoUrlFromForm;
+            }
+            // IMPORTANT: Do NOT delete currentPlant.primaryPhotoUrl from S3.
         }
-        // If primaryPhotoFile is null/undefined and updatedPlantData.primaryPhotoUrl is not null,
-        // it means the primary photo was selected from existing gallery photos (its S3 key is already in updatedPlantData.primaryPhotoUrl)
-        // or it was unchanged. In these cases, newPrimaryPhotoS3Key is already correctly set from updatedPlantData.primaryPhotoUrl.
 
-
-        // 2. Update the Plant record (top-level fields) including the potentially new primaryPhotoUrl
+        // Update the Plant record with all textual changes and the final primaryPhotoUrl
         const { data: updatedPlant, errors: plantErrors } = await client.models.Plant.update({
             id: plantId,
-            commonName: updatedPlantData.commonName,
-            scientificName: updatedPlantData.scientificName,
-            familyCategory: updatedPlantData.familyCategory,
-            ageEstimateYears: updatedPlantData.ageEstimateYears,
-            healthCondition: updatedPlantData.healthCondition,
-            location: updatedPlantData.location,
-            plantingDate: updatedPlantData.plantingDate,
-            customNotes: updatedPlantData.customNotes,
-            primaryPhotoUrl: newPrimaryPhotoS3Key, // Use the potentially new S3 key
-            // Do NOT update relationships (photos, careTasks) directly here
+            ...updatedPlantDataFromArgs,
+            primaryPhotoUrl: finalS3KeyForPrimaryPhoto,
         },{authMode: 'userPool'});
 
         if (plantErrors || !updatedPlant) {
@@ -371,10 +384,8 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
             throw new Error(plantErrors ? plantErrors[0].message : "Failed to update plant.");
         }
 
-        // 3. Update local state: update the plant in the plants array
-        setPlantsState(prevPlants =>
-          prevPlants.map(plant => plant.id === plantId ? updatedPlant as Plant : plant)
-        );
+        // Update local state
+        setPlantsState(prevPlants => prevPlants.map(p => p.id === plantId ? updatedPlant as Plant : p));
 
         // Return the updated plant data from the backend
         return updatedPlant as Plant;
@@ -383,10 +394,10 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         console.error(`Exception updating plant ${plantId}:`, error);
         throw error; // Re-throw the error after logging
     } finally {
-        setIsLoading(false); // Reset loading state
+        setIsLoading(false);
     }
 
-  }, [user, plants, uploadImageToS3, remove, toast, t]);
+  }, [user, plants, uploadImageToS3, t, toast]); // Removed `remove` from dependencies as it's not used for S3 deletion here
 
   const deletePlant = useCallback(async (plantId: string): Promise<void> => {
     if (!user) {

@@ -71,8 +71,8 @@ export function PlantHeaderCard({
   const { user } = useAuth(); // Get user from AuthContext
   const { t } = useLanguage();
   const [isImageDialogOpen, setIsImageDialogOpen] = React.useState(false);
-  const caredForDuration = getCaredForDuration(plant.plantingDate, t);
-  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useS3Image(plant.primaryPhotoUrl, user?.id); // Pass userId
+  const caredForDuration = getCaredForDuration(plant.plantingDate ?? undefined, t);
+  const { imageUrl: primaryImageUrl, isLoading: isLoadingPrimaryImage, error: primaryImageError } = useS3Image(plant.primaryPhotoUrl ?? undefined, user?.id); // Pass userId
 
   const healthConditionKey = `plantDetail.healthConditions.${plant.healthCondition}`;
   const displayPrimaryImageUrl = primaryImageUrl || `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName)}`;
@@ -110,7 +110,7 @@ export function PlantHeaderCard({
                         variant="outline"
                         className={cn(
                             `capitalize shrink-0 text-xs px-2 py-0.5`,
-                            healthConditionStyles[plant.healthCondition]
+                            healthConditionStyles[plant.healthCondition as PlantHealthCondition]
                         )}
                         >
                         {t(healthConditionKey)}
@@ -187,7 +187,9 @@ export function PlantHeaderCard({
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={isDeleting}>{t('common.cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                    <AlertDialogAction onClick={onConfirmDelete} disabled={isDeleting} className={cn(
+                        "bg-destructive hover:bg-destructive/90", isDeleting && "opacity-75 cursor-not-allowed"
+                    )}>
                       {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                       {t('common.delete')}
                     </AlertDialogAction>

@@ -129,7 +129,7 @@ export type DiagnosePlantHealthFlowOutput = {
         ageEstimateYears?: number | null;
     };
     healthAssessment: {
-        isHealthy: boolean;
+        status: PlantHealthCondition;
         diagnosis?: string | null;
         confidence?: 'low' | 'medium' | 'high' | null; 
     };

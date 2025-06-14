@@ -155,7 +155,7 @@ export function PlantCareManagement({
           </CardTitle>
           <div className={cn(
             "flex items-center gap-2",
-            isStandalone ? "w-full flex-wrap justify-start sm:w-auto sm:justify-end" : ""
+            isStandalone ? "flex-col items-end" : ""
           )}>
             {isManagingCarePlan && selectedTaskIds.size > 0 && (
               <Button

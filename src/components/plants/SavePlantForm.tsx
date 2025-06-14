@@ -12,9 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
-import { Leaf, Save, Edit, ImageOff, Loader2, Camera } from 'lucide-react';
+import { Leaf, Save, Edit, ImageOff, Loader2, Camera, ImageIcon, UploadCloud } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -45,7 +45,6 @@ interface GalleryPhotoThumbnailProps {
 }
 
 const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, isSelected, userId, onClick }) => {
-  // useS3Image now correctly handles S3 keys
   const { imageUrl, isLoading: isLoadingImage, error: imageError } = useS3Image(photo.url, userId);
 
   return (
@@ -63,7 +62,7 @@ const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, is
       ) : imageError || !imageUrl ? (
         <ImageOff size={24} className="text-muted-foreground" />
       ) : (
-        <Image
+        <NextImage
           src={imageUrl}
           alt={`Gallery photo ${photo.id}`}
           width={80}
@@ -95,7 +94,6 @@ export function SavePlantForm({
   const { t } = useLanguage();
   const isStandalone = usePWAStandalone();
 
-  // Moved schema definition inside the component to access `t`
   const plantFormSchema = z.object({
     commonName: z.string().min(1, { message: t('savePlantForm.validation.commonNameRequired') }),
     scientificName: z.string().optional(),
@@ -106,9 +104,7 @@ export function SavePlantForm({
     }),
     location: z.string().optional(),
     customNotes: z.string().optional(),
-    // primaryPhoto is now a FileList for the new upload
     primaryPhoto: typeof window !== 'undefined' ? z.instanceof(FileList).optional().nullable() : z.any().optional().nullable(),
-    // diagnosedPhotoDataUrl will store the data URL of a new upload OR the S3 key of a selected gallery photo
     diagnosedPhotoDataUrl: z.string().optional().nullable(),
   });
 
@@ -129,23 +125,17 @@ export function SavePlantForm({
     },
   });
 
-   const [imagePreview, setImagePreview] = useState<string | null>(null); // Data URL of a *newly uploaded* image
+  const [imagePreview, setImagePreview] = useState<string | null>(null); // Data URL of a *newly uploaded* image
   const [selectedGalleryPhotoUrl, setSelectedGalleryPhotoUrl] = useState<string | null>(null); // S3 key of a *selected gallery* image
   const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Hook to fetch the display URL for the currently selected/initial image
   const { imageUrl: displayImageUrl, isLoading: isLoadingDisplayImage } = useS3Image(
-    // If there's a new image preview (data URL), use that directly.
-    // Otherwise, if a gallery photo URL is selected, use that.
-    // Otherwise, if there's an initial primary photo URL (from initialData), use that.
     imagePreview ? undefined : (selectedGalleryPhotoUrl ?? initialData?.diagnosedPhotoDataUrl ?? undefined),
     user?.id
   );
   
   useEffect(() => {
-    // This effect primarily sets the initial state from props
-    // and handles changes if initialData itself changes.
     form.reset({
       commonName: initialData?.commonName || '',
       scientificName: initialData?.scientificName || '',
@@ -158,19 +148,15 @@ export function SavePlantForm({
       diagnosedPhotoDataUrl: initialData?.diagnosedPhotoDataUrl || null, // This will be the initial primaryPhotoUrl (S3 key or data URL)
     });
 
-    // Set initial preview based on initialData.diagnosedPhotoDataUrl (which is the primaryPhotoUrl S3 key)
     if (initialData?.diagnosedPhotoDataUrl) {
       if (initialData.diagnosedPhotoDataUrl.startsWith('data:image/')) {
-        // If it's a data URL (e.g., from Diagnose page before saving)
         setImagePreview(initialData.diagnosedPhotoDataUrl);
         setSelectedGalleryPhotoUrl(null);
       } else if (initialData.diagnosedPhotoDataUrl.startsWith('http')) {
-         // If it's an external URL (e.g., placeholder)
          setImagePreview(initialData.diagnosedPhotoDataUrl);
          setSelectedGalleryPhotoUrl(null);
       }
       else {
-        // Assume it's an S3 key from an existing plant
         setSelectedGalleryPhotoUrl(initialData.diagnosedPhotoDataUrl);
         setImagePreview(null);
       }
@@ -182,7 +168,6 @@ export function SavePlantForm({
 
 
   const onSubmit = async (data: SavePlantFormValues) => {
-    // Extract the File object from the FileList
     const primaryPhotoFile = data.primaryPhoto && data.primaryPhoto.length > 0 ? data.primaryPhoto[0] : null;
 
     // Prepare the data to pass to the parent's onSave function
@@ -208,6 +193,19 @@ export function SavePlantForm({
   const currentSubmitButtonText = submitButtonText || t('savePlantForm.submitButtonText');
   const FormIcon = initialData && Object.keys(initialData).length > 0 && !initialData.diagnosedPhotoDataUrl ? Edit : Leaf;
 
+  const handleTakePhoto = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute('capture', 'environment');
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleChooseFromGallery = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.removeAttribute('capture');
+      fileInputRef.current.click();
+    }
+  };
 
   const handleGalleryPhotoSelect = (photo: PlantPhoto) => {
     setImagePreview(null); // Clear direct upload preview
@@ -219,22 +217,16 @@ export function SavePlantForm({
     }
   };
 
-  // Determine the URL to display in the preview area
   let previewDisplayUrl: string | null = null;
   if (imagePreview) {
-    // If a new file was uploaded and compressed (data URL)
     previewDisplayUrl = imagePreview;
   } else if (selectedGalleryPhotoUrl) {
-    // If an existing gallery photo was selected (use the URL from the hook)
     previewDisplayUrl = displayImageUrl;
   } else if (initialData?.diagnosedPhotoDataUrl) {
-    // If there was an initial primary photo (use the URL from the hook)
-     previewDisplayUrl = displayImageUrl;
+    previewDisplayUrl = displayImageUrl;
   }
 
-
   const isDisplayLoading = isLoadingDisplayImage || isCompressing;
-  const uploadAreaText = isStandalone ? t('savePlantForm.uploadAreaTextPWA') : t('savePlantForm.uploadAreaText');
 
   return (
     <Card className={cn("shadow-lg animate-in fade-in-50", hideInternalHeader ? "border-0 shadow-none" : "")}>
@@ -256,7 +248,7 @@ export function SavePlantForm({
               </div>
             ) : previewDisplayUrl ? (
               <div className="my-4 p-2 border rounded-md bg-muted/50 flex justify-center">
-                <Image
+                <NextImage
                   src={previewDisplayUrl}
                   alt={t('savePlantForm.primaryPhotoLabel')}
                   width={150}
@@ -277,75 +269,112 @@ export function SavePlantForm({
                 <FormItem>
                   <FormLabel>{t('savePlantForm.primaryPhotoLabel')} <span className="text-muted-foreground text-xs">{t('common.optional')}</span></FormLabel>
                   <FormControl>
-                    <div className="flex items-center justify-center w-full">
+                    <div>
+                      {isStandalone ? (
+                        <div className="space-y-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full py-6 text-base"
+                            onClick={handleTakePhoto}
+                            disabled={isCompressing}
+                          >
+                            {isCompressing && form.getValues('primaryPhoto')?.[0] ? (
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            ) : (
+                              <Camera className="mr-2 h-5 w-5" />
+                            )}
+                            {t('savePlantForm.takePhotoPWA')}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full py-6 text-base"
+                            onClick={handleChooseFromGallery}
+                            disabled={isCompressing}
+                          >
+                            {isCompressing && form.getValues('primaryPhoto')?.[0] ? (
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            ) : (
+                              <ImageIcon className="mr-2 h-5 w-5" />
+                            )}
+                            {t('savePlantForm.chooseFromGalleryPWA')}
+                          </Button>
+                        </div>
+                      ) : (
+                        // Desktop version
                         <label
-                            htmlFor="primaryPhoto-input"
+                            htmlFor="primaryPhoto-input-saveform"
                             className="flex flex-col items-center justify-center w-full h-32 border-2 border-border border-dashed rounded-lg cursor-pointer bg-card hover:bg-secondary/50"
                         >
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                {isCompressing ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <Camera className="w-8 h-8 mb-2 text-muted-foreground" /> }
+                                {isCompressing ? <Loader2 className="w-8 h-8 mb-2 text-muted-foreground animate-spin" /> : <UploadCloud className="w-8 h-8 mb-2 text-muted-foreground" /> }
                                 <p className="mb-1 text-sm text-muted-foreground">
-                                    <span className="font-semibold">{uploadAreaText}</span>
+                                    <span className="font-semibold">{t('savePlantForm.uploadAreaText')}</span>
                                 </p>
                                 <p className="text-xs text-muted-foreground">{t('savePlantForm.uploadAreaHint')}</p>
                                 {(form.getValues('primaryPhoto')?.[0] && imagePreview && !isCompressing) && <p className="text-xs text-primary mt-1">{form.getValues('primaryPhoto')?.[0].name}</p>}
                             </div>
-                            <Input
-                                id="primaryPhoto-input"
-                                type="file"
-                                className="hidden"
-                                accept="image/png, image/jpeg, image/gif, image/webp"
-                                name={name}
-                                ref={(e) => {
-                                  formRefSetter(e);
-                                  if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e;
-                                }}
-                                onBlur={onBlur}
-                                onChange={async (e) => {
-                                    const files = e.target.files;
-                                    onChange(files);
-                                    if (files && files[0]) {
-                                        if (files[0].size > 5 * 1024 * 1024) { // Increased max size to 5MB for initial upload
-                                            form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoTooLargeError')});
-                                            setImagePreview(null);
-                                            setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null); // Revert to previously selected/initial URL
-                                            if (e.target) e.target.value = '';
-                                            return;
-                                        }
-                                        form.clearErrors("primaryPhoto");
-                                        setIsCompressing(true);
-                                        const reader = new FileReader();
-                                        reader.onloadend = async () => {
-                                          try {
-                                            const originalDataUrl = reader.result as string;
-                                            // Compress to a reasonable size for display/storage
-                                            const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.8, type: 'image/webp', maxWidth: 1920, maxHeight: 1920 });
-                                            setImagePreview(compressedDataUrl); // Set the data URL for preview
-                                            form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true}); // Store data URL in form state temporarily
-                                            setSelectedGalleryPhotoUrl(null); // Clear gallery selection if new file uploaded
-                                          } catch (err) {
-                                            console.error("Error compressing image in SavePlantForm:", err);
-                                            form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoProcessingError')});
-                                            setImagePreview(null);
-                                            setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null); // Revert on error
-                                          } finally {
-                                            setIsCompressing(false);
-                                          }
-                                        };
-                                        reader.readAsDataURL(files[0]);
-                                    } else {
-                                        // File input was cleared
+                            </label>
+                      )}
+                      {/* Hidden File Input, controlled by RHF and accessible via fileInputRef */}
+                      <Input
+                          id="primaryPhoto-input-saveform" // Consistent ID for desktop label's htmlFor
+                          type="file"
+                          className="hidden"
+                          accept="image/png, image/jpeg, image/gif, image/webp"
+                          name={name} // from RHF field
+                          ref={(e) => {
+                            formRefSetter(e); // RHF ref
+                            if (e) (fileInputRef as React.MutableRefObject<HTMLInputElement | null>).current = e; // Our custom ref
+                          }}
+                          onBlur={onBlur} // from RHF field
+                          onChange={async (e) => { // from RHF field, with our async logic
+                              const files = e.target.files;
+                              onChange(files); // This is field.onChange from RHF, updates form state
+                              if (files && files[0]) {
+                                  if (files[0].size > 5 * 1024 * 1024) {
+                                      form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoTooLargeError')});
+                                      setImagePreview(null);
+                                      setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null);
+                                      if (e.target) e.target.value = '';
+                                      return;
+                                  }
+                                  form.clearErrors("primaryPhoto");
+                                  setIsCompressing(true);
+                                  const reader = new FileReader();
+                                  reader.onloadend = async () => {
+                                    try {
+                                      const originalDataUrl = reader.result as string;
+                                      const compressedDataUrl = await compressImage(originalDataUrl, { quality: 0.8, type: 'image/webp', maxWidth: 1920, maxHeight: 1920 });
+                                      setImagePreview(compressedDataUrl);
+                                      form.setValue('diagnosedPhotoDataUrl', compressedDataUrl, {shouldDirty: true});
+                                      setSelectedGalleryPhotoUrl(null);
+                                    } catch (err) {
+                                      console.error("Error compressing image in SavePlantForm:", err);
+                                      form.setError("primaryPhoto", { type: "manual", message: t('savePlantForm.validation.photoProcessingError')});
+                                      setImagePreview(null);
+                                      setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null);
+                                    } finally {
+                                      setIsCompressing(false);
+                                    }
+                                  };
+                                  reader.readAsDataURL(files[0]);
+                              } else {
                                         setImagePreview(null);
-                                        // Revert to previously selected gallery photo or initial primary photo
                                         setSelectedGalleryPhotoUrl(form.getValues('diagnosedPhotoDataUrl') || null);
                                         form.setValue('diagnosedPhotoDataUrl', form.getValues('diagnosedPhotoDataUrl') || null);
                                     }
                                 }}
-                            />
-                        </label>
+                      />
                     </div>
                   </FormControl>
                   <FormMessage />
+                  {isStandalone && (form.getValues('primaryPhoto')?.[0] && imagePreview && !isCompressing) && (
+                    <p className="text-xs text-primary mt-1 text-center">
+                      {t('savePlantForm.selectedFileLabel')}: {form.getValues('primaryPhoto')?.[0].name}
+                    </p>
+                  )}
                 </FormItem>
               )}
             />
