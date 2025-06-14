@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { DiagnosePlantHealthOutput, PlantFormData, PlantHealthCondition } from '@/types';
+import type { DiagnosePlantHealthFlowOutput, PlantHealthCondition } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
 
 interface DiagnosisResultDisplayProps {
-  diagnosisResult: DiagnosePlantHealthOutput;
+  diagnosisResult: DiagnosePlantHealthFlowOutput;
   previewUrl: string | null;
   onShowSaveForm: () => void;
   plantSaved: boolean;
@@ -51,12 +51,13 @@ export function DiagnosisResultDisplay({
     low: <TrendingDown className="h-3.5 w-3.5 mr-1" aria-label={t('diagnosePage.resultDisplay.confidenceLow')} />,
     medium: <Minus className="h-3.5 w-3.5 mr-1" aria-label={t('diagnosePage.resultDisplay.confidenceMedium')} />,
     high: <TrendingUp className="h-3.5 w-3.5 mr-1" aria-label={t('diagnosePage.resultDisplay.confidenceHigh')} />,
-  };
+  } as const; // Add 'as const' for stricter key typing
 
   const confidenceText = diagnosisResult.healthAssessment.confidence
     ? t(`diagnosePage.resultDisplay.confidence${diagnosisResult.healthAssessment.confidence.charAt(0).toUpperCase() + diagnosisResult.healthAssessment.confidence.slice(1)}` as any)
     : '';
 
+  const currentHealthStatus = diagnosisResult.healthAssessment?.status;
 
   return (
     <Card className="shadow-xl animate-in fade-in-50">
@@ -109,10 +110,12 @@ export function DiagnosisResultDisplay({
                       variant="outline"
                       className={cn(
                         "capitalize ml-1.5",
-                        healthConditionStyles[diagnosisResult.healthAssessment.status]
+                        currentHealthStatus
+                          ? healthConditionStyles[currentHealthStatus]
+                          : healthConditionStyles.unknown // Fallback
                       )}
                     >
-                      {t(`common.${diagnosisResult.healthAssessment.status}`)}
+                      {currentHealthStatus ? t(`common.${currentHealthStatus}`) : t('common.unknown')}
                     </Badge>
                   </p>
                   {diagnosisResult.healthAssessment.diagnosis && <p><strong>{t('diagnosePage.resultDisplay.diagnosisLabel')}</strong> {diagnosisResult.healthAssessment.diagnosis}</p>}
@@ -123,10 +126,10 @@ export function DiagnosisResultDisplay({
                         variant="outline"
                         className={cn(
                           "capitalize ml-1.5 inline-flex items-center",
-                          confidenceStyles[diagnosisResult.healthAssessment.confidence]
+                          diagnosisResult.healthAssessment.confidence ? confidenceStyles[diagnosisResult.healthAssessment.confidence] : ""
                         )}
                       >
-                        {confidenceIcons[diagnosisResult.healthAssessment.confidence]}
+                        {diagnosisResult.healthAssessment.confidence && confidenceIcons[diagnosisResult.healthAssessment.confidence]}
                         {confidenceText}
                       </Badge>
                     </p>

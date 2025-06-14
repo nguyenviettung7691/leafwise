@@ -39,18 +39,20 @@ export function PlantGrid({
           {t('myPlantsPage.emptyState.title')}
         </h3>
         <p className="text-md text-muted-foreground max-w-md mb-6">
-          {t('myPlantsPage.emptyState.descriptionPart1')}
-          <ProgressBarLink href="/diagnose" className="font-semibold text-primary hover:underline">
-            {t('nav.diagnosePlant')}
+          {t('myPlantsPage.emptyState.descriptionPart')}
+          <ProgressBarLink href="/diagnose" className="ml-2">
+            <Button>
+              <Sparkles className="mr-2 h-5 w-5" />
+              {t('nav.diagnosePlant')}
+            </Button>
           </ProgressBarLink>
-          {t('myPlantsPage.emptyState.descriptionPart2')}
         </p>
-        <ProgressBarLink href="/plants/new">
-          <Button>
-            <PlusCircle className="mr-2 h-5 w-5" />
-            {t('myPlantsPage.emptyState.addNewPlantButton')}
-          </Button>
-        </ProgressBarLink>
+        <p className="text-sm text-muted-foreground">
+          {t('myPlantsPage.emptyState.orAddManually')}
+          <ProgressBarLink href="/plants/new" className="font-semibold text-primary hover:underline ml-1">
+            {t('myPlantsPage.emptyState.addNewPlantLink')}
+          </ProgressBarLink>
+        </p>
       </div>
     );
   }

@@ -46,7 +46,7 @@ export function PushNotificationManager({}: PushNotificationManagerProps) {
     typeof window !== 'undefined' ? Notification.permission : 'default'
   );
   const [notificationTiming, setNotificationTiming] = useState<{
-    daysBefore: number;
+    daysBefore: number | string;
     timeUnit: 'days' | 'weeks';
     specificTime: string; // HH:MM
   }>(defaultNotificationSettings);
@@ -139,7 +139,9 @@ export function PushNotificationManager({}: PushNotificationManagerProps) {
     if (user?.preferences) {
       setNotificationTiming({
         daysBefore: user.preferences.notifyDaysBefore ?? defaultNotificationSettings.daysBefore,
-        timeUnit: (user.preferences.notifyTimeUnit as 'days' | 'weeks') ?? defaultNotificationSettings.timeUnit,
+        timeUnit: (user.preferences.notifyTimeUnit === 'days' || user.preferences.notifyTimeUnit === 'weeks')
+          ? user.preferences.notifyTimeUnit
+          : defaultNotificationSettings.timeUnit,
         specificTime: user.preferences.notifySpecificTime ?? defaultNotificationSettings.specificTime,
       });
     } else {
@@ -288,35 +290,44 @@ export function PushNotificationManager({}: PushNotificationManagerProps) {
     }
   }
 
-  const handleTimingChange = async (key: keyof typeof notificationTiming, value: any) => {
-    if (!user?.id || authLoading || isProcessing) return; // Use combined state
+  const handleTimingInputChange = (key: keyof Omit<typeof notificationTiming, 'enabled'>, value: any) => {
+    if (key === 'daysBefore') {
+      if (value === "" || (/^\d+$/.test(String(value)) && parseInt(String(value), 10) >= 0) ) {
+        setNotificationTiming(prev => ({ ...prev, daysBefore: value }));
+      } else if (typeof value === 'number' && value >= 0) {
+        setNotificationTiming(prev => ({ ...prev, daysBefore: value }));
+      }
+    } else {
+      setNotificationTiming(prev => ({ ...prev, [key]: value }));
+    }
+  };
 
-    const updatedTiming = {
-      ...notificationTiming,
-      [key]: value,
-    };
-    setNotificationTiming(updatedTiming); // Optimistic update
+  // Saves all timing settings
+  const handleSaveTimingSettings = async () => {
+    if (!user?.id || authLoading || isProcessing) return;
 
-    setIsProcessing(true); // Use combined state
+    const daysBeforeValue = parseInt(String(notificationTiming.daysBefore), 10);
+    const validDaysBefore = (!isNaN(daysBeforeValue) && daysBeforeValue >= 0)
+        ? daysBeforeValue
+        : defaultNotificationSettings.daysBefore; // Fallback to default if invalid or empty
+
+    setIsProcessing(true);
     try {
-        // Update user preferences in the backend
         await updateUser({
             preferences: {
                 ...user.preferences,
-                notifyDaysBefore: updatedTiming.daysBefore,
-                notifyTimeUnit: updatedTiming.timeUnit,
-                notifySpecificTime: updatedTiming.specificTime,
+                notifyDaysBefore: validDaysBefore,
+                notifyTimeUnit: notificationTiming.timeUnit,
+                notifySpecificTime: notificationTiming.specificTime,
             }
         });
-        // Local state is updated by AuthContext effect after successful save
-        toast({ title: t('common.success'), description: t('profilePage.toasts.preferenceUpdatedSuccess', { preferenceKey: t('profilePage.notifications.timingSettingsLabel')})}); // Add i18n key
+        toast({ title: t('common.success'), description: t('profilePage.toasts.preferenceUpdatedSuccess', { preferenceKey: t('profilePage.notifications.timingSettingsLabel')})});
 
     } catch (error) {
-        console.error(`Error saving notification timing ${key}:`, error);
-        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', { preferenceKey: t('profilePage.notifications.timingSettingsLabel') }), variant: "destructive" }); // Add i18n key
-        // Optionally revert the local state change on error
+        console.error(`Error saving notification timing settings:`, error);
+        toast({ title: t('common.error'), description: t('profilePage.toasts.preferenceUpdateError', { preferenceKey: t('profilePage.notifications.timingSettingsLabel') }), variant: "destructive" });
     } finally {
-        setIsProcessing(false); // Use combined state
+        setIsProcessing(false);
     }
   }
 
@@ -365,14 +376,12 @@ export function PushNotificationManager({}: PushNotificationManagerProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Label htmlFor="push-notifications-toggle" className="text-base font-medium">
-              {t('profilePage.notifications.sectionDescription')}
-            </Label>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="push-notifications-toggle" className="text-base font-medium">
+            {t('profilePage.notifications.sectionDescription')}
+          </Label>
           {isProcessing ? ( // Show loader if any process is loading
-             <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <Switch
               id="push-notifications-toggle"
@@ -414,40 +423,51 @@ export function PushNotificationManager({}: PushNotificationManagerProps) {
             <p className="text-xs text-muted-foreground">{t('profilePage.notifications.timingSettingsDescription')}</p> {/* Add i18n key */}
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <Label htmlFor="notify-days-before" className="text-sm font-normal shrink-0">{t('profilePage.notifications.notifyBeforeLabel')}</Label> {/* Add i18n key */}
-                <Input
-                    id="notify-days-before"
-                    type="number"
-                    min="0"
-                    value={notificationTiming.daysBefore}
-                    onChange={(e) => handleTimingChange('daysBefore', parseInt(e.target.value, 10) || 0)}
-                    className="w-20"
-                    disabled={isTimingDisabled}
-                />
-                 <Select
-                    value={notificationTiming.timeUnit}
-                    onValueChange={(value) => handleTimingChange('timeUnit', value as 'days' | 'weeks')}
-                    disabled={isTimingDisabled}
-                 >
-                    <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="days">{t('common.days')}</SelectItem> {/* Add i18n key */}
-                        <SelectItem value="weeks">{t('common.weeks')}</SelectItem> {/* Add i18n key */}
-                    </SelectContent>
-                 </Select>
-                 <Label htmlFor="notify-specific-time" className="text-sm font-normal shrink-0">{t('profilePage.notifications.atTimeLabel')}</Label> {/* Add i18n key */}
-                 <Input
-                    id="notify-specific-time"
-                    type="time"
-                    value={notificationTiming.specificTime}
-                    onChange={(e) => handleTimingChange('specificTime', e.target.value)}
-                    className="w-32"
-                    disabled={isTimingDisabled}
-                 />
-                 {isProcessing && <Loader2 className="h-4 w-4 animate-spin text-primary" />} {/* Show loader if any process is active */}
+                <div className='flex items-center gap-2'>
+                  <Label htmlFor="notify-days-before" className="text-sm font-normal shrink-0">{t('profilePage.notifications.notifyBeforeLabel')}</Label> {/* Add i18n key */}
+                  <Input
+                      id="notify-days-before"
+                      type="number"
+                      min="0"
+                      value={String(notificationTiming.daysBefore)} // Handle number or ""
+                      onChange={(e) => handleTimingInputChange('daysBefore', e.target.value)}
+                      className="w-20"
+                      disabled={isTimingDisabled}
+                  />
+                  <Select
+                      value={notificationTiming.timeUnit}
+                      onValueChange={(value) => handleTimingInputChange('timeUnit', value as 'days' | 'weeks')}
+                      disabled={isTimingDisabled}
+                  >
+                      <SelectTrigger className="w-[100px]">
+                          <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="days">{t('common.days')}</SelectItem>
+                          <SelectItem value="weeks">{t('common.weeks')}</SelectItem>
+                      </SelectContent>
+                  </Select>
+                </div>
+                 <div className='flex items-center gap-2'>
+                  <Label htmlFor="notify-specific-time" className="text-sm font-normal shrink-0">{t('profilePage.notifications.atTimeLabel')}</Label> {/* Add i18n key */}
+                  <Input
+                      id="notify-specific-time"
+                      type="time"
+                      value={notificationTiming.specificTime || defaultNotificationSettings.specificTime}
+                      onChange={(e) => handleTimingInputChange('specificTime', e.target.value)}
+                      className="w-34"
+                      disabled={isTimingDisabled}
+                  />
+                 </div>
             </div>
+            <Button
+                onClick={handleSaveTimingSettings}
+                disabled={isTimingDisabled || isProcessing}
+                size="sm"
+            >
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {t('common.saveChanges')}
+            </Button>
         </div>
 
 

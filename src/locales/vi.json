@@ -81,9 +81,9 @@
     "loadingPlants": "Đang tải những cây xinh đẹp của bạn...",
     "emptyState": {
       "title": "Vườn LeafWise của bạn đang nảy mầm!",
-      "descriptionPart1": "Thêm cây đầu tiên của bạn theo cách thủ công, hoặc để AI giúp bạn nhận dạng nó tại trang ",
-      "descriptionPart2": "!",
-      "addNewPlantButton": "Thêm cây mới"
+      "descriptionPart": "Hãy để AI giúp bạn nhận dạng và chẩn đoán cây đầu tiên",
+      "orAddManually": "Ngoài ra, bạn có thể ",
+      "addNewPlantLink": "thêm cây mới thủ công"
     },
     "filterSortCard": {
       "title": "Lọc & Sắp xếp cây",
@@ -148,9 +148,11 @@
     "formDescription": "Xác nhận hoặc cập nhật chi tiết cho cây này.",
     "submitButtonText": "Lưu cây",
     "primaryPhotoLabel": "Ảnh chính",
-    "uploadAreaText": "Nhấn để tải lên hoặc kéo thả",
-    "uploadAreaTextPWA": "Chạm để chọn hoặc chụp ảnh",
+    "uploadAreaText": "Nhấn để tải lên hoặc kéo thả ảnh",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (TỐI ĐA 1MB)",
+    "takePhotoPWA": "Chụp Ảnh",
+    "chooseFromGalleryPWA": "Chọn Từ Thư Viện",
+    "selectedFileLabel": "Tệp đã chọn",
     "gallerySelectLabel": "Hoặc chọn từ Thư viện",
     "commonNameLabel": "Tên thường gọi",
     "commonNamePlaceholder": "VD: Trầu Bà Lá Xẻ",
@@ -184,13 +186,19 @@
   },
   "diagnosePage": {
     "uploadForm": {
-      "title": "Chẩn đoán cây",
-      "description": "Tải lên ảnh cây của bạn và thêm bất kỳ quan sát nào. AI của chúng tôi sẽ phân tích và cung cấp đánh giá sức khỏe cũng như mẹo chăm sóc.",
-      "imageLabel": "Ảnh cây (Tối đa 1MB)",
-      "descriptionLabel": "Mô tả (Tùy chọn)",
+      "title": "Chẩn Đoán Cây",
+      "description": "Tải ảnh lên và mô tả các triệu chứng. AI của chúng tôi sẽ phân tích.",
+      "imageUploadLabel": "Tải Ảnh Cây Trồng",
+      "takePhotoPWA": "Chụp Ảnh",
+      "chooseFromGalleryPWA": "Chọn Từ Thư Viện",
+      "uploadAreaTextDesktop": "Nhấn để tải lên hoặc kéo thả ảnh",
+      "uploadAreaHintDesktop": "PNG, JPG, GIF, WEBP tối đa 5MB",
+      "changeImageHintDesktop": "Nhấn để thay đổi ảnh",
+      "imagePreviewAlt": "Xem trước ảnh cây cần chẩn đoán",
+      "notesLabel": "Triệu Chứng/Ghi Chú (Không bắt buộc)",
       "descriptionPlaceholder": "Ví dụ: Lá vàng, đốm nâu, héo úa...",
-      "submitButton": "Chẩn đoán cây",
-      "submitButtonLoading": "Đang phân tích cây..."
+      "submitButton": "Chẩn Đoán Cây Của Tôi",
+      "submitButtonLoading": "Đang chẩn đoán..."
     },
     "resultDisplay": {
       "title": "Kết quả chẩn đoán",
@@ -321,6 +329,8 @@
       "sectionTitle": "Theo dõi tăng trưởng",
       "photoGalleryTitle": "Thư viện ảnh",
       "addPhotoDiagnoseButton": "Thêm ảnh & Chẩn đoán",
+      "uploadFromGalleryPWA": "Tải từ Thư viện",
+      "takePhotoPWA": "Chụp Ảnh",
       "diagnosingButton": "Đang chẩn đoán...",
       "manageButton": "Quản lý ảnh",
       "doneButton": "Xong",
@@ -360,7 +370,7 @@
       "noCarePlanChanges": "Không có thay đổi cụ thể nào được đề xuất cho các công việc trong kế hoạch chăm sóc dựa trên chẩn đoán này.",
       "applyChangesButton": "Áp dụng thay đổi đề xuất",
       "keepCurrentPlanButton": "Giữ kế hoạch hiện tại",
-      "addPhotoToJournalButton": "Thêm ảnh đã chẩn đoán vào Nhật ký",
+      "addPhotoToGalleryButton": "Thêm Ảnh Đã Chẩn Đoán vào Thư viện",
       "suggestedAction": {
         "keep_as_is": "giữ nguyên",
         "pause": "tạm dừng",
@@ -448,6 +458,8 @@
       "taskResumed": "Công việc \"{{taskName}}\" đã được tiếp tục.",
       "plantDeletedTitle": "{{plantName}} đã bị xóa",
       "plantDeletedDesc": "{{plantName}} đã được xóa khỏi bộ sưu tập của bạn.",
+      "errorSettingPrimaryPhoto": "Không thể đặt ảnh chính cho {{plantName}}.",
+      "errorDeletingPlant": "Không thể xóa {{plantName}}.",
       "errorProactiveReview": "Đã xảy ra lỗi khi đánh giá kế hoạch chăm sóc."
     },
     "footer": {
@@ -645,6 +657,8 @@
       "testSentBodySample": "Đây là thông báo thử nghiệm từ LeafWise!",
       "testSectionTitle": "Kiểm tra Thông báo đẩy",
       "currentPermissionLabel": "Quyền hiện tại",
+      "permissionRequiredTitle": "Yêu Cầu Quyền",
+      "permissionRequiredBody": "Cần có quyền thông báo để gửi cho bạn thông báo đẩy. Vui lòng bật quyền này trong cài đặt trình duyệt của bạn.",
       "requestPermissionButton": "Yêu cầu quyền",
       "sendTestButton": "Gửi thông báo thử",
       "permissionBlocked": "Thông báo bị chặn bởi cài đặt trình duyệt.",
@@ -654,7 +668,7 @@
       "sectionDescription": "Nhận lời nhắc cho các công việc chăm sóc cây sắp tới.",
       "timingSettingsLabel": "Thời gian thông báo",
       "timingSettingsDescription": "Cấu hình thời điểm bạn muốn nhận lời nhắc trước khi công việc đến hạn.",
-      "notifyBeforeLabel": "Thông báo cho tôi",
+      "notifyBeforeLabel": "Thông báo tôi trước",
       "atTimeLabel": "lúc",
       "testMessagePlaceholder": "Nhập tin nhắn thử (tùy chọn)",
       "successfullyUnsubscribed": "Đã hủy đăng ký thông báo đẩy thành công.",

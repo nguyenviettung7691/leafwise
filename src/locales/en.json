@@ -81,9 +81,9 @@
     "loadingPlants": "Loading your beautiful plants...",
     "emptyState": {
       "title": "Your LeafWise garden is sprouting!",
-      "descriptionPart1": "Add your first plant manually, or let AI help you identify it on the ",
-      "descriptionPart2": " page!",
-      "addNewPlantButton": "Add New Plant"
+      "descriptionPart": "Let AI help you identify and diagnose your first plant",
+      "orAddManually": "Alternatively, you can ",
+      "addNewPlantLink": "add a new plant manually"
     },
     "filterSortCard": {
       "title": "Filter & Sort Plants",
@@ -148,9 +148,11 @@
     "formDescription": "Confirm or update the details for this plant.",
     "submitButtonText": "Save Plant",
     "primaryPhotoLabel": "Primary Photo",
-    "uploadAreaText": "Click to upload or drag and drop",
-    "uploadAreaTextPWA": "Tap to select or take photo",
+    "uploadAreaText": "Click to upload or drag & drop image",
     "uploadAreaHint": "PNG, JPG, GIF, WEBP (MAX. 1MB)",
+    "takePhotoPWA": "Take Photo",
+    "chooseFromGalleryPWA": "Choose from Gallery",
+    "selectedFileLabel": "Selected file",
     "gallerySelectLabel": "Or Select from Gallery",
     "commonNameLabel": "Common Name",
     "commonNamePlaceholder": "e.g., Swiss Cheese Plant",
@@ -184,13 +186,19 @@
   },
   "diagnosePage": {
     "uploadForm": {
-      "title": "Diagnose Plant",
-      "description": "Upload a photo of your plant and add any observations. Our AI will analyze it and provide a health assessment and care tips.",
-      "imageLabel": "Plant Image (Max 1MB)",
-      "descriptionLabel": "Optional Description",
+      "title": "Plant Diagnosis",
+      "description": "Upload a photo and describe any symptoms. Our AI will analyze it.",
+      "imageUploadLabel": "Upload Plant Photo",
+      "takePhotoPWA": "Take Photo",
+      "chooseFromGalleryPWA": "Choose from Gallery",
+      "uploadAreaTextDesktop": "Click to upload or drag & drop an image",
+      "uploadAreaHintDesktop": "PNG, JPG, GIF, WEBP up to 5MB",
+      "changeImageHintDesktop": "Click to change image",
+      "imagePreviewAlt": "Preview of plant to be diagnosed",
+      "notesLabel": "Symptoms/Notes (Optional)",
       "descriptionPlaceholder": "e.g., Yellowing leaves, brown spots, wilting...",
-      "submitButton": "Diagnose Plant",
-      "submitButtonLoading": "Analyzing Plant..."
+      "submitButton": "Diagnose My Plant",
+      "submitButtonLoading": "Diagnosing..."
     },
     "resultDisplay": {
       "title": "Diagnosis Result",
@@ -321,6 +329,8 @@
       "sectionTitle": "Growth Monitoring",
       "photoGalleryTitle": "Photo Gallery",
       "addPhotoDiagnoseButton": "Add Photo & Diagnose",
+      "uploadFromGalleryPWA": "Upload from Gallery",
+      "takePhotoPWA": "Take Photo",
       "diagnosingButton": "Diagnosing...",
       "manageButton": "Manage Photos",
       "doneButton": "Done",
@@ -360,7 +370,7 @@
       "noCarePlanChanges": "No specific changes suggested for the care plan tasks based on this diagnosis.",
       "applyChangesButton": "Apply Suggested Changes",
       "keepCurrentPlanButton": "Keep Current Plan",
-      "addPhotoToJournalButton": "Add Diagnosed Photo to Journal",
+      "addPhotoToGalleryButton": "Add Diagnosed Photo to Gallery",
       "suggestedAction": {
         "keep_as_is": "keep as is",
         "pause": "pause",
@@ -448,6 +458,8 @@
       "taskResumed": "Task \"{{taskName}}\" has been resumed.",
       "plantDeletedTitle": "{{plantName}} Deleted",
       "plantDeletedDesc": "{{plantName}} has been removed from your collection.",
+      "errorSettingPrimaryPhoto": "Failed to set primary photo for {{plantName}}.",
+      "errorDeletingPlant": "Failed to delete {{plantName}}.",
       "errorProactiveReview": "An error occurred while reviewing the care plan."
     },
     "footer": {
@@ -644,6 +656,8 @@
       "testSentBodySample": "This is a test notification from LeafWise!",
       "testSectionTitle": "Push Notification Test",
       "currentPermissionLabel": "Current Permission",
+      "permissionRequiredTitle": "Permission Required",
+      "permissionRequiredBody": "Notification permission is needed to send you alerts. Please enable it in your browser settings.",
       "requestPermissionButton": "Request Permission",
       "sendTestButton": "Send Test Notification",
       "permissionBlocked": "Notifications blocked by browser settings.",
@@ -653,7 +667,7 @@
       "sectionDescription": "Receive reminders for upcoming plant care tasks.",
       "timingSettingsLabel": "Notification Timing",
       "timingSettingsDescription": "Configure when you want to receive reminders before a task is due.",
-      "notifyBeforeLabel": "Notify me",
+      "notifyBeforeLabel": "Notify me before",
       "atTimeLabel": "at",
       "testMessagePlaceholder": "Enter test message (optional)",
       "successfullyUnsubscribed": "Successfully unsubscribed from push notifications.",

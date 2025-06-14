@@ -3,24 +3,36 @@
 import { useState, useEffect } from 'react';
 import { Leaf, Download } from 'lucide-react';
 
-export function InstallPrompt() { // Export the component
+const INSTALL_PROMPT_DISMISSED_KEY = 'installPromptDismissed';
+
+export function InstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(true); // State to control visibility
+  const [showPrompt, setShowPrompt] = useState(false);
 
   useEffect(() => {
-    setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
-    );
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+      setIsIOS(
+        /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+      );
+      setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
 
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches);
+    const dismissed = localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY);
 
-    const timer = setTimeout(() => setShowPrompt(false), 15000); // Hide after 15 seconds
-    return () => clearTimeout(timer);
-
+    if (!dismissed && !window.matchMedia('(display-mode: standalone)').matches) {
+        setShowPrompt(true); // Show if not dismissed and not standalone
+        const timer = setTimeout(() => {
+          setShowPrompt(false);
+          // Optionally, mark as dismissed after timeout if user didn't interact
+          // localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true');
+        }, 15000); // Hide after 15 seconds
+        return () => clearTimeout(timer);
+      } else {
+        setShowPrompt(false); // Hide if dismissed or already standalone
+      }
+    }
   }, []);
 
-  // Hide if already standalone or explicitly closed
   if (isStandalone || !showPrompt) {
     return null;
   }
@@ -54,7 +66,10 @@ export function InstallPrompt() { // Export the component
        {/* Add a close button */}
        <button
          className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-         onClick={() => setShowPrompt(false)} // Hide the prompt on click
+         onClick={() => {
+           setShowPrompt(false);
+           localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true');
+         }}
          aria-label="Close install prompt"
        >
          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
