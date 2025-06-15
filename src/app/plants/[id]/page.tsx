@@ -72,6 +72,7 @@ import {
 // Context
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
+import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { useAuth } from '@/contexts/AuthContext';
 
 // AI Flows
@@ -153,6 +154,7 @@ export default function PlantDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t, language, dateFnsLocale } = useLanguage();
+  const isStandalonePWA = usePWAStandalone();
   const id = params.id as string;
   // Get all plants, photos, and tasks from the context
   const {
@@ -176,6 +178,7 @@ export default function PlantDetailPage() {
   const [isDeletingPlant, setIsDeletingPlant] = useState(false);
   const [isDiagnosingNewPhoto, setIsDiagnosingNewPhoto] = useState(false);
   const growthPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [isAddingPhotoToGallery, setIsAddingPhotoToGallery] = useState(false);
   const [newPhotoJournaled, setNewPhotoJournaled] = useState(false);
 
   const [newPhotoDiagnosisDialogState, setNewPhotoDiagnosisDialogState] = useState<{
@@ -202,10 +205,12 @@ export default function PlantDetailPage() {
 
   const [isManagingPhotos, setIsManagingPhotos] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [isDeletingPhotos, setIsDeletingPhotos] = useState(false);
   const [showDeletePhotosDialog, setShowDeletePhotosDialog] = useState(false);
   const [isPrimaryPhotoSelectedForDeletion, setIsPrimaryPhotoSelectedForDeletion] = useState(false);
 
   const [isEditPhotoDialogVisible, setIsEditPhotoDialogVisible] = useState(false);
+  const [isSettingPrimaryPhoto, setIsSettingPrimaryPhoto] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<PlantPhoto | null>(null);
   const [editedPhotoDate, setEditedPhotoDate] = useState<Date | undefined>(new Date());
   const [editedPhotoHealth, setEditedPhotoHealth] = useState<PlantHealthCondition>('unknown');
@@ -214,6 +219,7 @@ export default function PlantDetailPage() {
   const [isSavingPhotoDetails, setIsSavingPhotoDetails] = useState(false);
 
   const [isManagingCarePlan, setIsManagingCarePlan] = useState(false);
+  const [isDeletingTasks, setIsDeletingTasks] = useState(false);
 
   const [isProactiveReviewDialogOpen, setIsProactiveReviewDialogOpen] = useState(false);
   const [proactiveReviewResult, setProactiveReviewResult] = useState<ReviewCarePlanOutput | null>(null);
@@ -336,14 +342,14 @@ useEffect(() => {
       const foundPlant = allContextPlants.find(p => p.id === id);
       if (foundPlant) {
         setPlant(foundPlant);
-      } else if (allContextPlants.length > 0) {
+      } else if (!isDeletingPlant) { // Only call notFound if not in the process of deleting this plant
+        // If the plant is not found and we are not actively deleting it,
+        // then it's a true 404 or the data hasn't loaded yet for some reason.
         notFound();
-      } else if (allContextPlants.length === 0) {
-         notFound();
       }
       setIsPageLoading(false);
     }
-  }, [id, allContextPlants, isLoadingContextData, notFound]);
+  }, [id, allContextPlants, isLoadingContextData, notFound, isDeletingPlant]);
 
   const handleToggleTaskPause = useCallback(async (taskId: string) => {
     const taskBeingToggled = currentPlantCareTasks.find(t => t.id === taskId);
@@ -373,6 +379,20 @@ useEffect(() => {
     }
   }, [currentPlantCareTasks, updateCareTask, t, toast]);
 
+  const handleTriggerUploadFromGallery = () => {
+    if (growthPhotoInputRef.current) {
+      growthPhotoInputRef.current.removeAttribute('capture');
+      growthPhotoInputRef.current.click();
+    }
+  };
+
+  const handleTriggerTakePhoto = () => {
+    if (growthPhotoInputRef.current) {
+      growthPhotoInputRef.current.setAttribute('capture', 'environment');
+      growthPhotoInputRef.current.click();
+    }
+  };
+
   const handleEditPlant = () => {
     router.push(`/plants/${id}/edit`);
   };
@@ -391,11 +411,12 @@ useEffect(() => {
         });
         router.push('/');
 
+        // If deletion is successful, isDeletingPlant remains true.
+        // The component will unmount, and the state will be cleared.
     } catch (error) {
         console.error("Error deleting plant:", error);
         toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingPlant'), variant: "destructive" });
-    } finally {
-        setIsDeletingPlant(false);
+        setIsDeletingPlant(false); // Only set to false on error
     }
   };
 
@@ -514,7 +535,7 @@ useEffect(() => {
     }
   };
 
-  const addPhotoToJournal = async () => {
+  const addPhotoToGallery = async () => {
     if (!plant || !newPhotoDiagnosisDialogState.newPhotoDiagnosisResult || !newPhotoDiagnosisDialogState.newPhotoFile || !user?.id) {
         toast({ title: t('common.error'), description: "Missing photo data or user info.", variant: "destructive" });
         return;
@@ -524,6 +545,7 @@ useEffect(() => {
     const photoFile = newPhotoDiagnosisDialogState.newPhotoFile;
 
     try {
+        setIsAddingPhotoToGallery(true);
         await addPhotoToPlant(plant.id, {
             url: '',
             dateTaken: new Date().toISOString(),
@@ -538,6 +560,8 @@ useEffect(() => {
     } catch (error) {
         console.error("Error adding photo to journal:", error);
         toast({ title: t('common.error'), description: t('plantDetail.toasts.errorAddingPhoto'), variant: "destructive" });
+    } finally {
+        setIsAddingPhotoToGallery(false);
     }
   };
 
@@ -656,13 +680,25 @@ useEffect(() => {
 
   const handleSetAsPrimaryPhoto = async (photoUrl: string) => {
     if (!plant) return;
+    setIsSettingPrimaryPhoto(true);
     try {
-        await updatePlant(plant.id, { primaryPhotoUrl: photoUrl });
+        // Pass the photoUrl as the diagnosedPhotoUrlFromForm argument.
+        // The updatedPlantData (second argument) can be an empty object
+        // as we are only changing the primaryPhotoUrl, which is handled
+        // by the diagnosedPhotoUrlFromForm parameter in the updatePlant context function.
+        // Pass null for primaryPhotoFile as no new file is being uploaded here.
+        await updatePlant(plant.id, {}, null, photoUrl);
         toast({ title: t('plantDetail.toasts.primaryPhotoUpdated'), description: t('plantDetail.toasts.primaryPhotoUpdatedDesc') });
         closeGridPhotoDialog();
     } catch (error) {
         console.error("Error setting primary photo:", error);
-        toast({ title: t('common.error'), description: t('plantDetail.toasts.errorSettingPrimaryPhoto'), variant: "destructive" });
+        toast({ 
+            title: t('common.error'), 
+            description: t('plantDetail.toasts.errorSettingPrimaryPhoto', { plantName: plant.commonName }), // Assuming you have such a key
+            variant: "destructive" 
+        });
+    } finally {
+        setIsSettingPrimaryPhoto(false);
     }
   };
 
@@ -745,6 +781,8 @@ useEffect(() => {
         .map(t => t.name)
         .join(', ');
 
+    setIsDeletingTasks(true);
+
     try {
         await Promise.all(Array.from(selectedTaskIds).map(taskId => deleteCareTask(taskId)));
 
@@ -756,6 +794,8 @@ useEffect(() => {
     } catch (error) {
         console.error("Error deleting selected tasks:", error);
         toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingTasks'), variant: "destructive" });
+    } finally {
+        setIsDeletingTasks(false);
     }
   };
 
@@ -796,6 +836,8 @@ useEffect(() => {
     if (!plant || selectedPhotoIds.size === 0 || !user?.id) return;
 
     try {
+        setIsDeletingPhotos(true);
+
         await Promise.all(Array.from(selectedPhotoIds).map(photoId => deletePhoto(photoId)));
 
         toast({ title: t('plantDetail.toasts.photosDeleted'), description: t('plantDetail.toasts.photosDeletedDesc', {count: selectedPhotoIds.size}) });
@@ -806,6 +848,8 @@ useEffect(() => {
     } catch (error) {
         console.error("Error deleting selected photos:", error);
         toast({ title: t('common.error'), description: t('plantDetail.toasts.errorDeletingPhotos'), variant: "destructive" });
+    } finally {
+        setIsDeletingPhotos(false);
     }
   };
 
@@ -1073,7 +1117,9 @@ useEffect(() => {
           plant={plant}
           plantPhotos={currentPlantPhotos}
           onOpenGridPhotoDialog={openGridPhotoDialog}
-          onTriggerNewPhotoUpload={() => growthPhotoInputRef.current?.click()}
+          onTriggerNewPhotoUpload={handleTriggerUploadFromGallery} // Default for desktop
+          onTriggerUploadFromGallery={handleTriggerUploadFromGallery}
+          onTriggerTakePhoto={handleTriggerTakePhoto}
           isDiagnosingNewPhoto={isDiagnosingNewPhoto}
           onChartDotClick={handleChartDotClick}
           isManagingPhotos={isManagingPhotos}
@@ -1103,7 +1149,7 @@ useEffect(() => {
                 setNewPhotoJournaled(false);
             }
         }}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="max-w-[95vw] sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2"><Sparkles className="text-primary h-5 w-5"/>{t('plantDetail.newPhotoDialog.title')}</DialogTitle>
                     <DialogDescription>
@@ -1240,18 +1286,30 @@ useEffect(() => {
                     )}
                 </div>
 
-                <DialogFooter className="sm:justify-between pt-4 border-t">
-                  <div>
+                <DialogFooter className={cn(
+                  "pt-4 border-t",
+                  isStandalonePWA ? "flex flex-col gap-2 w-full" : "sm:justify-between"
+                )}>
+                  <div className={cn(isStandalonePWA ? "w-full" : "")}>
                     {!newPhotoJournaled && newPhotoDiagnosisDialogState.newPhotoPreviewUrl && newPhotoDiagnosisDialogState.newPhotoDiagnosisResult?.identification.isPlant && (
-                       <Button type="button" variant="default" onClick={addPhotoToJournal}>
-                           <SaveIcon className="mr-2 h-4 w-4"/>{t('plantDetail.newPhotoDialog.addPhotoToJournalButton')}
+                       <Button
+                        type="button"
+                        variant="default"
+                        onClick={addPhotoToGallery}
+                        className={cn(isStandalonePWA ? "w-full" : "")}
+                       >
+                           {isAddingPhotoToGallery ? (
+                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                           ) : (
+                               <SaveIcon className="mr-2 h-4 w-4"/>
+                           )}{t('plantDetail.newPhotoDialog.addPhotoToGalleryButton')}
                        </Button>
                      )}
                      {newPhotoJournaled && ( <div className="h-9"></div>
                      )}
                   </div>
                   <DialogClose asChild>
-                      <Button type="button" variant="outline">
+                      <Button type="button" variant="outline" className={cn(isStandalonePWA ? "w-full" : "")}>
                           {t('common.close')}
                       </Button>
                   </DialogClose>
@@ -1333,7 +1391,7 @@ useEffect(() => {
                                         </CardContent>
                                     </Card>
                                 )}
-                                 <DialogFooter className="pt-4 border-t">
+                                 <DialogFooter className="gap-2 pt-4 border-t">
                                     <Button variant="outline" onClick={handleKeepCurrentProactiveCarePlan} disabled={isApplyingProactiveReviewChanges}>
                                         {t('plantDetail.newPhotoDialog.keepCurrentPlanButton')}
                                     </Button>
@@ -1378,15 +1436,32 @@ useEffect(() => {
                         {selectedGridPhoto.notes && <p><strong>{t('plantDetail.photoDetailsDialog.generalNotesLabel')}</strong> {selectedGridPhoto.notes}</p>}
                     </div>
                 )}
-                <DialogFooter>
+                <DialogFooter className={cn(
+                    isStandalonePWA ? "flex flex-col gap-2 w-full" : "sm:justify-end" // PWA: stack buttons, full width. Desktop: default.
+                )}>
                     {selectedGridPhoto && plant && selectedGridPhoto.url !== plant.primaryPhotoUrl && (
-                        <Button variant="default" onClick={() => handleSetAsPrimaryPhoto(selectedGridPhoto.url)}>
-                            {t('plantDetail.photoDetailsDialog.setAsPrimaryButton')}
-                        </Button>
+                        <Button
+                           variant="default"
+                           onClick={() => handleSetAsPrimaryPhoto(selectedGridPhoto.url)}
+                           className={cn(isStandalonePWA ? "w-full" : "")}
+                           disabled={isSettingPrimaryPhoto}
+                       >
+                           {isSettingPrimaryPhoto ? (
+                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                           ) : (
+                               // You might want a specific icon for "set as primary"
+                               // For now, just text or a generic save/check icon
+                               null 
+                           )}
+                           {t('plantDetail.photoDetailsDialog.setAsPrimaryButton')}
+                       </Button>
                     )}
                     <DialogClose asChild>
-                        <Button type="button" variant="outline">{t('common.close')}</Button>
+                        <Button type="button" variant="outline" className={cn(isStandalonePWA ? "w-full" : "")}>
+                            {t('common.close')}
+                        </Button>
                     </DialogClose>
+                    {!(selectedGridPhoto && plant && selectedGridPhoto.url !== plant.primaryPhotoUrl) && isStandalonePWA && <div className="h-0"></div>}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -1427,9 +1502,12 @@ useEffect(() => {
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedTaskIds(new Set())}>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteSelectedTasksConfirmed} className="bg-destructive hover:bg-destructive/90">
-                    {t('plantDetail.deleteTaskDialog.deleteButton', {count: selectedTaskIds.size})}
+                <AlertDialogCancel onClick={() => setSelectedTaskIds(new Set())} disabled={isDeletingTasks}>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelectedTasksConfirmed} className="bg-destructive hover:bg-destructive/90" disabled={isDeletingTasks}>
+                    {isDeletingTasks ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {t('plantDetail.deleteTaskDialog.deleteButton', { count: selectedTaskIds.size })}
                 </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -1449,9 +1527,12 @@ useEffect(() => {
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setSelectedPhotoIds(new Set())}>{t('common.cancel')}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteSelectedPhotosConfirm} className="bg-destructive hover:bg-destructive/90">
-                    {t('plantDetail.deletePhotosDialog.deleteButton', {count: selectedPhotoIds.size})}
+                <AlertDialogCancel onClick={() => setSelectedPhotoIds(new Set())} disabled={isDeletingPhotos}>{t('common.cancel')}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteSelectedPhotosConfirm} className="bg-destructive hover:bg-destructive/90" disabled={isDeletingPhotos}>
+                    {isDeletingPhotos ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {t('plantDetail.deletePhotosDialog.deleteButton', { count: selectedPhotoIds.size })}
                 </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

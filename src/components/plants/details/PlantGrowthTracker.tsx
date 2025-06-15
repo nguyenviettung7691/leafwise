@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon, Camera } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,7 @@ import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
 import dynamic from 'next/dynamic';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
@@ -185,6 +186,8 @@ interface PlantGrowthTrackerProps {
   onTogglePhotoSelection: (photoId: string) => void;
   onDeleteSelectedPhotos: () => void;
   onOpenEditPhotoDialog: (photo: PlantPhoto) => void;
+  onTriggerUploadFromGallery: () => void;
+  onTriggerTakePhoto: () => void;
 }
 
 export function PlantGrowthTracker({
@@ -192,7 +195,6 @@ export function PlantGrowthTracker({
   plantPhotos,
   onOpenGridPhotoDialog,
   onTriggerNewPhotoUpload,
-  isDiagnosingNewPhoto,
   onChartDotClick,
   isManagingPhotos,
   onToggleManagePhotos,
@@ -200,6 +202,9 @@ export function PlantGrowthTracker({
   onTogglePhotoSelection,
   onDeleteSelectedPhotos,
   onOpenEditPhotoDialog,
+  onTriggerUploadFromGallery,
+  onTriggerTakePhoto,
+  isDiagnosingNewPhoto,
 }: PlantGrowthTrackerProps) {
   const { user } = useAuth();
   const { t, dateFnsLocale } = useLanguage();
@@ -260,7 +265,7 @@ export function PlantGrowthTracker({
           </CardTitle>
           <div className={cn(
             "flex items-center gap-2",
-            isStandalone ? "w-full flex-wrap justify-start sm:w-auto sm:justify-end" : ""
+            isStandalone ? "flex-col items-end" : ""
           )}>
             {isManagingPhotos && selectedPhotoIds.size > 0 && (
               <Button
@@ -277,23 +282,49 @@ export function PlantGrowthTracker({
               {isManagingPhotos ? t('common.done') : t('common.manage')}
             </Button>
             {!isManagingPhotos && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onTriggerNewPhotoUpload}
-                disabled={isDiagnosingNewPhoto}
-              >
-                {isDiagnosingNewPhoto ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {t('plantDetail.growthTracker.diagnosingButton')}
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
-                  </>
-                )}
-              </Button>
+              isStandalone ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isDiagnosingNewPhoto}>
+                      {isDiagnosingNewPhoto ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={onTriggerUploadFromGallery} disabled={isDiagnosingNewPhoto}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      {t('plantDetail.growthTracker.uploadFromGalleryPWA')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onTriggerTakePhoto} disabled={isDiagnosingNewPhoto}>
+                      <Camera className="mr-2 h-4 w-4" />
+                      {t('plantDetail.growthTracker.takePhotoPWA')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                // Desktop: Original button behavior
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onTriggerNewPhotoUpload} // This will be the gallery upload for desktop
+                  disabled={isDiagnosingNewPhoto}
+                >
+                  {isDiagnosingNewPhoto ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {t('plantDetail.growthTracker.diagnosingButton')}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" /> {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
+                    </>
+                  )}
+                </Button>
+              )
             )}
           </div>
         </CardHeader>

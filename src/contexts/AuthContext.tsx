@@ -31,8 +31,9 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => void;
-  updateUser: (updatedData: { name?: string, preferences?: Partial<UserPreferences>, avatarFile?: File | null }) => Promise<void>;
+  updateUser: (updatedData: { name?: string, preferences?: Partial<UserPreferences>, avatarFile?: File | null }) => Promise<boolean>;
   isLoading: boolean;
+  isUpdatingUser: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,6 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -275,17 +277,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Update user attributes function using Amplify Auth
   const updateUser = useCallback(
-    async (updatedData: { name?: string, preferences?: Partial<UserPreferences>, avatarFile?: File | null }) => {
+    async (updatedData: { name?: string, preferences?: Partial<UserPreferences>, avatarFile?: File | null }): Promise<boolean> => {
       if (!user) {
         toast({
           title: t("common.error"),
           description: t("authContextToasts.errorNoUserSession"),
           variant: "destructive",
         });
-        return;
+        return false;
       }
-      setIsLoading(true);
-
+      setIsUpdatingUser(true); // Use specific loading state
+      let success = false;
       try {
         // 1. Update Cognito attributes (only name for now)
         const userAttributes = await fetchUserAttributes();
@@ -391,6 +393,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           title: t("authContextToasts.profileUpdatedTitle"),
           description: t("authContextToasts.profileUpdatedDescription"),
         });
+        success = true;
       } catch (error) {
         console.error("Update user error:", error);
         toast({
@@ -398,16 +401,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           description: t("profilePage.toasts.profileUpdateError"),
           variant: "destructive",
         });
+        success = false;
       } finally {
-        setIsLoading(false);
+        setIsUpdatingUser(false); // Use specific loading state
       }
+      return success;
     },
     [user, toast, t, fetchUserPreferences, createDefaultUserPreferences], // Add dependencies
   );
 
   return (
     <AuthContext.Provider
-      value={{ user, login, register, logout, updateUser, isLoading }}
+      value={{ user, login, register, logout, updateUser, isLoading, isUpdatingUser }}
     >
       {children}
     </AuthContext.Provider>

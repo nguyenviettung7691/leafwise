@@ -129,20 +129,3 @@ html {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.5) hsl(var(--background) / 0.15); /* thumb track */
 }
-
-/* Removed specific styles for .calendar-day-cell-tasks as global style is now thinner */
-/*
-.calendar-day-cell-tasks::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-
-.calendar-day-cell-tasks::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground) / 0.3); 
-  border-radius: 2px; 
-}
-
-.calendar-day-cell-tasks::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.5); 
-}
-*/

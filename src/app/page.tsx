@@ -332,8 +332,10 @@ export default function MyPlantsPage() {
       )}>
         <h1 className="text-3xl font-bold tracking-tight">{t('nav.myPlants')}</h1>
         <div className={cn(
-          "flex items-center gap-2",
-          isStandalone && "w-full justify-start"
+          "flex gap-2",
+          isStandalone
+            ? "flex-col items-end"
+            : "items-center"
         )}>
           {isManagingPlants && selectedPlantIds.size > 0 && (
             <Button

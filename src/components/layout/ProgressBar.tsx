@@ -3,7 +3,6 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProgressContext } from '@/contexts/ProgressContext';
-import { useEffect } from 'react';
 
 export function ProgressBar() {
   const { state, value, reset } = useProgressContext();
