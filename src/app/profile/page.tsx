@@ -218,7 +218,6 @@ export default function ProfilePage() {
                     diagnosisNotes: photo.diagnosisNotes
                 })),
                 careTasks: clientModelPlant.careTasks,
-                ageEstimate: undefined,
             };
         }),
       };
@@ -289,6 +288,7 @@ export default function ProfilePage() {
             name: string;
             description?: string | null;
             frequency: string;
+            frequencyEvery?: number | null;
             timeOfDay?: string | null;
             nextDueDate?: string | null;
             isPaused: boolean;
@@ -343,6 +343,7 @@ export default function ProfilePage() {
                             name: taskData.name,
                             description: taskData.description || null,
                             frequency: taskData.frequency,
+                            frequencyEvery: taskData.frequencyEvery || null,
                             timeOfDay: taskData.timeOfDay || null,
                             nextDueDate: taskData.nextDueDate || null,
                             isPaused: taskData.isPaused ?? false,
