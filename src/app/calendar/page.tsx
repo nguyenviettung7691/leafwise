@@ -51,11 +51,6 @@ export default function CalendarPage() {
     setCurrentCalendarDate(newDate);
   };
 
-  const handleTaskAction = (task: CareTask, plantId: string) => {
-    console.log(`Placeholder: Mark task "${task.name}" for plant "${plantId}" as complete.`);
-    // Future: Implement actual task completion logic
-  };
-
   if (pageIsLoading) {
     return (
       <AppLayout>
@@ -84,7 +79,6 @@ export default function CalendarPage() {
             tasks={filteredCareTasks}
             currentDate={currentCalendarDate}
             onNavigatePeriod={handleNavigatePeriod}
-            onTaskAction={handleTaskAction}
           />
         </div>
       </div>

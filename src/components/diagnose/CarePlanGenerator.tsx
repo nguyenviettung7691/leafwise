@@ -211,17 +211,6 @@ export function CarePlanGenerator({
             )}
 
               <Separator className="my-4" />
-              <h3 className="font-bold text-lg text-primary mt-4">{t('diagnosePage.carePlanGenerator.futureEnhancementsTitle')}</h3>
-              <div className="space-y-3 text-xs text-muted-foreground">
-                <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                  <Zap className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{carePlanResult.pushNotificationsPlaceholder}</p>
-                </div>
-                <div className="flex items-start gap-2 p-3 border rounded-md bg-muted/30">
-                  <ListChecks className="h-4 w-4 mt-0.5 text-primary/80 shrink-0" />
-                  <p>{carePlanResult.activityTrackingPlaceholder}</p>
-                </div>
-              </div>
 
               <div className="mt-6 text-center">
                 {carePlanEffectivelySaved && lastSavedPlantId ? (

@@ -91,13 +91,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
   const isCurrentActualWeek = useMemo(() => isSameWeek(currentDate, new Date(), { weekStartsOn }), [currentDate, weekStartsOn]);
 
   const isActive = (task: CareTask, date: Date): boolean => {
-    if (!task.isPaused) return true;
-    if (task.isPaused && task.resumeDate) {
-      try {
-        return date >= parseISO(task.resumeDate);
-      } catch { return false; }
-    }
-    return false;
+    return !task.isPaused;
   };
 
   useEffect(() => {
@@ -165,7 +159,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
 
     const allOccurrences: DisplayableTaskOccurrence[] = [];
     tasks.forEach(task => {
-      if (!task.isPaused || (task.isPaused && task.resumeDate && parseISO(task.resumeDate) <= currentWeekEnd)) {
+      if (!task.isPaused) {
          allOccurrences.push(...getTaskOccurrencesInRange(task, currentWeekStart, currentWeekEnd));
       }
     });

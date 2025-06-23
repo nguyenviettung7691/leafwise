@@ -6,15 +6,11 @@ export type BackendPlant = Schema['Plant']['type'];
 export type BackendPlantPhoto = Schema['PlantPhoto']['type'];
 export type BackendCareTask = Schema['CareTask']['type'];
 export type BackendUserPreferences = Schema['UserPreferences']['type'];
-export type BackendPushSubscription = Schema['PushSubscription']['type'];
 
-export type Plant = BackendPlant & {
-  lastCaredDate?: string | null;
-};
+export type Plant = BackendPlant;
 export type PlantPhoto = BackendPlantPhoto;
 export type CareTask = BackendCareTask;
 export type UserPreferences = BackendUserPreferences;
-export type PushSubscription = BackendPushSubscription;
 
 export type PlantHealthCondition = 'healthy' | 'needs_attention' | 'sick' | 'unknown';
 
@@ -66,8 +62,6 @@ export interface AIGeneratedTask {
 export interface GenerateDetailedCarePlanOutput {
   generatedTasks: AIGeneratedTask[];
   customizableSchedulesPlaceholder: string;
-  pushNotificationsPlaceholder: string;
-  activityTrackingPlaceholder: string;
 }
 
 export interface AITaskSuggestionDetails {

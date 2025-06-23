@@ -88,12 +88,13 @@ import type {
   PlantHealthCondition, 
   CareTask, 
   CarePlanTaskFormData, 
-  OnSaveTaskData, 
   ComparePlantHealthInput, 
   ReviewCarePlanOutput, 
   ReviewCarePlanInput,
   AIGeneratedTask
 } from '@/types';
+// Import OnSaveTaskData specifically from its definition file
+import type { OnSaveTaskData } from '@/components/plants/CarePlanTaskForm';
 
 const healthConditionStyles: Record<PlantHealthCondition, string> = {
   healthy: 'bg-green-100 text-green-800 border-green-300 dark:bg-green-700/30 dark:text-green-300 dark:border-green-500',
@@ -290,39 +291,14 @@ export default function PlantDetailPage() {
         startDate: taskData.nextDueDate || new Date().toISOString(),
     };
 
-    const freqLower = taskData.frequency.toLowerCase();
+    const freqKey = taskData.frequency; // This is now an English key e.g. "daily", "every_x_days"
+    const freqEvery = taskData.frequencyEvery;
 
-    if (freqLower === 'ad-hoc' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) {
-        formData.frequencyMode = 'adhoc';
-    } else if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) {
-        formData.frequencyMode = 'daily';
-    } else if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) {
-        formData.frequencyMode = 'weekly';
-    } else if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) {
-        formData.frequencyMode = 'monthly';
-    } else if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) {
-        formData.frequencyMode = 'yearly';
+    formData.frequencyMode = freqKey as CarePlanTaskFormData['frequencyMode'];
+    if (freqKey.startsWith('every_x_') && freqEvery !== undefined) {
+        formData.frequencyValue = freqEvery ?? undefined;
     } else {
-        const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
-        if (everyXDaysMatch) {
-            formData.frequencyValue = parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10);
-            formData.frequencyMode = 'every_x_days';
-        } else {
-            const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
-            if (everyXWeeksMatch) {
-                formData.frequencyValue = parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10);
-                formData.frequencyMode = 'every_x_weeks';
-            } else {
-                const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
-                if (everyXMonthsMatch) {
-                    formData.frequencyValue = parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10);
-                    formData.frequencyMode = 'every_x_months';
-                } else {
-                    formData.frequencyMode = 'adhoc';
-                    console.warn("Could not parse frequency for form:", taskData.frequency);
-                }
-            }
-        }
+        formData.frequencyValue = 1; // Default for non "every_x_" types or if undefined
     }
 
     const timeOfDay = taskData.timeOfDay;
@@ -362,8 +338,7 @@ useEffect(() => {
 
     try {
         await updateCareTask(taskId, {
-            isPaused: !taskBeingToggled.isPaused,
-            resumeDate: !taskBeingToggled.isPaused ? null : (taskBeingToggled.resumeDate || addWeeks(new Date(), 1).toISOString())
+            isPaused: !taskBeingToggled.isPaused
         });
 
         if (taskNameForToast && wasPausedBeforeUpdate !== undefined) {
@@ -565,30 +540,57 @@ useEffect(() => {
     }
   };
 
-  const calculateNextDueDateFromFrequency = (frequency: string, startDate?: string): string | undefined => {
+  // Helper to parse AI frequency string (assuming English for now)
+  interface ParsedFrequency {
+    frequencyKey: string; // e.g., "daily", "every_x_days"
+    frequencyEvery?: number;
+  }
+  
+  function parseAIFrequencyString(freqStr: string): ParsedFrequency {
+    const lowerFreqStr = freqStr.toLowerCase();
+  
+    if (lowerFreqStr === 'daily') return { frequencyKey: 'daily' };
+    if (lowerFreqStr === 'weekly') return { frequencyKey: 'weekly' };
+    if (lowerFreqStr === 'monthly') return { frequencyKey: 'monthly' };
+    if (lowerFreqStr === 'yearly') return { frequencyKey: 'yearly' };
+    if (lowerFreqStr === 'ad-hoc' || lowerFreqStr === 'as needed') return { frequencyKey: 'adhoc' };
+  
+    const everyXDaysMatch = lowerFreqStr.match(/^every (\d+) days?$/i);
+    if (everyXDaysMatch) return { frequencyKey: 'every_x_days', frequencyEvery: parseInt(everyXDaysMatch[1], 10) };
+  
+    const everyXWeeksMatch = lowerFreqStr.match(/^every (\d+) weeks?$/i);
+    if (everyXWeeksMatch) return { frequencyKey: 'every_x_weeks', frequencyEvery: parseInt(everyXWeeksMatch[1], 10) };
+  
+    const everyXMonthsMatch = lowerFreqStr.match(/^every (\d+) months?$/i);
+    if (everyXMonthsMatch) return { frequencyKey: 'every_x_months', frequencyEvery: parseInt(everyXMonthsMatch[1], 10) };
+    
+    console.warn(`Could not parse AI frequency string: "${freqStr}". Defaulting to adhoc.`);
+    return { frequencyKey: 'adhoc' }; // Fallback
+  }
+
+  const calculateNextDueDateFromFrequency = (
+    frequencyKey: string, 
+    frequencyEvery: number | undefined, 
+    startDate?: string
+  ): string | undefined => {
     const baseDate = startDate ? parseISO(startDate) : new Date();
     const now = new Date(baseDate);
 
-    if (!frequency) return undefined;
-    const freqLower = frequency.toLowerCase();
+    if (!frequencyKey) return undefined;
 
-    if (freqLower === 'ad-hoc' || freqLower === 'as needed' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) return undefined;
-    if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) return addDays(now, 1).toISOString();
-    if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) return addWeeks(now, 1).toISOString();
-    if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) return addMonths(now, 1).toISOString();
-    if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) return addYears(now, 1).toISOString();
-
-    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
-    if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10)).toISOString();
-
-    const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
-    if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10)).toISOString();
-
-    const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
-    if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10)).toISOString();
-
-    console.warn("Could not parse frequency for next due date:", frequency);
-    return undefined;
+    switch (frequencyKey) {
+      case 'adhoc': return undefined;
+      case 'daily': return addDays(now, 1).toISOString();
+      case 'weekly': return addWeeks(now, 1).toISOString();
+      case 'monthly': return addMonths(now, 1).toISOString();
+      case 'yearly': return addYears(now, 1).toISOString();
+      case 'every_x_days': return frequencyEvery ? addDays(now, frequencyEvery).toISOString() : undefined;
+      case 'every_x_weeks': return frequencyEvery ? addWeeks(now, frequencyEvery).toISOString() : undefined;
+      case 'every_x_months': return frequencyEvery ? addMonths(now, frequencyEvery).toISOString() : undefined;
+      default:
+        console.warn("Could not parse frequency key for next due date:", frequencyKey);
+        return undefined;
+    }
   };
 
   const handleApplyCarePlanChanges = async () => {
@@ -605,7 +607,7 @@ useEffect(() => {
 
             switch (mod.suggestedAction) {
                 case 'pause':
-                    await updateCareTask(mod.taskId, { isPaused: true, resumeDate: null });
+                    await updateCareTask(mod.taskId, { isPaused: true });
                     break;
                 case 'resume':
                     await updateCareTask(mod.taskId, { isPaused: false });
@@ -615,19 +617,21 @@ useEffect(() => {
                     break;
                 case 'update_details':
                     if (mod.updatedDetails) {
-                        const oldFrequency = taskToModify.frequency;
+                        const { frequencyKey: newFreqKey, frequencyEvery: newFreqEvery } = parseAIFrequencyString(mod.updatedDetails.frequency || taskToModify.frequency);
+                        const oldFrequencyKey = taskToModify.frequency;
                         const updatedDetails: Partial<CareTask> = {
                             name: mod.updatedDetails.name || taskToModify.name,
                             description: mod.updatedDetails.description || taskToModify.description,
-                            frequency: mod.updatedDetails.frequency || taskToModify.frequency,
+                            frequency: newFreqKey,
+                            frequencyEvery: newFreqEvery,
                             timeOfDay: mod.updatedDetails.timeOfDay || taskToModify.timeOfDay,
                             level: mod.updatedDetails.level || taskToModify.level,
                         };
-                        if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
+                        if (newFreqKey && newFreqKey !== oldFrequencyKey) {
                             const baseDateForFreqRecalc = taskToModify.nextDueDate && parseISO(taskToModify.nextDueDate) > new Date(0)
                                                             ? taskToModify.nextDueDate
                                                             : new Date().toISOString();
-                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(updatedDetails.frequency!, baseDateForFreqRecalc);
+                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(newFreqKey, newFreqEvery, baseDateForFreqRecalc);
                         }
                         await updateCareTask(mod.taskId, updatedDetails);
                     }
@@ -638,16 +642,16 @@ useEffect(() => {
         }));
 
         await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
+            const { frequencyKey, frequencyEvery } = parseAIFrequencyString(aiTask.suggestedFrequency);
             await addCareTaskToPlant(plant.id, {
                 name: aiTask.taskName,
                 description: aiTask.taskDescription,
-                frequency: aiTask.suggestedFrequency,
+                frequency: frequencyKey,
+                frequencyEvery: frequencyEvery,
                 timeOfDay: aiTask.suggestedTimeOfDay,
                 level: aiTask.taskLevel,
                 isPaused: false,
-                nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
-                lastCompleted: undefined,
-                resumeDate: null,
+                nextDueDate: calculateNextDueDateFromFrequency(frequencyKey, frequencyEvery, new Date().toISOString())
             });
         }));
 
@@ -708,10 +712,13 @@ useEffect(() => {
 
     try {
         if (taskToEdit) {
+            // taskData.frequency from form is actually frequencyMode (e.g. "daily", "every_x_days")
+            // taskData.frequencyValue is the X for "every_x_days"
             await updateCareTask(taskToEdit.id, {
                 name: taskData.name,
                 description: taskData.description,
-                frequency: taskData.frequency,
+                frequency: taskData.frequencyMode, // This is the English key
+                frequencyEvery: taskData.frequencyValue, // This is the number for "every x"
                 timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
                 nextDueDate: taskData.startDate,
@@ -722,13 +729,12 @@ useEffect(() => {
             await addCareTaskToPlant(plant.id, {
                 name: taskData.name,
                 description: taskData.description,
-                frequency: taskData.frequency,
+                frequency: taskData.frequencyMode, // English key
+                frequencyEvery: taskData.frequencyValue, // Number for "every x"
                 timeOfDay: taskData.timeOfDay,
                 level: taskData.level,
                 isPaused: false,
-                resumeDate: null,
-                nextDueDate: taskData.startDate,
-                lastCompleted: undefined,
+                nextDueDate: taskData.startDate
             });
             toast({ title: t('plantDetail.toasts.taskAdded'), description: t('plantDetail.toasts.taskAddedDesc', {taskName: taskData.name, plantName: plant.commonName}) });
         }
@@ -905,37 +911,30 @@ useEffect(() => {
     }
   };
 
-  const translateFrequencyDisplayLocal = useCallback((frequency: string): string => {
-    if (!frequency) return '';
-    const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
+  const translateFrequencyDisplayLocal = useCallback((frequencyKey: string, frequencyEvery: number | undefined): string => {
+    if (!frequencyKey) return '';
+    const directKey = `carePlanTaskForm.frequencyOptions.${frequencyKey.toLowerCase()}`;
     if (t(directKey) !== directKey) {
-        if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
-            const countMatch = frequency.match(/\d+/);
-            const count = countMatch ? parseInt(countMatch[0], 10) : 0;
-            const translatedKey = directKey + '_formatted';
-             if (t(translatedKey) !== translatedKey) {
-                return t(translatedKey, {count});
+        if (frequencyKey.startsWith('every_x_') && frequencyEvery !== undefined) {
+            const formattedKey = `${directKey}_formatted`;
+            if (t(formattedKey) !== formattedKey) {
+            return t(formattedKey, { count: frequencyEvery });
             }
         }
-        return t(directKey);
+      return t(directKey);
     }
-
-    const lowerFreq = frequency.toLowerCase();
-    if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
-    if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
-    if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
-    if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
-    if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
-
-    const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
-    if (everyXMatchResult) {
-        const count = parseInt(everyXMatchResult[1], 10);
-        const unit = everyXMatchResult[2].toLowerCase();
-        if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
-        if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
-        if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
-    }
-    return frequency;
+  
+    // Fallback for older data or if keys are missing
+    if (frequencyKey === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+    if (frequencyKey === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+    if (frequencyKey === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+    if (frequencyKey === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+    if (frequencyKey === 'adhoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+    if (frequencyKey === 'every_x_days' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: frequencyEvery });
+    if (frequencyKey === 'every_x_weeks' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: frequencyEvery });
+    if (frequencyKey === 'every_x_months' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: frequencyEvery });
+  
+    return frequencyKey;
   }, [t]);
 
   const translateTimeOfDayDisplayLocal = useCallback((timeOfDay: string | undefined): string => {
@@ -995,7 +994,7 @@ useEffect(() => {
 
             switch (mod.suggestedAction) {
                 case 'pause':
-                    await updateCareTask(mod.taskId, { isPaused: true, resumeDate: null });
+                    await updateCareTask(mod.taskId, { isPaused: true });
                     break;
                 case 'resume':
                     await updateCareTask(mod.taskId, { isPaused: false });
@@ -1005,19 +1004,21 @@ useEffect(() => {
                     break;
                 case 'update_details':
                     if (mod.updatedDetails) {
-                        const oldFrequency = taskToModify.frequency;
+                        const { frequencyKey: newFreqKey, frequencyEvery: newFreqEvery } = parseAIFrequencyString(mod.updatedDetails.frequency || taskToModify.frequency);
+                        const oldFrequencyKey = taskToModify.frequency;
                         const updatedDetails: Partial<CareTask> = {
                             name: mod.updatedDetails.name || taskToModify.name,
                             description: mod.updatedDetails.description || taskToModify.description,
-                            frequency: mod.updatedDetails.frequency || taskToModify.frequency,
+                            frequency: newFreqKey,
+                            frequencyEvery: newFreqEvery,
                             timeOfDay: mod.updatedDetails.timeOfDay || taskToModify.timeOfDay,
                             level: mod.updatedDetails.level || taskToModify.level,
                         };
-                        if (mod.updatedDetails.frequency && mod.updatedDetails.frequency !== oldFrequency) {
+                        if (newFreqKey && newFreqKey !== oldFrequencyKey) {
                             const baseDateForFreqRecalc = taskToModify.nextDueDate && parseISO(taskToModify.nextDueDate) > new Date(0)
                                                             ? taskToModify.nextDueDate
                                                             : new Date().toISOString();
-                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(updatedDetails.frequency!, baseDateForFreqRecalc);
+                            updatedDetails.nextDueDate = calculateNextDueDateFromFrequency(newFreqKey, newFreqEvery, baseDateForFreqRecalc);
                         }
                         await updateCareTask(mod.taskId, updatedDetails);
                     }
@@ -1028,16 +1029,16 @@ useEffect(() => {
         }));
 
         await Promise.all(newTasks.map(async (aiTask: AIGeneratedTask) => {
+            const { frequencyKey, frequencyEvery } = parseAIFrequencyString(aiTask.suggestedFrequency);
             await addCareTaskToPlant(plant.id, {
                 name: aiTask.taskName,
                 description: aiTask.taskDescription,
-                frequency: aiTask.suggestedFrequency,
+                frequency: frequencyKey,
+                frequencyEvery: frequencyEvery,
                 timeOfDay: aiTask.suggestedTimeOfDay,
                 level: aiTask.taskLevel,
                 isPaused: false,
-                nextDueDate: calculateNextDueDateFromFrequency(aiTask.suggestedFrequency, new Date().toISOString()),
-                lastCompleted: undefined,
-                resumeDate: null,
+                nextDueDate: calculateNextDueDateFromFrequency(frequencyKey, frequencyEvery, new Date().toISOString())
             });
         }));
 
@@ -1243,7 +1244,7 @@ useEffect(() => {
                                                         <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
                                                             {mod.updatedDetails.name && <p>{t('plantDetail.newPhotoDialog.taskModificationNewName', {name: mod.updatedDetails.name})}</p>}
                                                             {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
-                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency)})}</p>}
+                                                            {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(parseAIFrequencyString(mod.updatedDetails.frequency).frequencyKey, parseAIFrequencyString(mod.updatedDetails.frequency).frequencyEvery)})}</p>}
                                                             {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay)})}</p>}
                                                             {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)})}</p>}
                                                         </div>
@@ -1262,7 +1263,7 @@ useEffect(() => {
                                                 <li key={`new-${index}`}>
                                                     <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{t(`common.${task.taskLevel}`)}</Badge>)
                                                     <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
-                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(task.suggestedFrequency)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay)}</p>
+                                                    <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(parseAIFrequencyString(task.suggestedFrequency).frequencyKey, parseAIFrequencyString(task.suggestedFrequency).frequencyEvery)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay)}</p>
                                                 </li>
                                             ))}
                                         </ul>
@@ -1363,7 +1364,7 @@ useEffect(() => {
                                                             <div className="text-xs pl-6 mt-0.5 space-y-0.5 bg-muted/30 p-2 rounded-md">
                                                                 {mod.updatedDetails.name && <p>{t('plantDetail.newPhotoDialog.taskModificationNewName', {name: mod.updatedDetails.name})}</p>}
                                                                 {mod.updatedDetails.description && <p>{t('plantDetail.newPhotoDialog.taskModificationNewDesc', {description: mod.updatedDetails.description})}</p>}
-                                                                {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(mod.updatedDetails.frequency)})}</p>}
+                                                                {mod.updatedDetails.frequency && <p>{t('plantDetail.newPhotoDialog.taskModificationNewFreq', {frequency: translateFrequencyDisplayLocal(parseAIFrequencyString(mod.updatedDetails.frequency).frequencyKey, parseAIFrequencyString(mod.updatedDetails.frequency).frequencyEvery)})}</p>}
                                                                 {mod.updatedDetails.timeOfDay && <p>{t('plantDetail.newPhotoDialog.taskModificationNewTime', {time: translateTimeOfDayDisplayLocal(mod.updatedDetails.timeOfDay)})}</p>}
                                                                 {mod.updatedDetails.level && <p>{t('plantDetail.newPhotoDialog.taskModificationNewLevel', {level: t(`common.${mod.updatedDetails.level}`)})}</p>}
                                                             </div>
@@ -1384,7 +1385,7 @@ useEffect(() => {
                                                     <li key={`proactive-new-${index}`}>
                                                         <strong>{task.taskName}</strong> (<Badge variant="secondary" className="capitalize">{t(`common.${task.taskLevel}`)}</Badge>)
                                                         <p className="text-xs text-muted-foreground pl-4">{task.taskDescription}</p>
-                                                        <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(task.suggestedFrequency)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay)}</p>
+                                                        <p className="text-xs text-muted-foreground pl-4">{t('plantDetail.careManagement.taskFrequencyLabel')}: {translateFrequencyDisplayLocal(parseAIFrequencyString(task.suggestedFrequency).frequencyKey, parseAIFrequencyString(task.suggestedFrequency).frequencyEvery)}, {t('plantDetail.careManagement.taskTimeOfDayLabel')}: {translateTimeOfDayDisplayLocal(task.suggestedTimeOfDay)}</p>
                                                     </li>
                                                 ))}
                                             </ul>

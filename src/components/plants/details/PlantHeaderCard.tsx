@@ -161,12 +161,6 @@ export function PlantHeaderCard({
                     {t('plantDetail.headerCard.caredForDurationPrefix')}{caredForDuration}
                 </span>
                 )}
-                {plant.lastCaredDate && (
-                    <span className="flex items-center gap-1">
-                        <History className="h-4 w-4" />
-                        {t('plantDetail.headerCard.lastCaredDatePrefix')}: {formatDateSimple(plant.lastCaredDate, t)}
-                    </span>
-                )}
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={onEditPlant} aria-label={t('plantDetail.headerCard.editPlantAriaLabel')}>

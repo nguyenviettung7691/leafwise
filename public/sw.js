@@ -4,7 +4,7 @@ self.addEventListener('push', function (event) {
     const options = {
       body: data.body,
       icon: data.icon || '/icon_transparent.png',
-      badge: '/badge.png',
+      badge: data.badge || '/maskable-icon.png',
       vibrate: [100, 50, 100],
       data: {
         dateOfArrival: Date.now(),

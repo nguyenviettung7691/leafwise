@@ -62,11 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        try {
            const { data: preferences, errors } = await client.models.UserPreferences.create({
               id: userId,
-              pushNotifications: false,
               avatarS3Key: null,
-              notifyDaysBefore: 1,
-              notifyTimeUnit: 'days',
-              notifySpecificTime: '09:00',
            },{ authMode: 'userPool' });
            if (errors || !preferences) {
                console.error(`Failed to create default user preferences for ${userId}:`, errors);
@@ -355,12 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } as const; // Use const assertion to ensure type safety
 
             // Only update if there are actual changes to preference fields or avatarS3Key
-            const hasPreferenceChanges =
-                (updatedData.preferences?.pushNotifications !== undefined && updatedData.preferences.pushNotifications !== currentPreferences.pushNotifications) ||
-                (newAvatarS3Key !== user.avatarS3Key) ||
-                (updatedData.preferences?.notifyDaysBefore !== undefined && updatedData.preferences.notifyDaysBefore !== currentPreferences.notifyDaysBefore) ||
-                (updatedData.preferences?.notifyTimeUnit !== undefined && updatedData.preferences.notifyTimeUnit !== currentPreferences.notifyTimeUnit) ||
-                (updatedData.preferences?.notifySpecificTime !== undefined && updatedData.preferences.notifySpecificTime !== currentPreferences.notifySpecificTime);
+            const hasPreferenceChanges = (newAvatarS3Key !== user.avatarS3Key);
 
             if (hasPreferenceChanges) {
                  const { data: updatedPreferences, errors: preferenceErrors } = await client.models.UserPreferences.update(preferencesToUpdate, { authMode: 'userPool' });

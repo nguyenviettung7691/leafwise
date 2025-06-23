@@ -28,7 +28,7 @@ export default function NewPlantPage() {
     }
     setIsSaving(true);
 
-    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
@@ -41,7 +41,7 @@ export default function NewPlantPage() {
 
     try {
         const createdPlant = await addPlant(
-          newPlantData as Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'createdAt' | 'updatedAt'>,
+          newPlantData as Omit<Plant, 'id' | 'photos' | 'careTasks' | 'createdAt' | 'updatedAt'>,
           primaryPhotoFile,
           undefined,
           'manual'

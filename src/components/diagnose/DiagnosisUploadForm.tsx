@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Sparkles, Stethoscope, Camera, Image as ImageIcon, UploadCloud } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
@@ -52,7 +52,7 @@ export function DiagnosisUploadForm({
   };
 
   return (
-    <Card className="shadow-xl w-full sm:max-w-lg">
+    <Card className="shadow-xl w-full">
       <CardHeader>
         <CardTitle className="text-2xl flex items-center gap-2">
           <Stethoscope className="h-7 w-7 text-primary" />

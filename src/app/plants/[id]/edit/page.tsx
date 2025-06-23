@@ -5,7 +5,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter, notFound } from 'next/navigation';
-import type { Plant, PlantFormData, PlantPhoto } from '@/types';
+import type { Plant, PlantFormData, PlantPhoto, PlantHealthCondition } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,31 +28,47 @@ export default function EditPlantPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    const loadPlantData = async () => {
+      setIsLoadingPage(true);
       const foundPlant = getPlantById(id);
       if (foundPlant) {
         setPlant(foundPlant);
-        setGalleryPhotos(foundPlant.photos || []);
-        
+
+        if (typeof foundPlant.photos === 'function') {
+          // foundPlant.photos is a LazyLoader function from the base Amplify schema type
+          const photosResult = await foundPlant.photos(); // This resolves to an object like { data: PlantPhoto[], ... }
+          setGalleryPhotos(photosResult.data ? photosResult.data as PlantPhoto[] : []);
+        } else if (Array.isArray(foundPlant.photos)) {
+          // foundPlant.photos is already an array (e.g., if pre-resolved by getPlantById)
+          setGalleryPhotos(foundPlant.photos as PlantPhoto[]);
+        } else {
+          // Default to an empty array if photos is null/undefined and not a function
+          setGalleryPhotos([]);
+        }
+
         setInitialFormData({
           commonName: foundPlant.commonName,
           scientificName: foundPlant.scientificName || '',
           familyCategory: foundPlant.familyCategory || '',
           ageEstimateYears: foundPlant.ageEstimateYears,
-          healthCondition: foundPlant.healthCondition,
+          healthCondition: foundPlant.healthCondition as PlantHealthCondition,
           location: foundPlant.location || '',
           customNotes: foundPlant.customNotes || '',
-          diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null, 
+          diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
         });
       } else {
         notFound();
       }
+      setIsLoadingPage(false);
+    };
+
+    if (id) {
+      loadPlantData();
     }
-    setIsLoadingPage(false);
   }, [id, getPlantById]);
 
   // Updated handleUpdatePlant to accept plant data and the primary photo file
-  const handleUpdatePlant = async (data: Omit<PlantFormData, 'primaryPhoto' | 'diagnosedPhotoDataUrl'>, primaryPhotoFile?: File | null) => {
+  const handleUpdatePlant = async (data: Omit<PlantFormData, 'primaryPhoto'>, primaryPhotoFile?: File | null) => {
     if (!plant || !plant.id || !user?.id) {
         toast({ title: t('common.error'), description: t('editPlantPage.toastErrorFindingPlant'), variant: 'destructive'});
         return;
@@ -60,10 +76,7 @@ export default function EditPlantPage() {
     setIsSaving(true);
 
     // Prepare updated plant data (without image data/keys)
-    // The SavePlantForm passes the S3 key of a selected gallery photo in data.diagnosedPhotoDataUrl
-    // if no new file was uploaded. If a new file was uploaded, primaryPhotoFile is the File object.
-    // If the primary photo was removed, primaryPhotoFile is null and data.diagnosedPhotoDataUrl is null.
-    const updatedPlantData: Partial<Plant> = {
+    const updatedPlantData: Partial<Omit<Plant, 'primaryPhotoUrl' | 'photos' | 'careTasks' | 'owner'>> = { // Exclude primaryPhotoUrl here
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory || '',
@@ -71,8 +84,6 @@ export default function EditPlantPage() {
       healthCondition: data.healthCondition,
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
-      // primaryPhotoUrl will be handled by the context method based on the file or selected URL
-      // photos and careTasks are not updated via this form
     };
 
     try {
@@ -80,25 +91,13 @@ export default function EditPlantPage() {
         // The context method handles uploading the new file (if any), deleting the old one,
         // and updating the primaryPhotoUrl field on the Plant record.
         // It also handles the case where an existing gallery photo was selected as primary
-        // (by passing its S3 key in updatedPlantData.primaryPhotoUrl) or if the primary photo was removed.
-        // The SavePlantForm passes the S3 key in data.diagnosedPhotoDataUrl if no new file is uploaded.
-        // If a new file is uploaded, primaryPhotoFile is the File object.
-        // If the primary photo is removed, primaryPhotoFile is null and data.diagnosedPhotoDataUrl is null.
-        // The context method needs to know if a *new file* is being uploaded (primaryPhotoFile is File),
-        // if an *existing gallery photo* is being set as primary (primaryPhotoFile is null, updatedPlantData.primaryPhotoUrl is S3 key),
-        // or if the *primary photo is being removed* (primaryPhotoFile is null, updatedPlantData.primaryPhotoUrl is null).
-        // The SavePlantForm's onSave signature passes the file and the diagnosedPhotoDataUrl (which holds the S3 key or data URL).
-        // We need to pass the file and the potential new primaryPhotoUrl (S3 key or null) to the context.
-
-        // The SavePlantForm passes the S3 key of a selected gallery photo in `data.diagnosedPhotoDataUrl`
-        // when no new file is uploaded. If a new file is uploaded, `primaryPhotoFile` is the File object.
-        // If the primary photo is removed, `primaryPhotoFile` is null and `data.diagnosedPhotoDataUrl` is null.
-        // The `updatePlant` context method expects `primaryPhotoFile` for new uploads, and `updatedPlantData.primaryPhotoUrl`
-        // for setting an existing gallery photo as primary or removing the primary photo.
-
-        // So, we pass the file if it exists, and the potential new primaryPhotoUrl from the form data.
-        await updatePlant(plant.id, { ...updatedPlantData, primaryPhotoUrl: data.diagnosedPhotoDataUrl }, primaryPhotoFile);
-
+        // (by passing its S3 key as the 4th argument) or if the primary photo was removed (passing null as 4th arg).
+        await updatePlant(
+            plant.id,
+            updatedPlantData, // This no longer contains primaryPhotoUrl
+            primaryPhotoFile,
+            data.diagnosedPhotoDataUrl // Pass S3 key or null from form as the 4th argument
+        );
 
         toast({
           title: t('editPlantPage.toastPlantUpdatedTitle'),

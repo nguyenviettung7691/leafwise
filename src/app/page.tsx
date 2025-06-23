@@ -4,7 +4,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { PlantGrid } from '@/components/plants/PlantGrid';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2 } from 'lucide-react';
+import { PlusCircle, Loader2, Settings2 as ManageIcon, Check, Trash2, MoreVertical } from 'lucide-react';
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -27,6 +27,13 @@ import {
   DialogTitle as ShadDialogTitle, // Use a different alias
   DialogDescription as ShadDialogDescription, // Use a different alias
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
 import { useToast } from '@/hooks/use-toast';
 import { usePlantData } from '@/contexts/PlantDataContext';
@@ -242,7 +249,7 @@ export default function MyPlantsPage() {
       } else if (valA instanceof Date && valB instanceof Date) {
         comparison = compareAsc(valA, valB);
       } else if (typeof valA === 'string' && typeof valB === 'string') {
-        if (sortConfig.key === 'plantingDate' || sortConfig.key === 'lastCaredDate') {
+        if (sortConfig.key === 'plantingDate') {
            try {
             comparison = compareAsc(parseISO(valA), parseISO(valB));
            } catch (e) {
@@ -330,35 +337,66 @@ export default function MyPlantsPage() {
           ? "flex-col items-start gap-4"
           : "flex-row justify-between items-center"
       )}>
-        <h1 className="text-3xl font-bold tracking-tight">{t('nav.myPlants')}</h1>
-        <div className={cn(
-          "flex gap-2",
-          isStandalone
-            ? "flex-col items-end"
-            : "items-center"
-        )}>
-          {isManagingPlants && selectedPlantIds.size > 0 && (
-            <Button
-                variant="destructive"
-                onClick={() => setShowDeleteConfirmDialog(true)}
-                size="sm"
-            >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('myPlantsPage.deleteSelected', { count: selectedPlantIds.size })}
-            </Button>
+        <h1 className="text-3xl font-bold tracking-tight flex-grow">{t('nav.myPlants')}</h1>
+        <div className="flex-shrink-0">
+          {isStandalone ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isManagingPlants && selectedPlantIds.size > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteConfirmDialog(true)}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('myPlantsPage.deleteSelected', { count: selectedPlantIds.size })}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={toggleManagePlantsMode}>
+                  {isManagingPlants ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
+                  {isManagingPlants ? t('myPlantsPage.doneManaging') : t('myPlantsPage.managePlants')}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant || isManagingPlants}>
+                  {isNavigatingToNewPlant ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                  )}
+                  {isNavigatingToNewPlant ? t('myPlantsPage.navigating') : t('myPlantsPage.addNewPlant')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <div className="flex gap-2 items-center">
+              {isManagingPlants && selectedPlantIds.size > 0 && (
+                <Button
+                    variant="destructive"
+                    onClick={() => setShowDeleteConfirmDialog(true)}
+                    size="sm"
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('myPlantsPage.deleteSelected', { count: selectedPlantIds.size })}
+                </Button>
+              )}
+              <Button variant="outline" onClick={toggleManagePlantsMode} size="sm">
+                {isManagingPlants ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
+                {isManagingPlants ? t('myPlantsPage.doneManaging') : t('myPlantsPage.managePlants')}
+              </Button>
+              <Button onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant || isManagingPlants}>
+                {isNavigatingToNewPlant ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                )}
+                {isNavigatingToNewPlant ? t('myPlantsPage.navigating') : t('myPlantsPage.addNewPlant')}
+              </Button>
+            </div>
           )}
-          <Button variant="outline" onClick={toggleManagePlantsMode} size="sm">
-            {isManagingPlants ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
-            {isManagingPlants ? t('myPlantsPage.doneManaging') : t('myPlantsPage.managePlants')}
-          </Button>
-          <Button onClick={handleAddNewPlantClick} disabled={isNavigatingToNewPlant || isManagingPlants}>
-            {isNavigatingToNewPlant ? (
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            ) : (
-              <PlusCircle className="mr-2 h-5 w-5" />
-            )}
-            {isNavigatingToNewPlant ? t('myPlantsPage.navigating') : t('myPlantsPage.addNewPlant')}
-          </Button>
         </div>
       </div>
 
