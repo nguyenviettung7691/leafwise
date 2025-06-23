@@ -39,7 +39,10 @@ interface PlantDataContextType {
   deletePhoto: (photoId: string) => Promise<void>;
   addCareTaskToPlant: (
     plantId: string,
-    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>
+    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'> & { 
+      frequency: string; // English key e.g., "daily", "every_x_days"
+      frequencyEvery?: number; 
+    }
     ) => Promise<CareTask | undefined>;
   updateCareTask: (taskId: string, updatedDetails: Partial<Omit<CareTask, 'plant'>>) => Promise<CareTask | undefined>;
   deleteCareTask: (taskId: string) => Promise<void>;
@@ -610,10 +613,8 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
                                  description: taskData.description,
                                  frequency: taskData.frequency,
                                  timeOfDay: taskData.timeOfDay,
-                                 lastCompleted: taskData.lastCompleted,
                                  nextDueDate: taskData.nextDueDate,
                                  isPaused: taskData.isPaused ?? false,
-                                 resumeDate: taskData.resumeDate,
                                  level: taskData.level,
                              },{authMode: 'userPool'});
                              if (taskErrors || !createdTask) {
@@ -717,7 +718,10 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       }
   }, [user]);
 
-  const addCareTaskToPlant = useCallback(async (plantId: string, task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>): Promise<CareTask | undefined> => {
+  const addCareTaskToPlant = useCallback(async (
+    plantId: string, 
+    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'> & { frequency: string; frequencyEvery?: number }
+  ): Promise<CareTask | undefined> => {
       if (!user) throw new Error("User not authenticated.");
       setIsLoading(true);
       try {
@@ -727,11 +731,10 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
               name: task.name,
               description: task.description,
               frequency: task.frequency,
+              frequencyEvery: task.frequencyEvery,
               timeOfDay: task.timeOfDay,
-              lastCompleted: task.lastCompleted,
               nextDueDate: task.nextDueDate,
               isPaused: task.isPaused,
-              resumeDate: task.resumeDate,
               level: task.level,
           },{authMode: 'userPool'});
 
@@ -761,6 +764,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
           const { data: updatedTask, errors } = await client.models.CareTask.update({
               id: taskId,
               ...updatedDetails,
+              // frequency and frequencyEvery should be part of updatedDetails if they change
               // Ensure relationship fields are not updated directly here
           },{authMode: 'userPool'});
 

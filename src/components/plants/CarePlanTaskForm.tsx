@@ -57,10 +57,11 @@ const taskFormSchema = z.object({
 
 export type OnSaveTaskData = {
     name: string;
-    description?: string;
-    startDate: string; 
-    frequency: string;
-    timeOfDay: string;
+    description?: string; // Optional description
+    startDate: string; // ISO string format for the start date
+    frequencyMode: string; // English key like "daily", "every_x_days"
+    frequencyValue?: number; // The 'X' in "every X days/weeks/months"
+    timeOfDay: string; // Can be "All Day" or "HH:MM"
     level: 'basic' | 'advanced';
 };
 
@@ -137,25 +138,14 @@ export function CarePlanTaskForm({
 
 
   const onSubmit = (data: CarePlanTaskFormData) => {
-    let frequencyString = '';
-    switch (data.frequencyMode) {
-        case 'adhoc': frequencyString = t('carePlanTaskForm.frequencyOptions.adhoc'); break;
-        case 'daily': frequencyString = t('carePlanTaskForm.frequencyOptions.daily'); break;
-        case 'weekly': frequencyString = t('carePlanTaskForm.frequencyOptions.weekly'); break;
-        case 'monthly': frequencyString = t('carePlanTaskForm.frequencyOptions.monthly'); break;
-        case 'yearly': frequencyString = t('carePlanTaskForm.frequencyOptions.yearly'); break;
-        case 'every_x_days': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', {count: data.frequencyValue ?? 1}); break;
-        case 'every_x_weeks': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', {count: data.frequencyValue ?? 1}); break;
-        case 'every_x_months': frequencyString = t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', {count: data.frequencyValue ?? 1}); break;
-    }
-
     const timeOfDayString = data.timeOfDayOption === 'all_day' ? t('carePlanTaskForm.timeOfDayOptionAllDay') : data.specificTime!;
 
     onSave({
         name: data.name,
         description: data.description, 
         startDate: data.startDate, 
-        frequency: frequencyString,
+        frequencyMode: data.frequencyMode,
+        frequencyValue: data.frequencyValue,
         timeOfDay: timeOfDayString,
         level: data.level,
     });

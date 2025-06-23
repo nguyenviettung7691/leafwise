@@ -2,11 +2,11 @@
 'use client';
 
 import type { Plant, CareTask } from '@/types';
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, Sparkles } from 'lucide-react';
+import { Loader2, Play, Pause, PlusCircle, Settings2 as ManageIcon, Edit2 as EditTaskIcon, Check, Trash2, ListChecks, Sparkles, MoreVertical } from 'lucide-react';
 import { format, parseISO, isToday as fnsIsToday, compareAsc } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,6 +14,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import dynamic from 'next/dynamic';
 import type { Locale } from 'date-fns';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const DynamicWeeklyCareCalendarView = dynamic(
   () => import('@/components/plants/WeeklyCareCalendarView').then(mod => mod.WeeklyCareCalendarView),
@@ -38,37 +45,33 @@ const formatDate = (dateString?: string, t?: (key: string, replacements?: Record
   }
 };
 
-const translateFrequencyDisplayLocal = (frequency: string, t: Function): string => {
-  if (!frequency) return '';
-  const directKey = `carePlanTaskForm.frequencyOptions.${frequency.toLowerCase().replace(/ /g, '_').replace(/\d+/g, 'x')}`;
+const translateFrequencyDisplayLocal = (frequencyKey: string, frequencyEvery: number | undefined, t: Function): string => {
+  if (!frequencyKey) return '';
+  const directKey = `carePlanTaskForm.frequencyOptions.${frequencyKey.toLowerCase()}`;
   if (t(directKey) !== directKey) {
-    if (frequency.match(/^Every \d+ (Days|Weeks|Months)$/i)) {
-      const countMatch = frequency.match(/\d+/);
-      const count = countMatch ? parseInt(countMatch[0], 10) : 0;
-      const translatedKey = directKey + '_formatted';
-       if (t(translatedKey) !== translatedKey) {
-          return t(translatedKey, {count});
+    // For "every_x_..." types, we expect a formatted version
+    if (frequencyKey.startsWith('every_x_') && frequencyEvery !== undefined) {
+      const formattedKey = `${directKey}_formatted`;
+      if (t(formattedKey) !== formattedKey) {
+        return t(formattedKey, { count: frequencyEvery });
       }
     }
-    return t(directKey);
+    return t(directKey); // For simple keys like "daily", "weekly"
   }
 
-  const lowerFreq = frequency.toLowerCase();
-  if (lowerFreq === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
-  if (lowerFreq === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
-  if (lowerFreq === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
-  if (lowerFreq === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
-  if (lowerFreq === 'ad-hoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+  // Fallback for older data or if keys are missing (should ideally not happen with new data)
+  // This part might need adjustment based on how you want to handle potential old data.
+  // For now, it tries to match common English keys.
+  if (frequencyKey === 'daily') return t('carePlanTaskForm.frequencyOptions.daily');
+  if (frequencyKey === 'weekly') return t('carePlanTaskForm.frequencyOptions.weekly');
+  if (frequencyKey === 'monthly') return t('carePlanTaskForm.frequencyOptions.monthly');
+  if (frequencyKey === 'yearly') return t('carePlanTaskForm.frequencyOptions.yearly');
+  if (frequencyKey === 'adhoc') return t('carePlanTaskForm.frequencyOptions.adhoc');
+  if (frequencyKey === 'every_x_days' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count: frequencyEvery });
+  if (frequencyKey === 'every_x_weeks' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count: frequencyEvery });
+  if (frequencyKey === 'every_x_months' && frequencyEvery) return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count: frequencyEvery });
 
-  const everyXMatchResult = frequency.match(/^Every (\d+) (Days|Weeks|Months)$/i);
-  if (everyXMatchResult) {
-    const count = parseInt(everyXMatchResult[1], 10);
-    const unit = everyXMatchResult[2].toLowerCase();
-    if (unit === 'days') return t('carePlanTaskForm.frequencyOptions.every_x_days_formatted', { count });
-    if (unit === 'weeks') return t('carePlanTaskForm.frequencyOptions.every_x_weeks_formatted', { count });
-    if (unit === 'months') return t('carePlanTaskForm.frequencyOptions.every_x_months_formatted', { count });
-  }
-  return frequency;
+  return frequencyKey; // Return the key itself if no translation found
 };
 
 const translateTimeOfDayDisplayLocal = (timeOfDay: string | undefined, t: Function): string => {
@@ -106,7 +109,6 @@ interface PlantCareManagementProps {
 
 
 export function PlantCareManagement({
-  plant,
   careTasks,
   loadingTaskId,
   onToggleTaskPause,
@@ -153,45 +155,86 @@ export function PlantCareManagement({
             <ListChecks className="h-5 w-5 text-primary" />
             {t('plantDetail.careManagement.sectionTitle')}
           </CardTitle>
-          <div className={cn(
-            "flex items-center gap-2",
-            isStandalone ? "flex-col items-end" : ""
-          )}>
-            {isManagingCarePlan && selectedTaskIds.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onDeleteSelectedTasks}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('plantDetail.careManagement.deleteSelectedButton', {count: selectedTaskIds.size})}
-              </Button>
-            )}
-             {!isManagingCarePlan && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenProactiveReviewDialog}
-                disabled={isLoadingProactiveReview}
-              >
-                {isLoadingProactiveReview ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+          {isStandalone ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isManagingCarePlan && selectedTaskIds.size > 0 && (
+                  <DropdownMenuItem
+                    onClick={onDeleteSelectedTasks}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('plantDetail.careManagement.deleteSelectedButton', { count: selectedTaskIds.size })}
+                  </DropdownMenuItem>
                 )}
-                {t('plantDetail.careManagement.reviewCarePlanButton')}
+                {!isManagingCarePlan && (
+                  <DropdownMenuItem onClick={onOpenProactiveReviewDialog} disabled={isLoadingProactiveReview}>
+                    {isLoadingProactiveReview ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    {t('plantDetail.careManagement.reviewCarePlanButton')}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={onToggleManageCarePlan}>
+                  {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
+                  {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
+                </DropdownMenuItem>
+                {isManagingCarePlan && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={onOpenAddTaskDialog}>
+                      <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            // Desktop view: Original button layout
+            <div className="flex items-center gap-2">
+              {isManagingCarePlan && selectedTaskIds.size > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={onDeleteSelectedTasks}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('plantDetail.careManagement.deleteSelectedButton', { count: selectedTaskIds.size })}
+                </Button>
+              )}
+              {!isManagingCarePlan && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onOpenProactiveReviewDialog}
+                  disabled={isLoadingProactiveReview}
+                >
+                  {isLoadingProactiveReview ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  {t('plantDetail.careManagement.reviewCarePlanButton')}
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
+                {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
+                {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
               </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={onToggleManageCarePlan}>
-              {isManagingCarePlan ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-              {isManagingCarePlan ? t('plantDetail.careManagement.doneButton') : t('plantDetail.careManagement.manageButton')}
-            </Button>
-            {isManagingCarePlan && (
-              <Button variant="default" size="sm" onClick={onOpenAddTaskDialog}>
-                <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
-              </Button>
-            )}
-          </div>
+              {isManagingCarePlan && (
+                <Button variant="default" size="sm" onClick={onOpenAddTaskDialog}>
+                  <PlusCircle className="h-4 w-4 mr-2" /> {t('plantDetail.careManagement.addTaskButton')}
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
           <div className={cn("space-y-3")}>
@@ -199,7 +242,7 @@ export function PlantCareManagement({
               sortedTasks.map(task => {
                 const isTaskToday = task.nextDueDate && !task.isPaused && fnsIsToday(parseISO(task.nextDueDate!));
                 const isSelected = selectedTaskIds.has(task.id);
-                const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, t);
+                const displayableFrequency = translateFrequencyDisplayLocal(task.frequency, task.frequencyEvery ?? undefined, t);
                 const displayableTimeOfDay = translateTimeOfDayDisplayLocal(task.timeOfDay ?? undefined, t);
                 const isAdvanced = task.level === 'advanced';
 
@@ -255,11 +298,7 @@ export function PlantCareManagement({
                       <p className="text-xs text-muted-foreground mt-1">
                         {t('plantDetail.careManagement.taskFrequencyLabel')}: {displayableFrequency}
                         {task.timeOfDay && ` | ${t('plantDetail.careManagement.taskTimeOfDayLabel')}: ${displayableTimeOfDay}`}
-                        {task.isPaused ? (
-                          task.resumeDate ? ` | ${t('plantDetail.careManagement.taskResumesDate', {date: formatDate(task.resumeDate, t, dateFnsLocale)!})}` : ` | ${t('plantDetail.careManagement.taskPausedBadge')}`
-                        ) : (
-                          task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay ?? undefined, t, dateFnsLocale)}` : ''
-                        )}
+                        {task.nextDueDate ? ` | ${t('plantDetail.careManagement.nextDueDateLabel')}: ${formatDateTime(task.nextDueDate, task.timeOfDay ?? undefined, t, dateFnsLocale)}` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">

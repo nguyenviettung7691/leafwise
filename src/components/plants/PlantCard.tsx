@@ -198,12 +198,6 @@ export function PlantCard({ plant, plantCareTasks, isManaging, isSelected, onTog
                 <span>{t('plantCard.noUpcomingTasks')}</span>
               </div>
             )}
-            {plant.lastCaredDate && (
-              <div className="flex items-center gap-1">
-                <History className="h-3.5 w-3.5 flex-shrink-0" />
-                <span>{t('plantCard.lastCaredPrefix')} {formatDateSimple(plant.lastCaredDate, dateFnsLocale, t)}</span>
-              </div>
-            )}
           </CardFooter>
         </Card>
       </ProgressBarLink>

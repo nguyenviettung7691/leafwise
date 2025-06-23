@@ -61,7 +61,8 @@
     "notSupported": "Không được hỗ trợ",
     "info": "Thông tin",
     "days": "Ngày",
-    "weeks": "Tuần"
+    "weeks": "Tuần",
+    "hours": "Giờ"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -125,7 +126,6 @@
       "familyCategorySort": "Họ thực vật",
       "healthConditionSort": "Tình trạng sức khỏe",
       "createdDateSort": "Ngày tạo",
-      "lastCaredDateSort": "Ngày chăm sóc cuối",
       "nextCareTaskSort": "Việc chăm sóc kế tiếp",
       "directionLabel": "Thứ tự",
       "selectDirection": "Chọn thứ tự",
@@ -244,7 +244,6 @@
       "noTasksGenerated": "Không có công việc cụ thể nào được AI tạo cho kế hoạch này. Bạn vẫn có thể lưu đây là kế hoạch trống hoặc thử tạo lại với các tùy chọn khác.",
       "futureEnhancementsTitle": "Cải tiến trong tương lai",
       "notificationsPlaceholder": "Thông báo đẩy nhắc nhở công việc chăm sóc sắp ra mắt!",
-      "activityTrackingPlaceholder": "Theo dõi hoàn thành hoạt động cho các công việc chăm sóc của bạn sẽ được triển khai trong phiên bản tương lai.",
       "saveCarePlanButton": "Lưu kế hoạch chăm sóc cho {{plantName}}",
       "viewPlantDetailsLink": "Xem chi tiết {{plantName}}",
       "footerDisclaimer": "Kế hoạch chăm sóc này do AI tạo. Hãy điều chỉnh cho phù hợp với cây và môi trường cụ thể của bạn."
@@ -286,7 +285,6 @@
       "durationYears": "{{count}} năm",
       "durationMonths": "{{count}} tháng",
       "durationDays": "{{count}} ngày",
-      "lastCaredDatePrefix": "Chăm sóc cuối",
       "editPlantAriaLabel": "Chỉnh sửa cây",
       "deletePlantAriaLabel": "Xóa cây",
       "fullSizePhotoTitle": "{{plantName}} - Ảnh kích thước đầy đủ",
@@ -489,42 +487,41 @@
     "startDatePlaceholder": "Chọn ngày",
     "frequencyLabel": "Tần suất",
     "frequencyPlaceholder": "Chọn tần suất",
+    "frequencyOptions": {
+      "adhoc": "Linh hoạt (Khi cần)",
+      "daily": "Hằng ngày",
+      "every_x_days": "Mỗi X ngày",
+      "every_x_days_formatted": "Mỗi {{count}} ngày",
+      "weekly": "Hằng tuần",
+      "every_x_weeks": "Mỗi X tuần",
+      "every_x_weeks_formatted": "Mỗi {{count}} tuần",
+      "monthly": "Hằng tháng",
+      "every_x_months": "Mỗi X tháng",
+      "every_x_months_formatted": "Mỗi {{count}} tháng",
+      "yearly": "Hằng năm"
+    },
     "frequencyValueLabel": "Mỗi (Số)",
     "frequencyValuePlaceholder": "VD: 3",
     "timeOfDayLabel": "Thời gian trong ngày",
     "timeOfDayOptionAllDay": "Cả ngày",
     "timeOfDayOptionSpecificTime": "Thời gian cụ thể",
-    "specificTimeLabel": "Đặt thời gian (HH:MM)",
-    "specificTimePlaceholder": "HH:MM",
+    "specificTimeLabel": "Thời gian cụ thể (HH:MM)",
+    "specificTimePlaceholder": "VD: 09:00",
     "levelLabel": "Cấp độ công việc",
     "levelPlaceholder": "Chọn cấp độ công việc",
     "updateButton": "Cập nhật công việc",
     "addButton": "Thêm công việc",
     "savingButton": "Đang lưu...",
     "taskTypes": {
-      "watering": "Tưới nước",
-      "lighting_adjustment": "Điều chỉnh ánh sáng",
-      "fertilizing": "Bón phân",
-      "pruning": "Cắt tỉa",
-      "repotting": "Thay chậu",
-      "pest_check": "Kiểm tra sâu bệnh",
-      "soil_aeration": "Làm tơi đất",
-      "dusting_leaves": "Lau bụi lá",
-      "rotate_pot": "Xoay chậu"
-    },
-    "frequencyOptions": {
-      "ad-hoc": "Theo nhu cầu (Khi cần)",
-      "adhoc": "Theo nhu cầu (Khi cần)",
-      "daily": "Hàng ngày",
-      "every_x_days": "Mỗi X ngày",
-      "every_x_days_formatted": "Mỗi {{count}} ngày",
-      "weekly": "Hàng tuần",
-      "every_x_weeks": "Mỗi X tuần",
-      "every_x_weeks_formatted": "Mỗi {{count}} tuần",
-      "monthly": "Hàng tháng",
-      "every_x_months": "Mỗi X tháng",
-      "every_x_months_formatted": "Mỗi {{count}} tháng",
-      "yearly": "Hàng năm"
+        "watering": "Tưới nước",
+        "lighting_adjustment": "Điều chỉnh ánh sáng",
+        "fertilizing": "Bón phân",
+        "pruning": "Cắt tỉa",
+        "repotting": "Thay chậu",
+        "pest_check": "Kiểm tra sâu bệnh",
+        "soil_aeration": "Làm tơi đất",
+        "dusting_leaves": "Lau bụi lá",
+        "rotate_pot": "Xoay chậu"
     }
   },
   "weeklyCareCalendar": {
@@ -575,8 +572,7 @@
       },
       "taskTooltipTitle": "{{plantName}}: {{taskName}}",
       "taskTooltipTime": "Thời gian: {{time}}",
-      "taskTooltipDesc": "Mô tả: {{description}}",
-      "taskMarkCompleteAria": "Đánh dấu công việc đã hoàn thành"
+      "taskTooltipDesc": "Mô tả: {{description}}"
     }
   },
   "profilePage": {
@@ -593,7 +589,6 @@
     "saveChanges": "Lưu thay đổi",
     "preferencesCardTitle": "Tùy chọn",
     "preferencesCardDescription": "Quản lý cài đặt ứng dụng của bạn.",
-    "pushNotificationsLabel": "Thông báo đẩy",
     "preferencesDisclaimer": "Thay đổi hồ sơ và tùy chọn được lưu vào bộ nhớ cục bộ của trình duyệt và IndexedDB.",
     "dataManagementTitle": "Quản lý dữ liệu",
     "dataManagementDescription": "Xuất dữ liệu cây của bạn hoặc nhập dữ liệu từ tệp sao lưu.",
@@ -628,19 +623,6 @@
     "destroyConfirmButton": "HỦY",
     "pwaFeaturesCardTitle": "Tính năng PWA",
     "pwaFeaturesCardDescription": "Kiểm tra các chức năng của Progressive Web App như huy hiệu và thông báo.",
-    "badgeTestSectionTitle": "Kiểm tra API Huy hiệu Ứng dụng",
-    "badgeSupportStatus": "Trạng thái",
-    "badgeTestInfo": "Huy hiệu ứng dụng có thể chỉ hoạt động khi ứng dụng được cài đặt dưới dạng PWA và được trình duyệt/hệ điều hành của bạn hỗ trợ.",
-    "setAppBadgeButton": "Đặt Huy hiệu Thử nghiệm (3)",
-    "clearAppBadgeButton": "Xóa Huy hiệu Ứng dụng",
-    "badgeNotSupported": "API Huy hiệu Ứng dụng không được hỗ trợ trong trình duyệt này.",
-    "badgeSetSuccess": "Đã đặt huy hiệu thử nghiệm thành công!",
-    "badgeSetError": "Không thể đặt huy hiệu ứng dụng.",
-    "badgeClearedSuccess": "Đã xóa huy hiệu ứng dụng thành công!",
-    "badgeClearedError": "Không thể xóa huy hiệu ứng dụng.",
-    "preferences": {
-      "pushNotifications": "Thông báo đẩy"
-    },
     "notifications": {
       "browserNotSupportedTitle": "Trình duyệt không được hỗ trợ",
       "browserNotSupported": "Trình duyệt này không hỗ trợ thông báo trên máy tính.",

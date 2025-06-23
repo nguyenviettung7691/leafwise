@@ -71,8 +71,5 @@ export default function manifest(): MetadataRoute.Manifest {
           "label": "Plant Diagnose"
         }
     ],
-    // The following are not standard manifest fields, but you can add them as extensions if needed
-    // permissions: ['notifications', 'push'],
-    // gcm_sender_id: 'LeafWise',
   };
 }

@@ -12,19 +12,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import { Loader2, LogOut, UserCircle, Settings, Trash2, Download, SaveIcon, Edit3, Camera, Info, ImageUp } from 'lucide-react';
+import { Loader2, LogOut, UserCircle, Trash2, Download, SaveIcon, Edit3, Camera, ImageUp } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { generateClient } from 'aws-amplify/data';
 import { remove } from 'aws-amplify/storage';
 import type { Schema } from '../../../amplify/data/resource';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
-import { Badge } from '@/components/ui/badge';
-import { PushNotificationManager } from '@/components/profile/PushNotificationManager';
 
 const client = generateClient<Schema>();
 
@@ -46,7 +43,6 @@ export default function ProfilePage() {
   const [isDestroyingData, setIsDestroyingData] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [isBadgingAPISupported, setIsBadgingAPISupported] = useState(false);
 
   const avatarFileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
@@ -62,14 +58,6 @@ export default function ProfilePage() {
     authUser?.avatarS3Key || undefined,
     authUser?.id
   );
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if ('setAppBadge' in navigator && 'clearAppBadge' in navigator) {
-        setIsBadgingAPISupported(true);
-      }
-    }
-  }, []);
 
 
   useEffect(() => {
@@ -230,7 +218,6 @@ export default function ProfilePage() {
                     diagnosisNotes: photo.diagnosisNotes
                 })),
                 careTasks: clientModelPlant.careTasks,
-                lastCaredDate: clientModelPlant.lastCaredDate,
                 ageEstimate: undefined,
             };
         }),
@@ -303,7 +290,6 @@ export default function ProfilePage() {
             description?: string | null;
             frequency: string;
             timeOfDay?: string | null;
-            lastCompleted?: string | null;
             nextDueDate?: string | null;
             isPaused: boolean;
             resumeDate?: string | null;
@@ -323,7 +309,6 @@ export default function ProfilePage() {
             primaryPhotoUrl?: string | null;
             photos?: ImportedPhotoData[];
             careTasks?: ImportedCareTaskData[];
-            lastCaredDate?: string | null; // Add this field
             ageEstimate?: any; // Present in export but undefined
         }
 
@@ -359,10 +344,8 @@ export default function ProfilePage() {
                             description: taskData.description || null,
                             frequency: taskData.frequency,
                             timeOfDay: taskData.timeOfDay || null,
-                            lastCompleted: taskData.lastCompleted || null,
                             nextDueDate: taskData.nextDueDate || null,
                             isPaused: taskData.isPaused ?? false,
-                            resumeDate: taskData.resumeDate || null,
                             level: taskData.level,
                         };
                         return task;
@@ -393,7 +376,6 @@ export default function ProfilePage() {
         // Process user data from import
         const importedUserData = importData.user;
         const importedPreferences: Partial<UserPreferences> = {
-            pushNotifications: importedUserData.preferences?.pushNotifications,
             avatarS3Key: importedUserData.avatarS3Key, // Use the S3 key from import
         } as Partial<UserPreferences>; // Cast the object literal
 
@@ -478,34 +460,6 @@ export default function ProfilePage() {
         toast({ title: t('common.error'), description: t('profilePage.toasts.destroyError'), variant: "destructive" });
     } finally {
         setIsDestroyingData(false);
-    }
-  };
-
-  const handleSetTestBadge = async () => {
-    if (!isBadgingAPISupported || !('setAppBadge' in navigator)) {
-        toast({ title: t('common.error'), description: t('profilePage.badgeNotSupported'), variant: "destructive" });
-        return;
-    }
-    try {
-        await navigator.setAppBadge(3);
-        toast({ title: t('common.success'), description: t('profilePage.badgeSetSuccess') });
-    } catch (error) {
-        console.error("Error setting app badge:", error);
-        toast({ title: t('common.error'), description: t('profilePage.badgeSetError'), variant: "destructive" });
-    }
-  };
-
-  const handleClearTestBadge = async () => {
-    if (!isBadgingAPISupported || !('clearAppBadge' in navigator)) {
-        toast({ title: t('common.error'), description: t('profilePage.badgeNotSupported'), variant: "destructive" });
-        return;
-    }
-    try {
-        await navigator.clearAppBadge();
-        toast({ title: t('common.success'), description: t('profilePage.badgeClearedSuccess') });
-    } catch (error) {
-        console.error("Error clearing app badge:", error);
-        toast({ title: t('common.error'), description: t('profilePage.badgeClearedError'), variant: "destructive" });
     }
   };
 
@@ -667,8 +621,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <PushNotificationManager />
-
         <Card>
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2">
@@ -741,45 +693,6 @@ export default function ProfilePage() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Settings className="h-6 w-6 text-primary" /> {/* Re-using Settings icon */}
-              {t('profilePage.pwaFeaturesCardTitle')}
-            </CardTitle>
-            <CardDescription>{t('profilePage.pwaFeaturesCardDescription')}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Badge Testing */}
-            {isBadgingAPISupported && (
-                <div className="space-y-2 pt-3 border-t">
-                    <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
-                    <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.supported')}</Badge></p>
-                    <div className="flex gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" onClick={handleSetTestBadge}>{t('profilePage.setAppBadgeButton')}</Button>
-                        <Button variant="outline" size="sm" onClick={handleClearTestBadge}>{t('profilePage.clearAppBadgeButton')}</Button>
-                    </div>
-                      <Alert variant="default" className="bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300 text-xs">
-                        <Info className="h-3 w-3 text-blue-600 dark:text-blue-400" />
-                        <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
-                        <AlertDescription className="text-xs">{t('profilePage.badgeTestInfo')}</AlertDescription>
-                    </Alert>
-                </div>
-            )}
-            {!isBadgingAPISupported && (
-              <div className="space-y-2 pt-3 border-t">
-                  <p className="text-xs font-medium text-foreground/80">{t('profilePage.badgeTestSectionTitle')}</p>
-                  <p className="text-xs text-muted-foreground">{t('profilePage.badgeSupportStatus')}: <Badge variant="secondary">{t('common.notSupported')}</Badge></p>
-                    <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300 text-xs">
-                      <Info className="h-3 w-3 text-yellow-600 dark:text-yellow-400" />
-                      <AlertTitle className="text-xs font-semibold">{t('common.info')}</AlertTitle>
-                      <AlertDescription className="text-xs">{t('profilePage.badgeNotSupported')}</AlertDescription>
-                  </Alert>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>

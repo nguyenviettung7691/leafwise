@@ -35,8 +35,6 @@ export type AIGeneratedTask = z.infer<typeof AIGeneratedTaskSchema>;
 const GenerateDetailedCarePlanOutputSchema = z.object({
   generatedTasks: z.array(AIGeneratedTaskSchema).describe("A list of specific, actionable care tasks. Aim for 3-5 tasks for 'basic' mode, and 5-8 for 'advanced' mode, covering various aspects of care relevant to the plant and mode."),
   customizableSchedulesPlaceholder: z.string().describe('Placeholder text for customizable schedules feature. MUST be in the specified languageCode.'),
-  pushNotificationsPlaceholder: z.string().describe('Placeholder text for push notifications feature. MUST be in the specified languageCode.'),
-  activityTrackingPlaceholder: z.string().describe('Placeholder text for activity completion tracking feature. MUST be in the specified languageCode.'),
 });
 export type GenerateDetailedCarePlanOutput = z.infer<typeof GenerateDetailedCarePlanOutputSchema>;
 
@@ -50,7 +48,7 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateDetailedCarePlanOutputSchema},
   prompt: `
 Output Language Instructions:
-ALL textual output in your response, specifically 'taskName' and 'taskDescription' in the 'generatedTasks' array, and the placeholder texts ('customizableSchedulesPlaceholder', 'pushNotificationsPlaceholder', 'activityTrackingPlaceholder'), MUST be in the language specified by '{{languageCode}}'.
+ALL textual output in your response, specifically 'taskName' and 'taskDescription' in the 'generatedTasks' array, and the placeholder texts ('customizableSchedulesPlaceholder'), MUST be in the language specified by '{{languageCode}}'.
 - If '{{languageCode}}' is 'vi', respond entirely in Vietnamese.
 - If '{{languageCode}}' is 'en' or not provided, respond in English.
 
@@ -79,8 +77,6 @@ Task Generation Guidelines:
 
 Placeholders for Future Features (generate these in '{{languageCode}}'):
 -   customizableSchedulesPlaceholder: (Example if 'vi': "Lịch chăm sóc và danh sách công việc tùy chỉnh sẽ có trong bản cập nhật tới.")
--   pushNotificationsPlaceholder: (Example if 'vi': "Thông báo đẩy nhắc nhở công việc chăm sóc sắp ra mắt!")
--   activityTrackingPlaceholder: (Example if 'vi': "Theo dõi hoàn thành hoạt động cho công việc chăm sóc sẽ được triển khai trong phiên bản tới.")
 
 Return ONLY the JSON object adhering to the output schema. Do not add any introductory or concluding text outside the JSON structure.
 `,
@@ -97,25 +93,19 @@ const generateDetailedCarePlanFlow = ai.defineFlow(
     const lang = input.languageCode === 'vi' ? 'vi' : 'en';
 
     const defaultCustomizablePlaceholder = lang === 'vi' ? "Lịch chăm sóc và danh sách công việc tùy chỉnh sẽ có trong bản cập nhật tới." : "Customizable care schedules and task lists will be available in a future update.";
-    const defaultPushPlaceholder = lang === 'vi' ? "Thông báo đẩy nhắc nhở công việc chăm sóc sắp ra mắt!" : "Push notification reminders for care tasks are coming soon!";
-    const defaultActivityPlaceholder = lang === 'vi' ? "Theo dõi hoàn thành hoạt động cho công việc chăm sóc sẽ được triển khai trong phiên bản tới." : "Activity completion tracking for your care tasks will be implemented in a future version.";
 
     if (!output) {
         console.warn('Generate Detailed Care Plan prompt returned null output. Returning default structure.');
         return {
             generatedTasks: [],
             customizableSchedulesPlaceholder: defaultCustomizablePlaceholder,
-            pushNotificationsPlaceholder: defaultPushPlaceholder,
-            activityTrackingPlaceholder: defaultActivityPlaceholder,
         };
     }
     
     return {
         ...output,
         generatedTasks: Array.isArray(output.generatedTasks) ? output.generatedTasks : [],
-        customizableSchedulesPlaceholder: output.customizableSchedulesPlaceholder || defaultCustomizablePlaceholder,
-        pushNotificationsPlaceholder: output.pushNotificationsPlaceholder || defaultPushPlaceholder,
-        activityTrackingPlaceholder: output.activityTrackingPlaceholder || defaultActivityPlaceholder,
+        customizableSchedulesPlaceholder: output.customizableSchedulesPlaceholder || defaultCustomizablePlaceholder
     };
   }
 );

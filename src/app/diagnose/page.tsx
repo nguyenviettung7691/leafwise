@@ -48,30 +48,57 @@ export default function DiagnosePlantPage() {
   const { t, language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const calculateNextDueDate = (frequency: string, startDate?: string): string | undefined => {
+  // Helper to parse AI frequency string (consistent with plants/[id]/page.tsx)
+  interface ParsedFrequency {
+    frequencyKey: string; // e.g., "daily", "every_x_days"
+    frequencyEvery?: number;
+  }
+  
+  function parseAIFrequencyString(freqStr: string): ParsedFrequency {
+    const lowerFreqStr = freqStr.toLowerCase();
+  
+    if (lowerFreqStr === 'daily') return { frequencyKey: 'daily' };
+    if (lowerFreqStr === 'weekly') return { frequencyKey: 'weekly' };
+    if (lowerFreqStr === 'monthly') return { frequencyKey: 'monthly' };
+    if (lowerFreqStr === 'yearly') return { frequencyKey: 'yearly' };
+    if (lowerFreqStr === 'ad-hoc' || lowerFreqStr === 'as needed') return { frequencyKey: 'adhoc' };
+  
+    const everyXDaysMatch = lowerFreqStr.match(/^every (\d+) days?$/i);
+    if (everyXDaysMatch) return { frequencyKey: 'every_x_days', frequencyEvery: parseInt(everyXDaysMatch[1], 10) };
+  
+    const everyXWeeksMatch = lowerFreqStr.match(/^every (\d+) weeks?$/i);
+    if (everyXWeeksMatch) return { frequencyKey: 'every_x_weeks', frequencyEvery: parseInt(everyXWeeksMatch[1], 10) };
+  
+    const everyXMonthsMatch = lowerFreqStr.match(/^every (\d+) months?$/i);
+    if (everyXMonthsMatch) return { frequencyKey: 'every_x_months', frequencyEvery: parseInt(everyXMonthsMatch[1], 10) };
+    
+    console.warn(`Could not parse AI frequency string in DiagnosePage: "${freqStr}". Defaulting to adhoc.`);
+    return { frequencyKey: 'adhoc' }; // Fallback
+  }
+
+  const calculateNextDueDate = (
+    frequencyKey: string, 
+    frequencyEvery: number | undefined, 
+    startDate?: string
+  ): string | undefined => {
     const baseDate = startDate ? parseISO(startDate) : new Date();
     const now = new Date(baseDate);
 
-    if (!frequency) return undefined;
-    const freqLower = frequency.toLowerCase();
+    if (!frequencyKey) return undefined;
 
-    if (freqLower === 'ad-hoc' || freqLower === 'as needed' || freqLower === t('carePlanTaskForm.frequencyOptions.adhoc').toLowerCase()) return undefined;
-    if (freqLower === 'daily' || freqLower === t('carePlanTaskForm.frequencyOptions.daily').toLowerCase()) return addDays(now, 1).toISOString();
-    if (freqLower === 'weekly' || freqLower === t('carePlanTaskForm.frequencyOptions.weekly').toLowerCase()) return addWeeks(now, 1).toISOString();
-    if (freqLower === 'monthly' || freqLower === t('carePlanTaskForm.frequencyOptions.monthly').toLowerCase()) return addMonths(now, 1).toISOString();
-    if (freqLower === 'yearly' || freqLower === t('carePlanTaskForm.frequencyOptions.yearly').toLowerCase()) return addYears(now, 1).toISOString();
-
-    const everyXDaysMatch = freqLower.match(/^every (\d+) days?$/i) || freqLower.match(/^mỗi (\d+) ngày$/i);
-    if (everyXDaysMatch) return addDays(now, parseInt(everyXDaysMatch[1] || everyXDaysMatch[2], 10)).toISOString();
-
-    const everyXWeeksMatch = freqLower.match(/^every (\d+) weeks?$/i) || freqLower.match(/^mỗi (\d+) tuần$/i);
-    if (everyXWeeksMatch) return addWeeks(now, parseInt(everyXWeeksMatch[1] || everyXWeeksMatch[2], 10)).toISOString();
-
-    const everyXMonthsMatch = freqLower.match(/^every (\d+) months?$/i) || freqLower.match(/^mỗi (\d+) tháng$/i);
-    if (everyXMonthsMatch) return addMonths(now, parseInt(everyXMonthsMatch[1] || everyXMonthsMatch[2], 10)).toISOString();
-
-    console.warn(`Next due date calculation not fully implemented for frequency: "${frequency}" in DiagnosePage. Returning undefined.`);
-    return undefined;
+    switch (frequencyKey) {
+      case 'adhoc': return undefined;
+      case 'daily': return addDays(now, 1).toISOString();
+      case 'weekly': return addWeeks(now, 1).toISOString();
+      case 'monthly': return addMonths(now, 1).toISOString();
+      case 'yearly': return addYears(now, 1).toISOString();
+      case 'every_x_days': return frequencyEvery ? addDays(now, frequencyEvery).toISOString() : undefined;
+      case 'every_x_weeks': return frequencyEvery ? addWeeks(now, frequencyEvery).toISOString() : undefined;
+      case 'every_x_months': return frequencyEvery ? addMonths(now, frequencyEvery).toISOString() : undefined;
+      default:
+        console.warn("Could not parse frequency key for next due date in DiagnosePage:", frequencyKey);
+        return undefined;
+    }
   };
 
   const fullResetDiagnosisForm = () => {
@@ -196,7 +223,7 @@ export default function DiagnosePlantPage() {
 
     const primaryPhotoFile = file; // Use the file state directly
 
-    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'lastCaredDate' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
+    const newPlantData: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'primaryPhotoUrl' | 'createdAt' | 'updatedAt'> = {
       commonName: data.commonName,
       scientificName: data.scientificName || undefined,
       familyCategory: data.familyCategory,
@@ -205,7 +232,6 @@ export default function DiagnosePlantPage() {
       location: data.location || undefined,
       customNotes: data.customNotes || undefined,
       plantingDate: new Date().toISOString(),
-      // primaryPhotoUrl, photos, careTasks, lastCaredDate will be handled by the context method
     };
 
     try {
@@ -278,15 +304,19 @@ export default function DiagnosePlantPage() {
 
     const tasksToMap = Array.isArray(plan.generatedTasks) ? plan.generatedTasks : [];
 
-    const newCareTasksData: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>[] = tasksToMap.map((aiTask: AIGeneratedTask) => ({
-      name: aiTask.taskName,
-      description: aiTask.taskDescription,
-      frequency: aiTask.suggestedFrequency,
-      timeOfDay: aiTask.suggestedTimeOfDay,
-      isPaused: false,
-      nextDueDate: calculateNextDueDate(aiTask.suggestedFrequency, new Date().toISOString()),
-      level: aiTask.taskLevel,
-    }));
+    const newCareTasksData = tasksToMap.map((aiTask: AIGeneratedTask) => {
+      const { frequencyKey, frequencyEvery } = parseAIFrequencyString(aiTask.suggestedFrequency);
+      return {
+        name: aiTask.taskName,
+        description: aiTask.taskDescription,
+        frequency: frequencyKey, // This is now the English key
+        frequencyEvery: frequencyEvery, // This is number | undefined
+        timeOfDay: aiTask.suggestedTimeOfDay,
+        isPaused: false,
+        nextDueDate: calculateNextDueDate(frequencyKey, frequencyEvery, new Date().toISOString()),
+        level: aiTask.taskLevel,
+      };
+    });
 
     try {
         // Use the addCareTaskToPlant context method for each new task

@@ -87,7 +87,6 @@ interface CareCalendarViewProps {
   tasks: CareTask[];
   currentDate: Date;
   onNavigatePeriod: (newDate: Date) => void;
-  onTaskAction: (task: CareTask, plantId: string) => void;
 }
 
 interface TaskPlantAvatarDisplayProps {
@@ -122,7 +121,6 @@ export function CareCalendarView({
   tasks,
   currentDate,
   onNavigatePeriod,
-  onTaskAction,
 }: CareCalendarViewProps) {
   const { user } = useAuth(); 
   const { plants } = usePlantData();
@@ -175,13 +173,7 @@ export function CareCalendarView({
   }, [currentDate, viewMode, weekStartsOn]);
 
   const isActive = (task: CareTask, date: Date): boolean => {
-    if (!task.isPaused) return true;
-    if (task.isPaused && task.resumeDate) {
-      try {
-        return date >= parseISO(task.resumeDate);
-      } catch { return false; }
-    }
-    return false;
+    return !task.isPaused;
   };
 
   useEffect(() => {
@@ -263,7 +255,7 @@ export function CareCalendarView({
       // Find the corresponding plant for this task
       const plant = plants.find(p => p.id === task.plantId);
       if (plant) { // Only process if the plant is found
-        if (!task.isPaused || (task.isPaused && task.resumeDate && parseISO(task.resumeDate) <= rangeEnd)) {
+        if (!task.isPaused) {
            allOccurrences.push(...getTaskOccurrencesInRange(task, plant, rangeStart, rangeEnd));
         }
       } else {
@@ -372,15 +364,6 @@ export function CareCalendarView({
                 />
               </Avatar>
               <span className={cn("font-semibold truncate flex-grow", nameColor)}>{occurrence.originalTask.name}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("p-0 opacity-70 hover:opacity-100 focus-visible:ring-0 focus-visible:ring-offset-0 shrink-0", compact ? "h-3 w-3" : "h-4 w-4")}
-                onClick={(e) => { e.stopPropagation(); onTaskAction(occurrence.originalTask, occurrence.plantId);}}
-                aria-label={t('calendarPage.calendarView.taskMarkCompleteAria')}
-              >
-                <Check className={cn(iconColorClass, compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
-              </Button>
             </div>
           </TooltipTrigger>
           <TooltipContent className="text-xs">

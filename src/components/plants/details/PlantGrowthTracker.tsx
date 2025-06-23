@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon, Camera } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Sparkles, Loader2, TrendingUp, Edit3, Settings2 as ManageIcon, Check, Trash2, BookmarkCheck, ImageOff, Image as ImageIcon, Camera, MoreVertical } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,16 @@ import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useS3Image } from '@/hooks/useS3Image';
 import dynamic from 'next/dynamic';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent, DropdownMenuPortal
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/AuthContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 
@@ -67,7 +76,10 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
   const formatDateForGallery = (dateString?: string) => {
     if (!dateString) return t('common.notApplicable');
     try {
-      return format(parseISO(dateString), 'MMM d, yyyy', { locale: dateFnsLocale });
+      const date = parseISO(dateString);
+      // Check if the date is valid before formatting
+      if (!isValid(date)) throw new Error("Invalid date parsed");
+      return format(date, 'MMM d, yyyy', { locale: dateFnsLocale });
     } catch (error) {
       return t('common.error');
     }
@@ -256,61 +268,85 @@ export function PlantGrowthTracker({
     <div className="space-y-6">
       <Card>
         <CardHeader className={cn(
-          "flex items-center justify-between",
-          isStandalone ? "flex-col items-start gap-y-3 sm:flex-row sm:items-center" : "flex-row"
+          "flex flex-row items-center justify-between" // Always flex-row for header
         )}>
-          <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="text-lg flex items-center gap-2 flex-grow">
             <ImageIcon className="h-5 w-5 text-primary" />
             {t('plantDetail.growthTracker.photoGalleryTitle')}
           </CardTitle>
-          <div className={cn(
-            "flex items-center gap-2",
-            isStandalone ? "flex-col items-end" : ""
-          )}>
-            {isManagingPhotos && selectedPhotoIds.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={onDeleteSelectedPhotos}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('plantDetail.growthTracker.deleteSelectedButton', { count: selectedPhotoIds.size })}
-              </Button>
-            )}
-            <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
-              {isManagingPhotos ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
-              {isManagingPhotos ? t('common.done') : t('common.manage')}
-            </Button>
-            {!isManagingPhotos && (
-              isStandalone ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" disabled={isDiagnosingNewPhoto}>
-                      {isDiagnosingNewPhoto ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-4 w-4 mr-2" />
-                      )}
-                      {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={onTriggerUploadFromGallery} disabled={isDiagnosingNewPhoto}>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      {t('plantDetail.growthTracker.uploadFromGalleryPWA')}
+          <div className="flex-shrink-0">
+            {isStandalone ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isManagingPhotos && selectedPhotoIds.size > 0 && (
+                    <DropdownMenuItem
+                      onClick={onDeleteSelectedPhotos}
+                      className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t('plantDetail.growthTracker.deleteSelectedButton', { count: selectedPhotoIds.size })}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onTriggerTakePhoto} disabled={isDiagnosingNewPhoto}>
-                      <Camera className="mr-2 h-4 w-4" />
-                      {t('plantDetail.growthTracker.takePhotoPWA')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                // Desktop: Original button behavior
+                  )}
+                  <DropdownMenuItem onClick={onToggleManagePhotos}>
+                    {isManagingPhotos ? <Check className="mr-2 h-4 w-4" /> : <ManageIcon className="mr-2 h-4 w-4" />}
+                    {isManagingPhotos ? t('common.done') : t('common.manage')}
+                  </DropdownMenuItem>
+                  {!isManagingPhotos && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger disabled={isDiagnosingNewPhoto}>
+                          {isDiagnosingNewPhoto ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4 mr-2" />
+                          )}
+                          {t('plantDetail.growthTracker.addPhotoDiagnoseButton')}
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={onTriggerUploadFromGallery} disabled={isDiagnosingNewPhoto}>
+                              <ImageIcon className="mr-2 h-4 w-4" />
+                              {t('plantDetail.growthTracker.uploadFromGalleryPWA')}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={onTriggerTakePhoto} disabled={isDiagnosingNewPhoto}>
+                              <Camera className="mr-2 h-4 w-4" />
+                              {t('plantDetail.growthTracker.takePhotoPWA')}
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              // Desktop view: Original button layout
+              <div className="flex items-center gap-2">
+                {isManagingPhotos && selectedPhotoIds.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={onDeleteSelectedPhotos}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t('plantDetail.growthTracker.deleteSelectedButton', { count: selectedPhotoIds.size })}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={onToggleManagePhotos}>
+                  {isManagingPhotos ? <Check className="h-4 w-4 mr-2" /> : <ManageIcon className="h-4 w-4 mr-2" />}
+                  {isManagingPhotos ? t('common.done') : t('common.manage')}
+                </Button>
+                {!isManagingPhotos && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={onTriggerNewPhotoUpload} // This will be the gallery upload for desktop
+                  onClick={onTriggerNewPhotoUpload}
                   disabled={isDiagnosingNewPhoto}
                 >
                   {isDiagnosingNewPhoto ? (
@@ -324,7 +360,8 @@ export function PlantGrowthTracker({
                     </>
                   )}
                 </Button>
-              )
+              )}
+              </div>
             )}
           </div>
         </CardHeader>
