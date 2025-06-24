@@ -9,4 +9,4 @@
 
 ## Reporting a Vulnerability
 
-Email: nvtung.harry@gmail.com
+Email: matsu-guen@proton.me

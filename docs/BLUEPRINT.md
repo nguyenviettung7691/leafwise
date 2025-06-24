@@ -29,7 +29,7 @@ The application will include the following core features:
         *   Location (optional, text)
         *   Custom Notes (optional, textarea)
         *   Primary Photo (optional, image upload)
-    *   This data is stored locally in the user's browser (IndexedDB for images, `localStorage` for metadata, scoped per user).
+    *   Data is persisted using **AWS Amplify**. Plant records and care tasks are stored in Amplify Data and photos are uploaded to S3. Records reference the S3 key for each image.
 
 *   **AI-Powered Plant Diagnosis**:
     *   Integrated with the "Add Photo & Diagnose" feature for existing plants and the main "Diagnose Plant" page.
@@ -90,7 +90,7 @@ The application will include the following core features:
     *   Clear feedback for user actions (e.g., loading states, toast notifications).
     *   Accessibility considerations (ARIA attributes, keyboard navigation, sufficient color contrast).
 
-## 4. Technical Stack (Frontend UI Prototype)
+## 4. Technical Stack
 
 *   **Framework**: Next.js (App Router)
 *   **Language**: TypeScript
@@ -101,17 +101,38 @@ The application will include the following core features:
 *   **Forms**: React Hook Form with Zod for validation
 *   **Date Management**: `date-fns`
 *   **Client-Side Storage**:
-    *   `localStorage`: User session indicator (`currentLeafwiseUserId`), user-specific plant metadata (`leafwisePlants_{userId}`).
-    *   IndexedDB: User profiles (`userProfileStore` in `LeafWiseDB_{userId}`), plant images (`plantImages` object store in `LeafWiseDB_{userId}`).
+*   **Backend & Data Persistence**:
+    *   **Backend as a Service (BaaS)**: AWS Amplify Gen 2.
+    *   **Authentication**: AWS Amplify Auth (Amazon Cognito) for user management.
+    *   **Data Storage**: AWS Amplify Data (AWS AppSync & Amazon DynamoDB) for storing structured data like user profiles, plant details, and care tasks.
+    *   **File Storage**: AWS Amplify Storage (Amazon S3) for storing user-uploaded images (avatars, plant photos).
 *   **PWA**: `@ducanh2912/next-pwa`
 *   **Internationalization (i18n)**: Support for English and Vietnamese using React Context and JSON files.
 
-## 5. Data Model (Simplified for Prototype)
+## 5. Data Model (AWS Amplify)
 
-*   **User (from AuthContext, stored in IndexedDB)**: `id` (email), `name`, `email`, `avatarUrl` (IDB key for an image in `plantImages` store), `preferences` (object: `emailNotifications`, `pushNotifications`).
-*   **Plant (from PlantDataContext, stored in `localStorage`)**: `id`, `commonName`, `scientificName?`, `familyCategory?`, `ageEstimateYears?`, `healthCondition`, `location?`, `plantingDate?`, `customNotes?`, `primaryPhotoUrl?` (IDB key), `photos` (array of `PlantPhoto`), `careTasks` (array of `CareTask`), `lastCaredDate?`.
-*   **PlantPhoto**: `id` (IDB key), `url` (IDB key), `dateTaken`, `healthCondition`, `diagnosisNotes?`, `notes?`. Image Blob stored in user-specific IndexedDB (`plantImages` store).
-*   **CareTask**: `id`, `plantId`, `name`, `description?`, `frequency`, `timeOfDay?`, `lastCompleted?`, `nextDueDate?`, `isPaused`, `resumeDate?`, `level`.
+The data model is defined in the Amplify GraphQL schema (`amplify/data/resource.ts`) and managed by AWS Amplify Data. All models include `owner` fields for authorization.
 
-This blueprint outlines the core vision and current state of the LeafWise frontend UI prototype.
+*   **UserPreferences**: Stores user-specific settings.
+    *   `id` (primary key, typically user's sub/ID)
+    *   `owner` (string, for auth rules)
+    *   `avatarS3Key?` (string)
+
+*   **Plant**: Represents a single plant belonging to a user.
+    *   `id` (primary key), `owner` (string)
+    *   `commonName`, `scientificName?`, `familyCategory?`, `ageEstimateYears?`, `healthCondition`, `location?`, `plantingDate?`, `customNotes?`, `primaryPhotoUrl?` (S3 key)
+    *   `photos`: Relationship to `PlantPhoto` (has many)
+    *   `careTasks`: Relationship to `CareTask` (has many)
+
+*   **PlantPhoto**: Represents a single photo of a plant.
+    *   `id` (primary key), `owner` (string)
+    *   `plant`: Relationship to `Plant` (belongs to)
+    *   `url` (string, S3 key), `dateTaken?`, `healthCondition`, `diagnosisNotes?`, `notes?`
+
+*   **CareTask**: Represents a single care task for a plant.
+    *   `id` (primary key), `owner` (string)
+    *   `plant`: Relationship to `Plant` (belongs to)
+    *   `name`, `description?`, `frequency`, `frequencyEvery?`, `timeOfDay?`, `nextDueDate?`, `isPaused`, `level`
+
+This blueprint outlines the core vision of the LeafWise application, now powered by AWS Amplify.
     

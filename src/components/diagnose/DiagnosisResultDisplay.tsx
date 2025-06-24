@@ -4,10 +4,10 @@
 import type { DiagnosePlantHealthFlowOutput, PlantHealthCondition } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Info, SaveIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { CheckCircle, Info, Save, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
@@ -159,7 +159,7 @@ export function DiagnosisResultDisplay({
                   className="w-full"
                   variant="outline"
                 >
-                  <SaveIcon className="mr-2 h-5 w-5" /> {t('diagnosePage.resultDisplay.saveToMyPlantsButton')}
+                  <Save className="mr-2 h-5 w-5" /> {t('diagnosePage.resultDisplay.saveToMyPlantsButton')}
                 </Button>
               </div>
             )}

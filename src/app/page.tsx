@@ -331,12 +331,7 @@ export default function MyPlantsPage() {
 
   return (
     <AppLayout>
-      <div className={cn(
-        "mb-6 flex",
-        isStandalone
-          ? "flex-col items-start gap-4"
-          : "flex-row justify-between items-center"
-      )}>
+      <div className={"mb-6 flex flex-row justify-between items-center"}>
         <h1 className="text-3xl font-bold tracking-tight flex-grow">{t('nav.myPlants')}</h1>
         <div className="flex-shrink-0">
           {isStandalone ? (

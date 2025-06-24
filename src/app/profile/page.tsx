@@ -12,14 +12,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
-import { Loader2, LogOut, UserCircle, Trash2, Download, SaveIcon, Edit3, Camera, ImageUp } from 'lucide-react';
+import { Loader2, LogOut, UserCircle, Trash2, Download, Save, Edit3, Camera, ImageUp, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
 import { generateClient } from 'aws-amplify/data';
-import { remove } from 'aws-amplify/storage';
+import { getUrl, remove } from 'aws-amplify/storage';
 import type { Schema } from '../../../amplify/data/resource';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
 
@@ -31,7 +31,13 @@ const AuthLoader = ({ className }: { className?: string }) => (
 
 export default function ProfilePage() {
   const { user: authUser, updateUser: updateAuthUser, isLoading: authLoading, logout } = useAuth();
-  const { plants: contextPlants, setAllPlants: setContextPlants, clearAllPlantData } = usePlantData();
+  const {
+    plants: contextPlants,
+    plantPhotos: contextPlantPhotos,
+    careTasks: contextCareTasks,
+    setAllPlants: setContextPlants,
+    clearAllPlantData,
+  } = usePlantData();
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -178,6 +184,30 @@ export default function ProfilePage() {
     setIsExporting(true);
     toast({ title: t('profilePage.toasts.exportStartingTitle'), description: t('profilePage.toasts.exportStartingDesc')});
 
+    const fetchImageAsDataUrl = async (s3Key: string): Promise<string | null> => {
+      try {
+        const getUrlResult = await getUrl({
+          path: s3Key,
+          options: {
+            validateObjectExistence: true,
+            expiresIn: 60, // URL is valid for 60 seconds
+          },
+        });
+        const response = await fetch(getUrlResult.url);
+        if (!response.ok) throw new Error(`Failed to fetch image from S3: ${response.statusText}`);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error(`Could not fetch or convert image from S3 key ${s3Key}:`, error);
+        return null;
+      }
+    };
+
     try {
       // Fetch all plants for the user from Amplify Data
       // The PlantDataContext already fetches plants with photos and tasks
@@ -185,42 +215,69 @@ export default function ProfilePage() {
       const plantsToExport = contextPlants;
 
       // Construct the export data structure
+      const exportedPlants = await Promise.all(
+        plantsToExport.map(async (clientModelPlant: any) => {
+          const relatedPhotos = contextPlantPhotos.filter(p => p.plantId === clientModelPlant.id);
+          const relatedTasks = contextCareTasks.filter(t => t.plantId === clientModelPlant.id);
+
+          const primaryPhotoDataUrl = clientModelPlant.primaryPhotoUrl
+            ? await fetchImageAsDataUrl(clientModelPlant.primaryPhotoUrl)
+            : null;
+
+          const exportedPhotos = await Promise.all(
+            relatedPhotos.map(async (photo: any) => {
+              const imageDataUrl = await fetchImageAsDataUrl(photo.url);
+              return {
+                id: photo.id,
+                url: photo.url,
+                imageDataUrl: imageDataUrl,
+                notes: photo.notes,
+                dateTaken: photo.dateTaken,
+                healthCondition: photo.healthCondition,
+                diagnosisNotes: photo.diagnosisNotes,
+              };
+            })
+          );
+
+          return {
+            id: clientModelPlant.id,
+            commonName: clientModelPlant.commonName,
+            scientificName: clientModelPlant.scientificName,
+            familyCategory: clientModelPlant.familyCategory,
+            ageEstimateYears: clientModelPlant.ageEstimateYears,
+            healthCondition: clientModelPlant.healthCondition,
+            location: clientModelPlant.location,
+            plantingDate: clientModelPlant.plantingDate,
+            customNotes: clientModelPlant.customNotes,
+            primaryPhotoUrl: clientModelPlant.primaryPhotoUrl,
+            primaryPhotoDataUrl: primaryPhotoDataUrl,
+            photos: exportedPhotos,
+            careTasks: relatedTasks.map((task: any) => ({
+              id: task.id,
+              name: task.name,
+              description: task.description,
+              frequency: task.frequency,
+              frequencyEvery: task.frequencyEvery,
+              timeOfDay: task.timeOfDay,
+              nextDueDate: task.nextDueDate,
+              isPaused: task.isPaused,
+              level: task.level,
+            })),
+          };
+        })
+      );
+
       const exportData = {
-        version: 1, // Version the export format
+        version: 2, // Version the export format to include image data
         timestamp: new Date().toISOString(),
         user: {
           id: authUser.id,
           name: authUser.name,
           email: authUser.email,
-          avatarS3Key: authUser.avatarS3Key || null, // Include avatar S3 key
-          preferences: authUser.preferences || null, // Include preferences
+          avatarS3Key: authUser.avatarS3Key || null,
+          preferences: authUser.preferences || null,
         },
-        // Cast the plant object to the 'Plant' type to access its properties
-        plants: plantsToExport.map((clientModelPlant: any) => {
-            // Access the raw data from the client model
-            return {
-                id: clientModelPlant.id,
-                commonName: clientModelPlant.commonName,
-                scientificName: clientModelPlant.scientificName,
-                familyCategory: clientModelPlant.familyCategory,
-                ageEstimateYears: clientModelPlant.ageEstimateYears,
-                healthCondition: clientModelPlant.healthCondition,
-                location: clientModelPlant.location,
-                plantingDate: clientModelPlant.plantingDate,
-                customNotes: clientModelPlant.customNotes,
-                primaryPhotoUrl: clientModelPlant.primaryPhotoUrl,
-                photos: clientModelPlant.photos?.map((photo: any) => ({
-                    id: photo.id,
-                    url: photo.url,
-                    notes: photo.notes,
-                    dateTaken: photo.dateTaken,
-                    healthCondition: photo.healthCondition,
-                    diagnosisNotes: photo.diagnosisNotes
-                })),
-                careTasks: clientModelPlant.careTasks,
-                ageEstimate: undefined,
-            };
-        }),
+        plants: exportedPlants,
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -269,8 +326,11 @@ export default function ProfilePage() {
         const plantsToImport = importData.plants;
         const importedPlantsForCreation: Array<
           Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
-            photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
-            careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
+            primaryPhotoDataUrl?: string | null;
+            photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
+                imageDataUrl?: string | null;
+            }>,
+            careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
           }
         > = [];
 
@@ -278,6 +338,7 @@ export default function ProfilePage() {
         interface ImportedPhotoData {
             id: string;
             url: string;
+            imageDataUrl?: string | null;
             notes?: string | null;
             dateTaken?: string | null;
             healthCondition?: string | null;
@@ -289,6 +350,7 @@ export default function ProfilePage() {
             name: string;
             description?: string | null;
             frequency: string;
+            frequencyEvery?: number | null;
             timeOfDay?: string | null;
             nextDueDate?: string | null;
             isPaused: boolean;
@@ -307,6 +369,7 @@ export default function ProfilePage() {
             plantingDate?: string | null;
             customNotes?: string | null;
             primaryPhotoUrl?: string | null;
+            primaryPhotoDataUrl?: string | null;
             photos?: ImportedPhotoData[];
             careTasks?: ImportedCareTaskData[];
             ageEstimate?: any; // Present in export but undefined
@@ -315,15 +378,15 @@ export default function ProfilePage() {
         for (const plantData of plantsToImport as ImportedPlantData[]) { // Explicitly type plantData
             const photosToCreate: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>[] = [];
             const careTasksToCreate: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>[] = [];
-            let primaryPhotoS3Key: string | undefined = undefined;
-
-            primaryPhotoS3Key = plantData.primaryPhotoUrl || undefined;
 
             if (plantData.photos && Array.isArray(plantData.photos)) {
                 for (const photoData of plantData.photos) {
-                     if (photoData.url) {
-                         const photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> = {
+                     // For v2 exports, imageDataUrl will be present. For v1, only url will be.
+                     // We pass both to the context function, which will prioritize imageDataUrl.
+                     if (photoData.url || photoData.imageDataUrl) {
+                         const photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & { imageDataUrl?: string | null } = {
                               url: photoData.url,
+                              imageDataUrl: photoData.imageDataUrl || null,
                               notes: photoData.notes || null,
                               dateTaken: photoData.dateTaken || new Date().toISOString(),
                               healthCondition: photoData.healthCondition || 'unknown',
@@ -343,6 +406,7 @@ export default function ProfilePage() {
                             name: taskData.name,
                             description: taskData.description || null,
                             frequency: taskData.frequency,
+                            frequencyEvery: taskData.frequencyEvery || null,
                             timeOfDay: taskData.timeOfDay || null,
                             nextDueDate: taskData.nextDueDate || null,
                             isPaused: taskData.isPaused ?? false,
@@ -354,8 +418,11 @@ export default function ProfilePage() {
             }
 
             const plantToCreate: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
-              photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
-              careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
+              primaryPhotoDataUrl?: string | null;
+              photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
+                  imageDataUrl?: string | null;
+              }>,
+              careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
             } = {
               commonName: plantData.commonName,
               scientificName: plantData.scientificName || null,
@@ -365,7 +432,8 @@ export default function ProfilePage() {
               location: plantData.location || null,
               plantingDate: plantData.plantingDate || null,
               customNotes: plantData.customNotes || null,
-              primaryPhotoUrl: primaryPhotoS3Key,
+              primaryPhotoUrl: plantData.primaryPhotoUrl || undefined,
+              primaryPhotoDataUrl: plantData.primaryPhotoDataUrl || null,
               photos: photosToCreate,
               careTasks: careTasksToCreate,
             };
@@ -394,7 +462,7 @@ export default function ProfilePage() {
 
         // Now call setAllPlants with the processed data
         if (importedPlantsForCreation.length > 0) {
-             await setContextPlants(importedPlantsForCreation); // This method clears existing and creates new
+             await setContextPlants(importedPlantsForCreation, { removeImages: false }); // This method clears existing and creates new
              toast({ title: t('profilePage.toasts.importSuccessTitle'), description: t('profilePage.toasts.importSuccessDesc', {count: importedPlantsForCreation.length}) });
         } else {
              toast({ title: t('profilePage.toasts.importNoPlantsTitle'), description: t('profilePage.toasts.importNoPlantsDesc') });
@@ -433,7 +501,6 @@ export default function ProfilePage() {
         if (authUser.preferences) {
              try {
                  await client.models.UserPreferences.delete({ id: authUser.id });
-                 console.log(`User preferences deleted for user ${authUser.id}`);
              } catch (e) {
                  console.error(`Failed to delete user preferences for ${authUser.id}:`, e);
                  // Continue with other deletions
@@ -442,7 +509,6 @@ export default function ProfilePage() {
         if (authUser.avatarS3Key) {
              try {
                  await remove({ path: authUser.avatarS3Key });
-                 console.log(`User avatar deleted from S3 for user ${authUser.id}`);
              } catch (e) {
                  console.error(`Failed to delete user avatar from S3 for ${authUser.id}:`, e);
                  // Continue with other deletions
@@ -469,7 +535,7 @@ export default function ProfilePage() {
         : userAvatarS3Url // No, use existing S3 URL (if any)
        )
     || `https://placehold.co/100x100.png?text=${(authUser?.name?.charAt(0) || 'U').toUpperCase()}`; // 4. Final fallback placeholder
-  const showRemoveAvatarButton = isEditing && (avatarPreviewUrl !== null || authUser?.avatarS3Key !== null);
+  const showRemoveAvatarButton = isEditing && (avatarPreviewUrl !== null || authUser?.avatarS3Key != null);
   const isSaveDisabled = isUploadingAvatar || isCompressingAvatar || (editedName.trim() === authUser?.name.trim() && avatarFile === undefined);
 
   if (authLoading || (!authUser && !authLoading)) {
@@ -583,7 +649,7 @@ export default function ProfilePage() {
                     {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={isSaveDisabled}>
-                    {(isUploadingAvatar || isCompressingAvatar) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <SaveIcon className="mr-2 h-4 w-4" />}
+                    {(isUploadingAvatar || isCompressingAvatar) ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                     {(isUploadingAvatar || isCompressingAvatar) ? t('profilePage.toasts.savingProfile') : t('common.saveChanges')}
                   </Button>
                 </div>
@@ -629,25 +695,37 @@ export default function ProfilePage() {
             </CardTitle>
             <CardDescription>{t('profilePage.dataManagementDescription')}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="import-file" className="block text-sm font-medium text-foreground mb-1">{t('profilePage.importDataLabel')}</Label>
-              <Input
-                id="import-file"
-                type="file"
-                accept=".json"
-                ref={importFileInputRef}
-                onChange={handleImportFileChange}
-                className="file:mr-4 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                disabled={isImporting}
-              />
-              {isImporting && <p className="text-xs text-muted-foreground mt-1 flex items-center"><Loader2 className="h-3 w-3 animate-spin mr-1"/> {t('profilePage.importingText')}</p>}
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <h4 className="font-semibold">{t('profilePage.exportDataSectionTitle')}</h4>
+              <p className="text-sm text-muted-foreground">{t('profilePage.exportDataSectionDescription')}</p>
+              <div className="flex justify-end pt-2">
+                <Button onClick={handleExportData} disabled={isExporting || contextPlants.length === 0}>
+                  {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
+                  {isExporting ? t('profilePage.exportingText') : t('profilePage.exportDataButton')}
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-end">
-              <Button onClick={handleExportData} disabled={isExporting || contextPlants.length === 0}>
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>}
-                {isExporting ? t('profilePage.exportingText') : t('profilePage.exportDataButton')}
-              </Button>
+
+            <div className="border-t border-border"></div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold">{t('profilePage.importDataSectionTitle')}</h4>
+              <p className="text-sm text-muted-foreground">{t('profilePage.importDataSectionDescription')}</p>
+              
+              <div className="pt-2">
+                <Label htmlFor="import-file" className="sr-only">{t('profilePage.importDataLabel')}</Label>
+                <Input
+                  id="import-file"
+                  type="file"
+                  accept=".json"
+                  ref={importFileInputRef}
+                  onChange={handleImportFileChange}
+                  className="file:mr-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                  disabled={isImporting}
+                />
+                {isImporting && <p className="text-xs text-muted-foreground mt-1 flex items-center"><Loader2 className="h-3 w-3 animate-spin mr-1"/> {t('profilePage.importingText')}</p>}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -685,7 +763,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isDestroyingData}>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogCancel disabled={isDestroyingData}>{t('common.close')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDestroyDataConfirmed} disabled={isDestroyingData || destroyEmailInput !== authUser.email} className="bg-destructive hover:bg-destructive/90">
                     {isDestroyingData ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                     {t('profilePage.destroyConfirmButton')}

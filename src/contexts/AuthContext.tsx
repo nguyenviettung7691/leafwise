@@ -95,8 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatarS3Key: userPreferences?.avatarS3Key,
           preferences: userPreferences,
         });
-      } catch (error) {
-        console.log("No current authenticated user", error);
+      } catch (error: any) {
+        // When there is no active session, Amplify throws a
+        // `UserUnAuthenticatedException`. This is expected on first load
+        // so we avoid logging it as an error.
+        if (error?.name !== 'UserUnAuthenticatedException') {
+          console.error('Failed to fetch current user', error);
+        } else {
+          console.info('User not authenticated on initial load');
+        }
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -214,7 +221,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
            });
            router.push("/");
         } else {
-           console.log("Sign up next step:", nextStep);
            toast({
              title: t("common.info"),
              description: "Registration requires further steps.",
@@ -328,7 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                  try {
                      const fileExtension = updatedData.avatarFile.name.split('.').pop();
                      const { path } = await uploadData({
-                        path: ({identityId}) => `avatars/${identityId}/avatar-${Date.now()}.${fileExtension}`,
+                        path: (identityId) => `avatars/${identityId}/avatar-${Date.now()}.${fileExtension}`,
                         data: updatedData.avatarFile
                      }).result;
                      newAvatarS3Key = path; // Store the new S3 key

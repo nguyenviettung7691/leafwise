@@ -4,7 +4,7 @@
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useParams, useRouter, notFound } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; // Removed notFound
 import type { Plant, PlantFormData, PlantPhoto, PlantHealthCondition } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
@@ -57,7 +57,7 @@ export default function EditPlantPage() {
           diagnosedPhotoDataUrl: foundPlant.primaryPhotoUrl || null,
         });
       } else {
-        notFound();
+        router.replace('/404'); // Redirect to 404 page
       }
       setIsLoadingPage(false);
     };
@@ -65,7 +65,7 @@ export default function EditPlantPage() {
     if (id) {
       loadPlantData();
     }
-  }, [id, getPlantById]);
+  }, [id, getPlantById, router]); // Added router to dependencies
 
   // Updated handleUpdatePlant to accept plant data and the primary photo file
   const handleUpdatePlant = async (data: Omit<PlantFormData, 'primaryPhoto'>, primaryPhotoFile?: File | null) => {
@@ -125,7 +125,7 @@ export default function EditPlantPage() {
   }
 
   if (!plant) {
-    return notFound();
+    return null; // The redirect to /404 is handled by the useEffect
   }
 
   return (

@@ -36,7 +36,9 @@ export function ClientLayoutProvidersAndContent({ children }: { children: ReactN
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered with scope:', registration.scope);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[DEV] Service Worker registered with scope:', registration.scope);
+          }
         })
         .catch((error) => {
           console.error('Service Worker registration failed:', error);

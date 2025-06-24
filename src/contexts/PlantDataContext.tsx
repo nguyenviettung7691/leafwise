@@ -29,10 +29,13 @@ interface PlantDataContextType {
   deletePlant: (plantId: string) => Promise<void>;
   deleteMultiplePlants: (plantIds: Set<string>) => Promise<void>;
   setAllPlants: (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
-    photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>,
+    primaryPhotoDataUrl?: string | null;
+    photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
+        imageDataUrl?: string | null;
+    }>,
     careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
-  }>) => Promise<void>;
-  clearAllPlantData: () => Promise<void>;
+  }>, options?: { removeImages?: boolean }) => Promise<void>;
+  clearAllPlantData: (options?: { removeImages?: boolean }) => Promise<void>;
   // Methods for managing nested data
   addPhotoToPlant: (plantId: string, photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>, photoFile: File) => Promise<PlantPhoto | undefined>;
   updatePhotoDetails: (photoId: string, updatedDetails: Partial<Omit<PlantPhoto, 'plant'>>) => Promise<PlantPhoto | undefined>;
@@ -117,7 +120,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
   const uploadImageToS3 = useCallback(async (plantId: string, file: File): Promise<string> => {
       const fileExtension = file.name.split('.').pop();
       const { path } = await uploadData({
-        path: ({identityId}) => `plants/${identityId}/${plantId}/${Date.now()}.${fileExtension}`,
+        path: (identityId) => `plants/${identityId}/${plantId}/${Date.now()}.${fileExtension}`,
         data: file
       }).result;
       return path;
@@ -245,7 +248,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
             ));
             try {
                  await client.models.Plant.delete({ id: createdPlantRecord.id }, {authMode: 'userPool'});
-                 console.log(`Cleaned up plant record ${createdPlantRecord.id}`);
             } catch (e) {
                  console.error(`Cleanup failed for plant record ${createdPlantRecord.id}:`, e);
             }
@@ -480,7 +482,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
 
   }, [user, deletePlant]);
 
-  const clearAllPlantData = useCallback(async (): Promise<void> => {
+  const clearAllPlantData = useCallback(async (options?: { removeImages?: boolean }): Promise<void> => {
     const currentUserId = user?.id;
     if (currentUserId) {
       setIsLoading(true);
@@ -494,12 +496,15 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         const photoIdsToDelete: string[] = userPhotos.map(photo => photo.id);
         const taskIdsToDelete: string[] = userTasks.map(task => task.id);
 
+        const shouldRemoveImages = options?.removeImages ?? true;
 
-        await Promise.all(photoKeysToDelete.map(path =>
-            remove({ path }).catch(e => {
-                console.error(`Failed to delete S3 image ${path} during clearAllPlantData:`, e);
-            })
-        ));
+        if (shouldRemoveImages) {
+            await Promise.all(photoKeysToDelete.map(path =>
+                remove({ path }).catch(e => {
+                    console.error(`Failed to delete S3 image ${path} during clearAllPlantData:`, e);
+                })
+            ));
+        }
 
          await Promise.all(taskIdsToDelete.map(taskId =>
              client.models.CareTask.delete({ id: taskId }, {authMode: 'userPool'}).catch(e => {
@@ -523,7 +528,6 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         setPlantsState([]);
         setPlantPhotosState([]);
         setCareTasksState([]);
-        console.log(`All plant data cleared for user ${currentUserId}.`);
 
       } catch (error) {
         console.error(`Error clearing plant data for user ${currentUserId}:`, error);
@@ -539,29 +543,45 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
     }
   }, [user, plantPhotos, careTasks, plants, remove]);
 
-  const setAllPlants = useCallback(async (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & { photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>, careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>> }>): Promise<void> => {
+  const setAllPlants = useCallback(async (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & { primaryPhotoDataUrl?: string | null, photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & { imageDataUrl?: string | null }>, careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>> }>, options?: { removeImages?: boolean }): Promise<void> => {
     if (!user) {
       throw new Error("User not authenticated.");
     }
     setIsLoading(true); // Indicate import is in progress
 
+    const dataUrlToFile = (dataUrl: string, filename: string): File | null => {
+        try {
+            const arr = dataUrl.split(',');
+            if (arr.length < 2) return null;
+            const mimeMatch = arr[0].match(/:(.*?);/);
+            if (!mimeMatch) return null;
+            
+            const mime = mimeMatch[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new File([u8arr], filename, { type: mime });
+        } catch (error) {
+            console.error("Failed to convert data URL to file:", error);
+            return null;
+        }
+    };
+
     try {
         // 1. Clear all existing data for the user
-        await clearAllPlantData();
+        await clearAllPlantData(options);
 
-        // 2. Create the new plants, including uploading images and creating related records
+        // 2. Create new data
         const createdPlants: Plant[] = [];
         const createdPhotos: PlantPhoto[] = [];
         const createdTasks: CareTask[] = [];
 
         for (const newPlant of allNewPlants) {
             try {
-                 let primaryPhotoS3Key: string | undefined = undefined;
-
-                 // Handle primary photo (assuming it's an S3 key in newPlant.primaryPhotoUrl from export)
-                 primaryPhotoS3Key = newPlant.primaryPhotoUrl ?? undefined;
-
-                 // Create the Plant record
+                 // Create the Plant record first, without a primary photo URL
                  const { data: createdPlant, errors: plantErrors } = await client.models.Plant.create({
                     commonName: newPlant.commonName,
                     scientificName: newPlant.scientificName,
@@ -571,39 +591,99 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
                     location: newPlant.location,
                     plantingDate: newPlant.plantingDate,
                     customNotes: newPlant.customNotes,
-                    primaryPhotoUrl: primaryPhotoS3Key, // Use the S3 key
+                    primaryPhotoUrl: undefined, // Set later
                  },{authMode: 'userPool'});
 
                  if (plantErrors || !createdPlant) {
                      console.error("Error creating plant during import:", plantErrors);
                      continue; // Skip this plant on error
                  }
-                 createdPlants.push(createdPlant as Plant);
+                 let finalPrimaryPhotoS3Key: string | undefined = undefined;
+                 const photosForThisPlant: PlantPhoto[] = [];
 
-                 // Create associated PlantPhoto records
+                 // Upload photos from data URLs and create records
                  if (newPlant.photos) {
                      for (const photoData of newPlant.photos) {
-                         try {
-                             const { data: createdPhoto, errors: photoErrors } = await client.models.PlantPhoto.create({
-                                 plantId: createdPlant.id,
-                                 url: photoData.url, // This should be the S3 key from import
-                                 notes: photoData.notes,
-                                 dateTaken: photoData.dateTaken,
-                                 healthCondition: photoData.healthCondition,
-                                 diagnosisNotes: photoData.diagnosisNotes,
-                             },{authMode: 'userPool'});
-                             if (photoErrors || !createdPhoto) {
-                                 console.error("Error creating photo record during import:", photoErrors);
-                             } else {
-                                 createdPhotos.push(createdPhoto as PlantPhoto);
+                         let photoS3Key: string | undefined = undefined;
+                         if (photoData.imageDataUrl) {
+                             const photoFile = dataUrlToFile(photoData.imageDataUrl, `import-photo-${Date.now()}.webp`);
+                             if (photoFile) {
+                                 try {
+                                     photoS3Key = await uploadImageToS3(createdPlant.id, photoFile);
+                                 } catch (uploadError) {
+                                     console.error(`Failed to upload imported photo for plant ${createdPlant.commonName}:`, uploadError);
+                                 }
                              }
-                         } catch (e) {
-                             console.error("Exception creating photo record during import:", e);
+                         } else if (photoData.url) {
+                             // For v1 exports, we keep the old S3 key
+                             photoS3Key = photoData.url;
+                         }
+
+                         if (photoS3Key) {
+                             try {
+                                 const { data: createdPhoto, errors: photoErrors } = await client.models.PlantPhoto.create({
+                                     plantId: createdPlant.id,
+                                     url: photoS3Key,
+                                     notes: photoData.notes,
+                                     dateTaken: photoData.dateTaken,
+                                     healthCondition: photoData.healthCondition,
+                                     diagnosisNotes: photoData.diagnosisNotes,
+                                 },{authMode: 'userPool'});
+                                 if (photoErrors || !createdPhoto) {
+                                     console.error("Error creating photo record during import:", photoErrors);
+                                 } else {
+                                     photosForThisPlant.push(createdPhoto as PlantPhoto);
+                                     // Check if this photo was the primary photo in the export file
+                                     if (newPlant.primaryPhotoUrl && photoData.url === newPlant.primaryPhotoUrl) {
+                                         finalPrimaryPhotoS3Key = photoS3Key;
+                                     }
+                                 }
+                             } catch (e) {
+                                 console.error("Exception creating photo record during import:", e);
+                             }
                          }
                      }
                  }
 
-                 // Create associated CareTask records
+                 // Handle a primary photo that might not be in the gallery (from primaryPhotoDataUrl)
+                 if (newPlant.primaryPhotoDataUrl && !finalPrimaryPhotoS3Key) {
+                     const primaryPhotoFile = dataUrlToFile(newPlant.primaryPhotoDataUrl, `import-primary-photo-${Date.now()}.webp`);
+                     if (primaryPhotoFile) {
+                         try {
+                             const primaryS3Key = await uploadImageToS3(createdPlant.id, primaryPhotoFile);
+                             const { data: createdPrimaryPhoto, errors: primaryPhotoErrors } = await client.models.PlantPhoto.create({
+                                 plantId: createdPlant.id,
+                                 url: primaryS3Key,
+                                 dateTaken: new Date().toISOString(),
+                                 healthCondition: newPlant.healthCondition,
+                                 notes: "Imported primary photo",
+                             },{authMode: 'userPool'});
+                             if (primaryPhotoErrors || !createdPrimaryPhoto) {
+                                 console.error("Error creating primary photo record during import:", primaryPhotoErrors);
+                             } else {
+                                 photosForThisPlant.push(createdPrimaryPhoto as PlantPhoto);
+                                 finalPrimaryPhotoS3Key = primaryS3Key;
+                             }
+                         } catch (uploadError) {
+                             console.error(`Failed to upload imported primary photo for plant ${createdPlant.commonName}:`, uploadError);
+                         }
+                     }
+                 }
+
+                 // Update the plant with the final primary photo URL
+                 if (finalPrimaryPhotoS3Key) {
+                     const { data: updatedPlantWithPhoto, errors: updateErrors } = await client.models.Plant.update({
+                         id: createdPlant.id,
+                         primaryPhotoUrl: finalPrimaryPhotoS3Key,
+                     },{authMode: 'userPool'});
+                     createdPlants.push((updatedPlantWithPhoto || createdPlant) as Plant);
+                 } else {
+                     createdPlants.push(createdPlant as Plant);
+                 }
+
+                 createdPhotos.push(...photosForThisPlant);
+
+                 // Create CareTask records
                  if (newPlant.careTasks) {
                      for (const taskData of newPlant.careTasks) {
                          try {
@@ -644,7 +724,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }
 
-  }, [user, clearAllPlantData]);
+   }, [user, clearAllPlantData, uploadImageToS3]);
   
   // --- methods for nested data ---
 
