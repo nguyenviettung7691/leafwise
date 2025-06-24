@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A plant problem diagnosis AI agent.
@@ -86,7 +85,7 @@ You are an expert botanist and plant pathologist. Analyze the provided plant ima
 
 3.  **Care Recommendations**:
     *   Based on your diagnosis, suggest 2-3 actionable care steps as an array of objects in 'careRecommendations'.
-    *   Each object should have an 'action' (a short summary of the care category, in the specified language, e.g., "Watering Adjustment", "Pest Control").
+    *   Each object should have an 'action' (a short summary of the care category, in the specified language, e.g., "Watering Adjustment", "Pest Control", "Improve Lighting").
     *   Each object can have 'details' (more specific advice, in the specified language).
     *   Example for languageCode='vi': { "action": "Điều chỉnh Tưới nước", "details": "Giảm tần suất và đảm bảo chậu thoát nước tốt." }
     *   Example for languageCode='en': { "action": "Pest Control", "details": "Identify pest and treat with organic insecticide." }
@@ -110,32 +109,47 @@ const diagnosePlantHealthFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
+    const lang = input.languageCode === 'vi' ? 'vi' : 'en';
+    const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
+    const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
+
     if (!output || !output.healthAssessment) { // Added check for healthAssessment
         console.warn('Diagnose plant health prompt returned null or malformed output. Returning default structure.');
-        const lang = input.languageCode === 'vi' ? 'vi' : 'en';
-        const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
-        const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
         return {
             identification: {
               isPlant: false,
               commonName: isPlantMsg,
+              scientificName: undefined, // Explicitly undefined
+              familyCategory: undefined, // Explicitly undefined
+              ageEstimateYears: undefined, // Explicitly undefined
             },
-            healthAssessment: { status: 'unknown', diagnosis: errorMsg, confidence: 'low' },
-            careRecommendations: [],
-        };
+            healthAssessment: { status: 'unknown', diagnosis: errorMsg, confidence: 'low' }, // 'unknown' is a valid PlantHealthCondition
+            careRecommendations: [], // [] is a valid array
+        } as DiagnosePlantHealthOutput; // Explicitly cast to the output type
     }
-    // Ensure status is always one of the enum values, even if AI fails
-    const validStatus = ['healthy', 'needs_attention', 'sick', 'unknown'].includes(output.healthAssessment?.status)
-      ? output.healthAssessment.status
-      : 'unknown';
 
-    return {
-      ...output,
-      healthAssessment: {
-        ...output.healthAssessment,
-        status: validStatus as PlantHealthCondition,
-      },
+    // Ensure status is always one of the enum values, even if AI fails
+    const validStatus = ['healthy', 'needs_attention', 'sick', 'unknown'].includes(output.healthAssessment.status)
+      ? output.healthAssessment.status as PlantHealthCondition // Cast here after check
+      : 'unknown' as PlantHealthCondition; // Cast default as well
+
+    // Construct the return object explicitly to ensure correct typing
+    const validatedOutput: DiagnosePlantHealthOutput = {
+        identification: {
+            isPlant: output.identification?.isPlant ?? false,
+            commonName: output.identification?.commonName ?? undefined,
+            scientificName: output.identification?.scientificName ?? undefined,
+            familyCategory: output.identification?.familyCategory ?? undefined,
+            ageEstimateYears: output.identification?.ageEstimateYears ?? undefined,
+        },
+        healthAssessment: {
+            status: validStatus, // Use the validated status
+            diagnosis: output.healthAssessment?.diagnosis ?? undefined,
+            confidence: output.healthAssessment?.confidence ?? undefined,
+        },
+        careRecommendations: Array.isArray(output.careRecommendations) ? output.careRecommendations : [],
     };
+
+    return validatedOutput;
   }
 );
-    

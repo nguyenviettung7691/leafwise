@@ -15,7 +15,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="flex flex-col min-h-svh bg-background">
-      {!isStandalone && <Navbar isStandalone={false} />}
+      {!isStandalone && <Navbar/>}
       <main
         className={cn(
           "flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full",
@@ -24,7 +24,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       >
         {children}
       </main>
-      {isStandalone && <Navbar isStandalone={true} />}
+      {isStandalone && <Navbar/>}
     </div>
   );
 }
