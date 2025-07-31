@@ -3,7 +3,7 @@
 LeafWise is a plant care application built with Next.js and TypeScript. It integrates **AWS Amplify** for authentication, data storage and image uploads, and uses **Genkit** with Google's Gemini models for plant health analysis and care plan generation.
 
 ![Screenshot](/public/screenshot-1.png)
-![Screenshot](/public/screenshot-2.png)
+
 ![Screenshot](/public/screenshot-3.png)
 
 ## Features
