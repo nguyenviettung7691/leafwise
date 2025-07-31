@@ -2,8 +2,8 @@
 'use client';
 
 // React and Next.js imports
-import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { useParams, notFound, useRouter } from 'next/navigation';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'; // Removed notFound
+import { useParams, useRouter } from 'next/navigation';
 import NextImage from 'next/image';
 
 // Layout components
@@ -47,7 +47,7 @@ import {
   CalendarIcon, 
   Sparkles, 
   ChevronLeft, 
-  SaveIcon, 
+  Save, 
   CheckCircle, 
   MessageSquareWarning, 
   Loader2 
@@ -318,14 +318,14 @@ useEffect(() => {
       const foundPlant = allContextPlants.find(p => p.id === id);
       if (foundPlant) {
         setPlant(foundPlant);
-      } else if (!isDeletingPlant) { // Only call notFound if not in the process of deleting this plant
+      } else if (!isDeletingPlant) {
         // If the plant is not found and we are not actively deleting it,
         // then it's a true 404 or the data hasn't loaded yet for some reason.
-        notFound();
+        router.replace('/404'); // Redirect to 404 page
       }
       setIsPageLoading(false);
     }
-  }, [id, allContextPlants, isLoadingContextData, notFound, isDeletingPlant]);
+  }, [id, allContextPlants, isLoadingContextData, isDeletingPlant, router]);
 
   const handleToggleTaskPause = useCallback(async (taskId: string) => {
     const taskBeingToggled = currentPlantCareTasks.find(t => t.id === taskId);
@@ -1302,7 +1302,7 @@ useEffect(() => {
                            {isAddingPhotoToGallery ? (
                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                            ) : (
-                               <SaveIcon className="mr-2 h-4 w-4"/>
+                               <Save className="mr-2 h-4 w-4"/>
                            )}{t('plantDetail.newPhotoDialog.addPhotoToGalleryButton')}
                        </Button>
                      )}
@@ -1629,7 +1629,7 @@ useEffect(() => {
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsEditPhotoDialogVisible(false)} disabled={isSavingPhotoDetails}>{t('common.cancel')}</Button>
                     <Button onClick={handleSaveEditedPhotoDetails} disabled={isSavingPhotoDetails}>
-                        {isSavingPhotoDetails ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <SaveIcon className="mr-2 h-4 w-4"/>}
+                        {isSavingPhotoDetails ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4"/>}
                         {t('plantDetail.editPhotoDialog.saveChangesButton')}
                     </Button>
                 </DialogFooter>

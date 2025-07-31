@@ -27,29 +27,24 @@ This document provides a high-level overview of the LeafWise application's archi
     *   Care Plan Review and Update Suggestions
 *   **Implementation**: Genkit flows are defined as server-side functions (`'use server';`) within the Next.js application, callable from client components.
 
-## Data Storage (Prototype - Client-Side)
+## Backend & Data Storage
 
-*   **User Profiles**:
-    *   Stored in **IndexedDB** (`userProfileStore` within a user-specific database, e.g., `LeafWiseDB_{userId}`). Contains name, avatar image key, and preferences.
-    *   User session is indicated by a user ID in `localStorage` (`currentLeafwiseUserId`).
-*   **Plant Data (metadata, care tasks)**:
-    *   Stored in **`localStorage`** (key: `leafwisePlants_{userId}`). Contains an array of `Plant` objects.
-*   **Plant Images (avatars, plant photos)**:
-    *   Stored as **Blobs** in **IndexedDB** (`plantImages` object store within a user-specific database, e.g., `LeafWiseDB_{userId}`).
-    *   References (keys) to these images are stored in the plant metadata in `localStorage`.
-*   **Image Compression**: Images are compressed client-side (to WebP or JPEG) before being stored in IndexedDB to manage storage size.
-*   **Data Persistence**: Data is scoped per user and persists in the user's browser. Clearing browser data will remove it.
-*   **Import/Export**: A JSON-based import/export feature is available for user profile and plant data (including base64 encoded images for transfer).
+*   **Platform**: **AWS Amplify** is used for authentication, data and file storage.
+*   **Authentication**: Cognito user pools managed by Amplify Auth. All API calls are signed with the user's session token.
+*   **Data**: Plant records, photos, care tasks and user preferences are defined as Amplify Data models with owner-based authorization.
+*   **Images**: Uploaded photos and avatars are stored in S3 via Amplify Storage. Database records keep the S3 key for each file.
+*   **Import/Export**: The Profile page supports exporting all plant data, including embedded image data (as Data URLs), to a self-contained JSON file. During import, this embedded image data is re-uploaded to S3, generating new S3 keys for the restored `PlantPhoto` records. This ensures a complete backup and restoration of user data, including images, independent of original S3 keys.
+*   **Offline**: The application still functions offline for cached pages and will queue network requests when possible, but data primarily resides in the Amplify backend.
 
 ## Progressive Web App (PWA)
 
 *   **Plugin**: `@ducanh2912/next-pwa`
 *   **Features**:
     *   Installability (Add to Home Screen)
-    *   Offline support (via service worker caching of app shell and assets)
+    *   Offline support (via service worker caching of app shell and assets). The service worker is registered client-side, typically within the main layout component like `ClientLayoutProvidersAndContent.tsx`.
     *   Responsiveness
-    *   App Manifest (`public/manifest.json`)
-    *   Service Worker (`public/sw.js` custom + Workbox injection) for caching and push notifications.
+    *   App Manifest (dynamically generated from `src/app/manifest.ts`)
+    *   Service Worker (custom file at `public/sw.js` with Workbox injection) for caching and push notifications.
     *   App Shortcuts
     *   Push Notifications (client-side mechanism for showing notifications via service worker)
     *   Web Badging API (demonstration)
@@ -61,10 +56,8 @@ This document provides a high-level overview of the LeafWise application's archi
 *   **Storage**: Selected language preference is stored in `localStorage`.
 *   **Implementation**: Static UI text is translated using JSON files (`src/locales/en.json`, `src/locales/vi.json`). AI-generated content is requested in the selected language. Date formatting adapts to the selected locale.
 
-## Future (Beyond Prototype)
+## Future Enhancements
 
-*   **Backend Server**: Node.js/Express, Python/Django, or BaaS (e.g., Firebase).
-*   **Database**: Scalable database (e.g., PostgreSQL, MongoDB, Firebase Firestore).
-*   **Authentication**: Secure JWT-based authentication handled by the backend.
-*   **Image Storage**: Cloud storage (S3, Google Cloud Storage, Firebase Storage).
-*   **Push Notifications**: Server-driven push notifications (e.g., FCM).
+*   **Advanced Backend Features**: The Amplify backend can be extended with custom functions, additional authorization rules and scheduled tasks.
+*   **Analytics & Monitoring**: Integrate usage analytics and error monitoring.
+*   **Server-Driven Notifications**: Explore push notifications and background jobs for reminders.

@@ -24,6 +24,6 @@ Please refer to the main `README.md` for instructions on setting up the developm
 
 *   Follow existing coding patterns.
 *   Ensure code is clear, concise, and well-commented where necessary.
-*   Run linters and formatters if configured for the project.
+*   Before committing, run `npm run lint` and `npm run typecheck` to ensure code style and type safety.
 
 Thank you for helping make LeafWise better!

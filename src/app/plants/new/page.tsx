@@ -3,7 +3,7 @@
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { SavePlantForm } from '@/components/plants/SavePlantForm';
-import type { PlantFormData, Plant, SavePlantFormValues } from '@/types';
+import type { Plant, SavePlantFormValues } from '@/types';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';

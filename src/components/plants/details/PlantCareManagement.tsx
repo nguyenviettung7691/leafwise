@@ -147,10 +147,7 @@ export function PlantCareManagement({
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className={cn(
-          "flex items-center justify-between",
-          isStandalone ? "flex-col items-start gap-y-3 sm:flex-row sm:items-center" : "flex-row"
-        )}>
+        <CardHeader className={"flex flex-row items-center justify-between"}>
           <CardTitle className="text-lg flex items-center gap-2">
             <ListChecks className="h-5 w-5 text-primary" />
             {t('plantDetail.careManagement.sectionTitle')}

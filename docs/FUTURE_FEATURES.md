@@ -1,19 +1,19 @@
 
 # LeafWise - Future Features & Enhancements
 
-This document outlines potential future features and improvements for the LeafWise application beyond its current UI prototype stage.
+This document outlines potential future features and improvements for the LeafWise application, building upon its current UI prototype stage and existing AWS Amplify backend.
 
 ## Core Functionality Enhancements
 
 1.  **Full Backend Implementation**:
-    *   Develop a robust backend server (e.g., Node.js/Express, Python/Django/Flask).
-    *   Integrate a scalable database (e.g., PostgreSQL, MongoDB, Firebase Firestore).
+    *   **Expand Existing AWS Amplify Backend**: Leverage and extend the current AWS Amplify backend for more complex data models, advanced business logic, and integrations.
+    *   **Advanced APIs & Custom Logic**: Implement custom backend logic (e.g., using AWS Lambda functions) for features that go beyond standard GraphQL operations provided by Amplify Data.
     *   Implement secure, JWT-based user authentication with password hashing, refresh tokens, etc.
-    *   Move all data storage (user profiles, plant data, care tasks) to the backend database.
-    *   Implement API endpoints for all CRUD operations.
+    *   **Integrate with External Services**: Connect the backend to third-party APIs for enhanced functionality (e.g., advanced weather data, plant-specific knowledge bases).
+    *   **Refine Data Models**: Optimize and potentially denormalize data models within Amplify Data for performance and specific query patterns.
 
 2.  **Cloud Image Storage**:
-    *   Integrate a cloud storage solution (AWS S3, Google Cloud Storage, Firebase Storage) for all user-uploaded images (plant photos, avatars). Images should be uploaded securely to the cloud, and only their URLs stored in the database.
+    *   **Enhance AWS Amplify Storage Usage**: Further optimize image storage and retrieval from Amazon S3 (already in use via Amplify Storage). This could include advanced resizing, content delivery network (CDN) integration, or more granular access controls.
 
 3.  **Advanced Care Plan Management**:
     *   **Customizable Schedules**: Allow users to fully customize the frequency, specific dates, and times for each care task beyond AI suggestions.
