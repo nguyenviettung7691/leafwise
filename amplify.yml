@@ -16,19 +16,19 @@ frontend:
       commands:
         - env | grep -e GOOGLE_API_KEY >> .env.production
         - npm run build
+        - npm run export
     postBuild:
       commands:
-        - ls .next
-        - aws s3 sync .next s3://$S3_BUCKET_NAME --delete
+        - ls out
+        - aws s3 sync out s3://$S3_BUCKET_NAME --delete
         - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   artifacts:
-    baseDirectory: .next
+    baseDirectory: out
     files:
       - '**/*'
   cache:
     paths:
       - .next/cache/**/*
-      - .npm/**/*
 rewrites:
   - source: '/<*>'
     target: '/not-found'
