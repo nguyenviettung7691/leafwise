@@ -16,7 +16,6 @@ frontend:
       commands:
         - env | grep -e GOOGLE_API_KEY >> .env.production
         - npm run build
-        - npm run export
     postBuild:
       commands:
         - ls out
