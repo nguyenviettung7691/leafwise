@@ -521,7 +521,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         saveTokens(tokens);
         // Also save idToken in a cookie for server-side access
         if (typeof window !== 'undefined') {
-          document.cookie = `cognito_id_token=${tokens.idToken}; path=/; max-age=${Math.floor((tokens.expiresAt - Date.now()) / 1000)}`;
+          const maxAge = Math.floor((tokens.expiresAt - Date.now()) / 1000);
+          const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+          const sameSite = '; SameSite=Lax';
+          document.cookie = `cognito_id_token=${tokens.idToken}; Path=/; Max-Age=${maxAge}${sameSite}${secure}`;
         }
 
         // Fetch and set user
@@ -818,7 +821,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       // Clear token cookie
       if (typeof window !== 'undefined') {
-        document.cookie = 'cognito_id_token=; path=/; max-age=0';
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        const sameSite = '; SameSite=Lax';
+        document.cookie = `cognito_id_token=; Path=/; Max-Age=0${sameSite}${secure}`;
       }
 
       toast({

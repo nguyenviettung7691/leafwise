@@ -52,7 +52,8 @@ const authLink = new ApolloLink((operation, forward) => {
 
   operation.setContext({
     headers: {
-      authorization: idToken ? `Bearer ${idToken}` : '',
+      // AppSync with Cognito User Pools expects the raw JWT (no Bearer prefix)
+      authorization: idToken || '',
     },
   });
 
@@ -112,7 +113,8 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
               // Update the operation with the new token
               operation.setContext({
                 headers: {
-                  authorization: `Bearer ${newToken}`,
+                  // Use raw JWT (no Bearer prefix)
+                  authorization: newToken,
                 },
               });
 
@@ -146,7 +148,8 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
           operation.setContext({
             headers: {
-              authorization: `Bearer ${newToken}`,
+              // Use raw JWT (no Bearer prefix)
+              authorization: newToken,
             },
           });
 
@@ -182,9 +185,3 @@ const client = new ApolloClient({
 });
 
 export default client;
-
-/**
- * Server-side Apollo client
- * Note: Does not support automatic token refresh (no async support in links)
- */
-export const serverClient = client;

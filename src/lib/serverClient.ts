@@ -11,11 +11,12 @@
  * Usage in Server Components:
  * ```typescript
  * 'use server';
- * import serverClient from '@/lib/serverClient';
+ * import { createServerApolloClient } from '@/lib/serverClient';
  * import { gql } from '@apollo/client';
  *
  * export async function getPlantData(plantId: string) {
- *   const { data } = await serverClient.query({
+ *   const client = await createServerApolloClient();
+ *   const { data } = await client.query({
  *     query: gql`
  *       query GetPlant($id: ID!) {
  *         plant(id: $id) {
@@ -35,7 +36,7 @@
  * ```typescript
  * // app/api/plants/[id]/route.ts
  * import { NextRequest, NextResponse } from 'next/server';
- * import serverClient from '@/lib/serverClient';
+ * import { createServerApolloClient } from '@/lib/serverClient';
  * import { gql } from '@apollo/client';
  *
  * export async function GET(
@@ -43,7 +44,8 @@
  *   { params }: { params: { id: string } }
  * ) {
  *   try {
- *     const { data } = await serverClient.query({
+ *     const client = await createServerApolloClient();
+ *     const { data } = await client.query({
  *       query: PLANT_QUERY,
  *       variables: { id: params.id },
  *     });
@@ -68,6 +70,5 @@
  * - Added: Direct Apollo Client with Cognito auth header injection
  */
 
-import serverClient from './apolloClient';
-
-export default serverClient;
+export { createServerApolloClient } from './apolloServerClient';
+export { createServerApolloClient as default } from './apolloServerClient';
