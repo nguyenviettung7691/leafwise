@@ -83,6 +83,16 @@ To work with the AWS Amplify backend (e.g., modify data models, authentication r
    npm run genkit:dev
    ```
 
+#### Amplify Console Configuration (CI/CD)
+
+- Set environment variables in Amplify Console (not from `.env.local`):
+   - All required build-time vars: `GOOGLE_API_KEY`, `REACT_APP_COGNITO_REGION`, `REACT_APP_COGNITO_USER_POOL_ID`, `REACT_APP_COGNITO_CLIENT_ID`, `REACT_APP_COGNITO_IDENTITY_POOL_ID`, `REACT_APP_APPSYNC_ENDPOINT`, `REACT_APP_S3_BUCKET_NAME`, `REACT_APP_S3_REGION`
+   - Deployment vars: `S3_BUCKET_NAME` (target static site bucket), `CF_DIST_ID` (CloudFront distribution ID)
+- The Amplify build runs:
+   - `npx ampx pipeline-deploy` (backend)
+   - Next.js static export
+   - `aws s3 sync` to your bucket and `cloudfront create-invalidation`
+
 ## Architecture Notes
 
 **AWS Configuration**: The application uses environment variables for all AWS service endpoints and credentials:
@@ -176,3 +186,19 @@ This ensures all types are correct and the code compiles properly.
 Environment variables for CI/CD (set in your build environment, not `.env.local`):
 - `S3_BUCKET_NAME`: Target S3 bucket for the static site
 - `CF_DIST_ID`: CloudFront distribution ID for invalidation
+
+CloudFront + S3 prerequisites (one-time, via AWS Console):
+- S3 bucket: enable versioning, block all public access
+- CloudFront distribution: set S3 bucket as origin with OAI; default root object `index.html`
+- SPA routing: custom error response 404 → `/index.html` with response code 200
+- Optional: attach custom domain + ACM certificate; add DNS CNAME to CloudFront domain
+
+Note: Remove any Amplify Hosting rewrites; SPA routing is handled by CloudFront’s custom error response.
+
+### Sandbox Cleanup
+
+- Delete the current Amplify sandbox deployment:
+   ```bash
+   npx ampx sandbox delete
+   ```
+- VS Code task: `delete-amplify-sandbox` (Terminal → Run Task) to run the same command.
