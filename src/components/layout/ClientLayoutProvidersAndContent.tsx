@@ -12,13 +12,15 @@ import { ProgressBar } from '@/components/layout/ProgressBar';
 import { Toaster } from '@/components/ui/toaster';
 import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator';
 import { InstallPrompt } from '@/components/layout/InstallPrompt';
-import { Amplify } from 'aws-amplify';
-import outputs from '../../../amplify_outputs.json';
 
-// Configure Amplify client-side
-Amplify.configure(outputs, {
-  ssr: true // Keep ssr: true for potential future SSR needs
-});
+/**
+ * AWS Configuration is now handled via:
+ * - awsConfig.ts: Loads environment variables for Cognito, AppSync, S3
+ * - AuthContext.tsx: Uses direct AWS SDK v3 for Cognito authentication
+ * - apolloClient.ts: Configures Apollo Client for AppSync
+ * 
+ * No Amplify.configure() needed anymore!
+ */
 
 export function ClientLayoutProvidersAndContent({ children }: { children: ReactNode }) {
   const { language } = useLanguage();

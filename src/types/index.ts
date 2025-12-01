@@ -163,6 +163,7 @@ export interface User {
   id: string; // This will be the Cognito 'sub' (userId)
   name: string; // Cognito 'name' attribute
   email: string; // Cognito 'email' attribute
+  identityId: string; // Cognito Identity ID for S3 permissions (from CognitoIdentity)
   avatarS3Key?: string | null; // S3 key for avatar, stored in UserPreferences model
   preferences?: UserPreferences | null; // User preferences, stored in UserPreferences model
 }

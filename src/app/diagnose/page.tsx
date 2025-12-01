@@ -19,12 +19,10 @@ import { compressImage } from '@/lib/image-utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 
 export default function DiagnosePlantPage() {
   const { user } = useAuth();
-  const router = useRouter();
-  const { addPlant, updatePlant, getPlantById, addCareTaskToPlant } = usePlantData();
+  const { addPlant, addCareTaskToPlant } = usePlantData();
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [description, setDescription] = useState('');
@@ -216,7 +214,6 @@ export default function DiagnosePlantPage() {
   const handleSavePlant = async (data: PlantFormData) => {
     if (!user?.id) {
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
-      router.push('/login');
       return;
     }
     setIsSavingPlant(true);
@@ -235,7 +232,7 @@ export default function DiagnosePlantPage() {
     };
 
     try {
-        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile, undefined, 'diagnose');
+        const createdPlant = await addPlant(newPlantData as Plant, primaryPhotoFile, undefined);
 
         setLastSavedPlantId(createdPlant.id);
 
@@ -294,7 +291,6 @@ export default function DiagnosePlantPage() {
   const handleSaveCarePlan = async (plan: GenerateDetailedCarePlanOutput) => {
     if (!user) { // Added user check
       toast({ title: t('common.error'), description: t('authContextToasts.errorNoUserSession'), variant: 'destructive'});
-      router.push('/login');
       return;
     }
     if (!lastSavedPlantId) {

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,23 @@ import { LogIn, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { ProgressBarLink } from '@/components/layout/ProgressBarLink';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading: authLoading } = useAuth();
+  const { login, isLoading: authLoading, user } = useAuth();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useLanguage();
+
+  // If already authenticated, redirect to home
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -94,6 +103,12 @@ export default function LoginPage() {
               )}
               {t('loginPage.signInButton')}
             </Button>
+            {/* Forgot Password Link */}
+            <div className="text-center mt-4">
+              <ProgressBarLink href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+                {t('loginPage.forgotPasswordLink')}
+              </ProgressBarLink>
+            </div>
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t('loginPage.noAccountText')}{' '}

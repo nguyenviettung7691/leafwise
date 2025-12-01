@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
-import { useRouter } from 'next/navigation';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { Loader2, LogOut, UserCircle, Trash2, Download, Save, Edit3, Camera, ImageUp, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitlePrimitive, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -18,16 +17,29 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
-import { generateClient } from 'aws-amplify/data';
-import { getUrl, remove } from 'aws-amplify/storage';
-import type { Schema } from '../../../amplify/data/resource';
+import { deleteFile } from '@/lib/s3Utils';
+import { getS3Config } from '@/lib/awsConfig';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
-
-const client = generateClient<Schema>();
+import { DELETE_USER_PREFERENCES } from '@/lib/graphql/operations';
+import client from '@/lib/apolloClient';
 
 const AuthLoader = ({ className }: { className?: string }) => (
   <Loader2 className={className} />
 );
+
+function getIdTokenForS3(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('cognito_tokens');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed?.idToken ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export default function ProfilePage() {
   const { user: authUser, updateUser: updateAuthUser, isLoading: authLoading, logout } = useAuth();
@@ -38,7 +50,6 @@ export default function ProfilePage() {
     setAllPlants: setContextPlants,
     clearAllPlantData,
   } = usePlantData();
-  const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState('');
@@ -65,12 +76,14 @@ export default function ProfilePage() {
     authUser?.id
   );
 
-
-  useEffect(() => {
-    if (!authLoading && !authUser) {
-      router.push('/login');
-    }
-  }, [authLoading, authUser, router]);
+  // Middleware handles route protection; this is just a safety check for component rendering
+  if (!authLoading && !authUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <AuthLoader />
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (authUser) {
@@ -184,17 +197,43 @@ export default function ProfilePage() {
     setIsExporting(true);
     toast({ title: t('profilePage.toasts.exportStartingTitle'), description: t('profilePage.toasts.exportStartingDesc')});
 
-    const fetchImageAsDataUrl = async (s3Key: string): Promise<string | null> => {
+    const s3Config = getS3Config();
+
+    /**
+     * Generate a signed S3 URL for any S3 key
+     * @param s3Key - The S3 object key (e.g., 'plants/{identityId}/photo-123.jpg')
+     * @returns Signed URL valid for 1 hour, or null if key is invalid/missing
+     */
+    const generateSignedS3Url = async (s3Key: string | null | undefined): Promise<string | null> => {
+      if (!s3Key) return null;
       try {
-        const getUrlResult = await getUrl({
-          path: s3Key,
-          options: {
-            validateObjectExistence: true,
-            expiresIn: 60, // URL is valid for 60 seconds
-          },
+        const s3Client = new S3Client({ region: s3Config.region });
+        const command = new GetObjectCommand({
+          Bucket: s3Config.bucketName,
+          Key: s3Key,
         });
-        const response = await fetch(getUrlResult.url);
+        const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        return signedUrl;
+      } catch (error) {
+        console.error(`Failed to generate signed URL for S3 key ${s3Key}:`, error);
+        return null;
+      }
+    };
+
+    /**
+     * Fetch image from S3 using signed URL and convert to data URL
+     * @param s3Key - The S3 object key
+     * @returns Data URL string or null if fetch fails
+     */
+    const fetchImageAsDataUrl = async (s3Key: string | null | undefined): Promise<string | null> => {
+      if (!s3Key) return null;
+      try {
+        const signedUrl = await generateSignedS3Url(s3Key);
+        if (!signedUrl) return null;
+
+        const response = await fetch(signedUrl);
         if (!response.ok) throw new Error(`Failed to fetch image from S3: ${response.statusText}`);
+        
         const blob = await response.blob();
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -209,12 +248,8 @@ export default function ProfilePage() {
     };
 
     try {
-      // Fetch all plants for the user from Amplify Data
-      // The PlantDataContext already fetches plants with photos and tasks
-      // We can use the plants currently in the context state
       const plantsToExport = contextPlants;
 
-      // Construct the export data structure
       const exportedPlants = await Promise.all(
         plantsToExport.map(async (clientModelPlant: any) => {
           const relatedPhotos = contextPlantPhotos.filter(p => p.plantId === clientModelPlant.id);
@@ -268,7 +303,7 @@ export default function ProfilePage() {
       );
 
       const exportData = {
-        version: 2, // Version the export format to include image data
+        version: 2,
         timestamp: new Date().toISOString(),
         user: {
           id: authUser.id,
@@ -500,7 +535,11 @@ export default function ProfilePage() {
         // Also delete user preferences and avatar from S3
         if (authUser.preferences) {
              try {
-                 await client.models.UserPreferences.delete({ id: authUser.id });
+                 // Delete user preferences via Apollo GraphQL mutation
+                 await client.mutate({
+                   mutation: DELETE_USER_PREFERENCES,
+                   variables: { input: { id: authUser.id } },
+                 });
              } catch (e) {
                  console.error(`Failed to delete user preferences for ${authUser.id}:`, e);
                  // Continue with other deletions
@@ -508,7 +547,11 @@ export default function ProfilePage() {
         }
         if (authUser.avatarS3Key) {
              try {
-                 await remove({ path: authUser.avatarS3Key });
+                 const idToken = getIdTokenForS3();
+                 if (!idToken) {
+                   throw new Error('Missing ID token for S3 operation');
+                 }
+                 await deleteFile(authUser.avatarS3Key, idToken);
              } catch (e) {
                  console.error(`Failed to delete user avatar from S3 for ${authUser.id}:`, e);
                  // Continue with other deletions

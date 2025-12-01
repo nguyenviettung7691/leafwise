@@ -1,52 +1,77 @@
-
 'use client';
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
-import { generateClient } from 'aws-amplify/data';
-import { uploadData, remove } from 'aws-amplify/storage';
-import type { Schema } from '../../amplify/data/resource';
-import type { Plant, PlantPhoto, CareTask } from '@/types';
+import client from '@/lib/apolloClient';
+import {
+  LIST_PLANTS,
+  CREATE_PLANT,
+  UPDATE_PLANT,
+  DELETE_PLANT,
+  GET_PLANT,
+  LIST_PLANT_PHOTOS,
+  CREATE_PLANT_PHOTO,
+  UPDATE_PLANT_PHOTO,
+  DELETE_PLANT_PHOTO,
+  LIST_CARE_TASKS,
+  CREATE_CARE_TASK,
+  UPDATE_CARE_TASK,
+  DELETE_CARE_TASK,
+} from '@/lib/graphql/operations';
+import type { Plant, PlantPhoto, CareTask, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-const client = generateClient<Schema>();
+import { uploadFile, deleteFile, deleteMultipleFiles } from '@/lib/s3Utils';
 
 interface PlantDataContextType {
   plants: Plant[];
   plantPhotos: PlantPhoto[];
   careTasks: CareTask[];
   isLoading: boolean;
-  getPlantById: (id: string) => Plant | undefined;
-  addPlant: (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[], source?: 'manual' | 'diagnose') => Promise<Plant>;
+  getPlantById: (id: string) => Promise<(Plant & { photos: PlantPhoto[]; careTasks: CareTask[] }) | undefined>;
+  addPlant: (
+    newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>,
+    primaryPhotoFile?: File | null,
+    galleryPhotoFiles?: File[]
+  ) => Promise<Plant>;
   updatePlant: (
-    plantId: string, 
-    updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, 
-    primaryPhotoFile?: File | null, 
-    diagnosedPhotoUrlFromForm?: string | null // Added to handle SavePlantForm's primary photo choice
+    plantId: string,
+    updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>,
+    primaryPhotoFile?: File | null,
+    diagnosedPhotoUrlFromForm?: string | null
   ) => Promise<Plant | undefined>;
   deletePlant: (plantId: string) => Promise<void>;
   deleteMultiplePlants: (plantIds: Set<string>) => Promise<void>;
-  setAllPlants: (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
-    primaryPhotoDataUrl?: string | null;
-    photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
-        imageDataUrl?: string | null;
-    }>,
-    careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>
-  }>, options?: { removeImages?: boolean }) => Promise<void>;
+  setAllPlants: (
+    allNewPlants: Array<
+      Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
+        primaryPhotoDataUrl?: string | null;
+        photos?: Array<
+          Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
+            imageDataUrl?: string | null;
+          }
+        >;
+        careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>;
+      }
+    >,
+    options?: { removeImages?: boolean }
+  ) => Promise<void>;
   clearAllPlantData: (options?: { removeImages?: boolean }) => Promise<void>;
-  // Methods for managing nested data
-  addPhotoToPlant: (plantId: string, photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>, photoFile: File) => Promise<PlantPhoto | undefined>;
-  updatePhotoDetails: (photoId: string, updatedDetails: Partial<Omit<PlantPhoto, 'plant'>>) => Promise<PlantPhoto | undefined>;
+  addPhotoToPlant: (
+    plantId: string,
+    photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>,
+    photoFile: File
+  ) => Promise<PlantPhoto | undefined>;
+  updatePhotoDetails: (
+    photoId: string,
+    updatedDetails: Partial<Omit<PlantPhoto, 'plant'>>
+  ) => Promise<PlantPhoto | undefined>;
   deletePhoto: (photoId: string) => Promise<void>;
   addCareTaskToPlant: (
     plantId: string,
-    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'> & { 
-      frequency: string; // English key e.g., "daily", "every_x_days"
-      frequencyEvery?: number; 
-    }
-    ) => Promise<CareTask | undefined>;
+    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>
+  ) => Promise<CareTask | undefined>;
   updateCareTask: (taskId: string, updatedDetails: Partial<Omit<CareTask, 'plant'>>) => Promise<CareTask | undefined>;
   deleteCareTask: (taskId: string) => Promise<void>;
 }
@@ -54,7 +79,7 @@ interface PlantDataContextType {
 const PlantContext = createContext<PlantDataContextType | undefined>(undefined);
 
 export function PlantDataProvider({ children }: { children: ReactNode }) {
-  const { user, isLoading: isLoadingAuth } = useAuth(); 
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [plants, setPlantsState] = useState<Plant[]>([]);
   const [plantPhotos, setPlantPhotosState] = useState<PlantPhoto[]>([]);
   const [careTasks, setCareTasksState] = useState<CareTask[]>([]);
@@ -62,866 +87,795 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { t } = useLanguage();
 
+  // Load plants data via direct client.query() on mount
   useEffect(() => {
-    if (isLoadingAuth) {
+    if (!user?.id || !user?.identityId || isLoadingAuth) {
       setIsLoading(true);
       return;
     }
 
-    const fetchPlants = async () => {
-      setIsLoading(true);
+    const loadData = async () => {
       try {
-        const { data: fetchedPlants } = await client.models.Plant.list({ authMode: 'userPool' });
-        const plantsArray = fetchedPlants ? await fetchedPlants : [];
-        setPlantsState(plantsArray);
+        setIsLoading(true);
 
-        const { data: fetchedPhotos } = await client.models.PlantPhoto.list({ authMode: 'userPool' });
-        const photosArray = fetchedPhotos ? await fetchedPhotos : [];
-        setPlantPhotosState(photosArray);
+        // Load plants
+        const plantsResult = await client.query({
+          query: LIST_PLANTS,
+        });
+        if (plantsResult.data?.listPlants?.items) {
+          setPlantsState(plantsResult.data.listPlants.items);
+        }
 
-        const { data: fetchedTasks } = await client.models.CareTask.list({ authMode: 'userPool' });
-        const tasksArray = fetchedTasks ? await fetchedTasks : [];
-        setCareTasksState(tasksArray);
+        // Load photos
+        const photosResult = await client.query({
+          query: LIST_PLANT_PHOTOS,
+        });
+        if (photosResult.data?.listPlantPhotos?.items) {
+          setPlantPhotosState(photosResult.data.listPlantPhotos.items);
+        }
 
+        // Load care tasks
+        const tasksResult = await client.query({
+          query: LIST_CARE_TASKS,
+        });
+        if (tasksResult.data?.listCareTasks?.items) {
+          setCareTasksState(tasksResult.data.listCareTasks.items);
+        }
       } catch (error) {
-        console.error("Failed to fetch data from Amplify Data:", error);
-        setPlantsState([]);
-        setPlantPhotosState([]);
-        setCareTasksState([]);
+        console.error('Failed to load plant data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (user?.id) {
-      fetchPlants();
-    } else {
-      setPlantsState([]);
-      setPlantPhotosState([]);
-      setCareTasksState([]);
-      setIsLoading(false);
+    loadData();
+  }, [user?.id, user?.identityId, isLoadingAuth]);
+
+  /**
+   * Helper to get valid ID token for S3 operations
+   */
+  const getIdToken = useCallback(async (): Promise<string> => {
+    if (!user?.id) {
+      throw new Error('User not authenticated');
     }
-  }, [user?.id, isLoadingAuth]);
-
-  const getPlantById = useCallback((id: string): Plant | undefined => {
-    const plant = plants.find(p => p.id === id);
-    if (!plant) return undefined;
-
-    const relatedPhotos = plantPhotos.filter(photo => photo.plantId === id);
-    const relatedTasks = careTasks.filter(task => task.plantId === id);
-
-    return {
-        ...plant,
-        photos: relatedPhotos,
-        careTasks: relatedTasks,
-    } as unknown as Plant;
-  }, [plants, plantPhotos, careTasks]);
-
-  const uploadImageToS3 = useCallback(async (plantId: string, file: File): Promise<string> => {
-      const fileExtension = file.name.split('.').pop();
-      const { path } = await uploadData({
-        path: (identityId) => `plants/${identityId}/${plantId}/${Date.now()}.${fileExtension}`,
-        data: file
-      }).result;
-      return path;
-  }, []);
-
-  const addPlant = useCallback(async (newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>, primaryPhotoFile?: File | null, galleryPhotoFiles?: File[], source?: 'manual' | 'diagnose'): Promise<Plant> => {
-    if (!user) {
-      throw new Error("User not authenticated.");
+    
+    // Token is stored in localStorage by AuthContext
+    const stored = localStorage.getItem('cognito_tokens');
+    if (!stored) {
+      throw new Error('No tokens found in storage');
     }
+    
+    const tokens = JSON.parse(stored);
+    return tokens.idToken;
+  }, [user?.id]);
 
-    setIsLoading(true);
-
-    let createdPlantRecord: Plant | undefined;
-    let uploadedPrimaryPhotoKey: string | undefined;
-    const uploadedGalleryPhotoKeys: string[] = [];
-    const createdPhotoRecords: PlantPhoto[] = [];
-
-    try {
-        // 1. Create the Plant record first (without photo URLs)
-        // Amplify Data automatically adds the owner field based on the authenticated user
-        const { data: createdPlant, errors: plantErrors } = await client.models.Plant.create({
-            commonName: newPlant.commonName,
-            scientificName: newPlant.scientificName,
-            familyCategory: newPlant.familyCategory,
-            ageEstimateYears: newPlant.ageEstimateYears,
-            healthCondition: newPlant.healthCondition,
-            location: newPlant.location,
-            plantingDate: newPlant.plantingDate,
-            customNotes: newPlant.customNotes,
-            primaryPhotoUrl: undefined, // Do not set primaryPhotoUrl yet
-        },{authMode: 'userPool'});
-
-        if (plantErrors || !createdPlant) {
-            console.error("Error adding plant to Amplify Data:", plantErrors);
-            throw new Error(plantErrors ? plantErrors[0].message : "Failed to add plant.");
-        }
-        createdPlantRecord = createdPlant as Plant;
-
-        // 2. Upload primary photo if provided, using the created plant's ID
-        if (primaryPhotoFile) {
-            try {
-                uploadedPrimaryPhotoKey = await uploadImageToS3(createdPlantRecord.id, primaryPhotoFile);
-
-                const photoDiagnosisNotes = source === 'diagnose'
-                    ? t('diagnosePage.resultDisplay.initialDiagnosisNotes')
-                    : t('addNewPlantPage.initialDiagnosisNotes');
-
-                const { data: createdPrimaryPhoto, errors: primaryPhotoErrors } = await client.models.PlantPhoto.create({
-                    plantId: createdPlantRecord.id,
-                    url: uploadedPrimaryPhotoKey,
-                    dateTaken: new Date().toISOString(),
-                    healthCondition: newPlant.healthCondition,
-                    diagnosisNotes: photoDiagnosisNotes,
-                    notes: '',
-                }, {authMode: 'userPool'});
-
-                if (primaryPhotoErrors || !createdPrimaryPhoto) {
-                    console.error("Error adding primary photo record to Amplify Data:", primaryPhotoErrors);
-                } else {
-                    createdPhotoRecords.push(createdPrimaryPhoto as PlantPhoto); // Add to gallery photos list
-                }
-            } catch (e) {
-                console.error("Error uploading primary photo to S3:", e);
-                uploadedPrimaryPhotoKey = undefined;
-            }
-        }
-
-        // 3. Upload gallery photos and create PlantPhoto records, using the created plant's ID
-        if (galleryPhotoFiles && galleryPhotoFiles.length > 0) {
-             for (const file of galleryPhotoFiles) {
-                try {
-                    const photoS3Key = await uploadImageToS3(createdPlantRecord.id, file);
-                    uploadedGalleryPhotoKeys.push(photoS3Key); 
-
-                    const { data: createdPhoto, errors: photoErrors } = await client.models.PlantPhoto.create({
-                        plantId: createdPlantRecord.id,
-                        url: photoS3Key,
-                        dateTaken: new Date().toISOString(), 
-                        healthCondition: newPlant.healthCondition,
-                        diagnosisNotes: newPlant.customNotes,
-                    }, {authMode: 'userPool'});
-                    if (photoErrors || !createdPhoto) {
-                        console.error("Error adding photo record to Amplify Data:", photoErrors);
-                    } else {
-                        createdPhotoRecords.push(createdPhoto as PlantPhoto);
-                    }
-                } catch (e) {
-                    console.error("Error uploading gallery photo to S3:", e);
-                }
-            }
-        }
-
-        // 4. Update the Plant record with the primary photo URL (if uploaded)
-        if (uploadedPrimaryPhotoKey) {
-             const { data: updatedPlantWithPhoto, errors: updatePhotoErrors } = await client.models.Plant.update({
-                 id: createdPlantRecord.id,
-                 primaryPhotoUrl: uploadedPrimaryPhotoKey,
-             }, {authMode: 'userPool'});
-             if (updatePhotoErrors || !updatedPlantWithPhoto) {
-                 console.error("Error updating plant with primary photo URL:", updatePhotoErrors);
-             } else {
-                 createdPlantRecord.primaryPhotoUrl = updatedPlantWithPhoto.primaryPhotoUrl;
-             }
-        }
-
-        // 5. Update local state: Add the new plant and the created photos to their respective states
-        setPlantsState(prevPlants => [createdPlantRecord as Plant, ...prevPlants]);
-        setPlantPhotosState(prevPhotos => [...prevPhotos, ...createdPhotoRecords]);
-
-        const fullCreatedPlant: Plant = {
-            ...createdPlantRecord,
-            photos: createdPhotoRecords,
-            careTasks: [],
-        } as unknown as Plant;
-
-        return fullCreatedPlant;
-
-    } catch (error) {
-        console.error("Exception adding plant:", error);
-        if (createdPlantRecord) {
-            console.warn(`Attempting cleanup for plant ${createdPlantRecord.id} due to subsequent errors.`);
-            const keysToClean = [uploadedPrimaryPhotoKey, ...uploadedGalleryPhotoKeys].filter(Boolean) as string[];
-            await Promise.all(keysToClean.map(key =>
-                remove({ path: key }).catch(e => console.error(`Cleanup failed for S3 object ${key}:`, e))
-            ));
-            try {
-                 await client.models.Plant.delete({ id: createdPlantRecord.id }, {authMode: 'userPool'});
-            } catch (e) {
-                 console.error(`Cleanup failed for plant record ${createdPlantRecord.id}:`, e);
-            }
-        }
-        throw error;
-    } finally {
-        setIsLoading(false);
-    }
-
-  }, [user, uploadImageToS3, remove, t]);
-
-  const deletePhoto = useCallback(async (photoId: string): Promise<void> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
-      try {
-          // 1. Fetch the photo to get its S3 key
-          const { data: photoToDelete, errors: fetchErrors } = await client.models.PlantPhoto.get({ id: photoId }, { selectionSet: ['id', 'url', 'plantId'], authMode: 'userPool' });
-
-          if (fetchErrors || !photoToDelete) {
-              console.error(`Error fetching photo ${photoId} for deletion:`, fetchErrors);
-              // Attempt to delete the record anyway, but warn
-              console.warn(`Proceeding with photo record deletion for ${photoId}, but S3 cleanup may fail.`);
-          } else {
-              // 2. Delete image from S3
-              try {
-                  await remove({ path: photoToDelete.url });
-              } catch (e) {
-                  console.error(`Failed to delete S3 image ${photoToDelete.url} for photo ${photoId}:`, e);
-                  // Continue with record deletion even if S3 deletion fails
-              }
-          }
-
-          // 3. Delete PlantPhoto record
-          const { errors: deleteErrors } = await client.models.PlantPhoto.delete({ id: photoId }, {authMode: 'userPool'});
-
-          if (deleteErrors) {
-              console.error(`Error deleting photo record ${photoId}:`, deleteErrors);
-              throw new Error(deleteErrors[0].message || "Failed to delete photo record.");
-          }
-
-          // 4. Update local state: remove the photo from plantPhotos
-          setPlantPhotosState(prevPhotos => prevPhotos.filter(photo => photo.id !== photoId));
-
-          // 5. Check if the deleted photo was the primary photo for its plant and update the plant state
-          if (photoToDelete?.plantId && photoToDelete?.url) {
-              setPlantsState(prevPlants =>
-                  prevPlants.map(plant =>
-                      plant.id === photoToDelete.plantId && plant.primaryPhotoUrl === photoToDelete.url
-                          ? { ...plant, primaryPhotoUrl: undefined } // Set primaryPhotoUrl to undefined if it matched the deleted photo
-                          : plant
-                  )
-              );
-          }
-
-      } catch (error) {
-          console.error(`Exception deleting photo ${photoId}:`, error);
-          throw error;
-      } finally {
-          setIsLoading(false);
+  // Update uploadImageToS3 to use credentials
+  const uploadImageToS3 = useCallback(
+    async (plantId: string, file: File): Promise<string> => {
+      if (!user?.id || !user?.identityId || isLoadingAuth) {
+        throw new Error('User not authenticated or Identity ID not available');
       }
-  }, [user, remove]);
-  
-  const updatePlant = useCallback(async (
-    plantId: string, 
-    updatedPlantDataFromArgs: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>, 
-    primaryPhotoFileFromPage?: File | null,
-    diagnosedPhotoUrlFromForm?: string | null
-  ): Promise<Plant | undefined> => {
-    if (!user) {
-      throw new Error("User not authenticated.");
-    }
 
-    setIsLoading(true);
+      try {
+        const idToken = await getIdToken();
+        const timestamp = Date.now();
+        const extension = file.name.split('.').pop() || 'jpg';
+        const s3Key = `plants/${user.identityId}/${plantId}/photo-${timestamp}.${extension}`;
 
-    const currentPlant = plants.find(p => p.id === plantId);
-    if (!currentPlant) {
-        console.error(`Plant with id ${plantId} not found for update.`);
-        setIsLoading(false);
-        toast({ title: t('common.error'), description: "Plant not found for update.", variant: "destructive" });
+        await uploadFile(s3Key, file, idToken);
+        return s3Key;
+      } catch (error) {
+        console.error('S3 upload failed:', error);
+        throw error;
+      }
+    },
+    [user?.id, user?.identityId, isLoadingAuth, getIdToken]
+  );
+
+  const getPlantById = useCallback(
+    async (id: string): Promise<(Plant & { photos: PlantPhoto[]; careTasks: CareTask[] }) | undefined> => {
+      try {
+        const { data } = await client.query({
+          query: GET_PLANT,
+          variables: { id },
+        });
+
+        const plant = data?.getPlant;
+        if (!plant) return undefined;
+
+        const plantPhotos_ = plantPhotos.filter((p) => p.plantId === id);
+        const careTasks_ = careTasks.filter((t) => t.plantId === id);
+
+        return {
+          ...plant,
+          photos: plantPhotos_,
+          careTasks: careTasks_,
+        } as Plant & { photos: PlantPhoto[]; careTasks: CareTask[] };
+      } catch (error) {
+        console.error('Failed to fetch plant:', error);
         return undefined;
-    }
-
-    let finalS3KeyForPrimaryPhoto: string | undefined | null = currentPlant.primaryPhotoUrl; // Start with current plant's primary photo
-
-    try {
-        // Scenario 1: A new file is explicitly provided to be the primary photo
-        if (primaryPhotoFileFromPage) {
-            const newUploadedS3Key = await uploadImageToS3(plantId, primaryPhotoFileFromPage);
-
-            // Create a new PlantPhoto record for this new image and add it to the gallery
-            try {
-                const { data: newPhotoRecord, errors: photoErrors } = await client.models.PlantPhoto.create({
-                    plantId: plantId,
-                    url: newUploadedS3Key,
-                    dateTaken: new Date().toISOString(),
-                    healthCondition: updatedPlantDataFromArgs.healthCondition || currentPlant.healthCondition,
-                    diagnosisNotes: "New primary photo.", // Or a more descriptive note
-                }, { authMode: 'userPool' });
-
-                if (photoErrors || !newPhotoRecord) {
-                    console.error("Error creating PlantPhoto record for new primary photo:", photoErrors);
-                    // Attempt to clean up the S3 file if record creation failed
-                    try { await remove({ path: newUploadedS3Key }); } catch (e) { console.error("S3 cleanup failed for new primary photo:", e); }
-                    // Do not set as primary if record creation failed
-                } else {
-                    setPlantPhotosState(prev => [...prev, newPhotoRecord as PlantPhoto]);
-                    finalS3KeyForPrimaryPhoto = newUploadedS3Key;
-                }
-            } catch (e) {
-                console.error("Error during new primary photo record creation:", e);
-            }
-            // IMPORTANT: Do NOT delete currentPlant.primaryPhotoUrl from S3. It remains a gallery photo.
-        } 
-        // Scenario 2: No new file, but SavePlantForm might have indicated a choice via diagnosedPhotoUrlFromForm
-        else if (diagnosedPhotoUrlFromForm !== undefined) { 
-            if (diagnosedPhotoUrlFromForm === null) { // Primary photo selection was cleared
-                finalS3KeyForPrimaryPhoto = null;
-            } else if (diagnosedPhotoUrlFromForm.startsWith('data:image/')) {
-                // This case should ideally be handled by primaryPhotoFileFromPage if SavePlantForm passes the File.
-                // If it still reaches here, it means SavePlantForm only provided a dataURL.
-                console.warn("UpdatePlant received a dataURL in diagnosedPhotoUrlFromForm. This suggests SavePlantForm did not pass the File object directly. Attempting to handle, but this flow should be reviewed.");
-                // Potentially convert dataURL to File and call uploadImageToS3 + create PlantPhoto record, similar to Scenario 1.
-                // For now, this path is less likely if SavePlantForm is correct.
-            } else { // It's an S3 key (selected from gallery or unchanged)
-                finalS3KeyForPrimaryPhoto = diagnosedPhotoUrlFromForm;
-            }
-            // IMPORTANT: Do NOT delete currentPlant.primaryPhotoUrl from S3.
-        }
-
-        // Update the Plant record with all textual changes and the final primaryPhotoUrl
-        const { data: updatedPlant, errors: plantErrors } = await client.models.Plant.update({
-            id: plantId,
-            ...updatedPlantDataFromArgs,
-            primaryPhotoUrl: finalS3KeyForPrimaryPhoto,
-        },{authMode: 'userPool'});
-
-        if (plantErrors || !updatedPlant) {
-            console.error(`Error updating plant ${plantId} in Amplify Data:`, plantErrors);
-            throw new Error(plantErrors ? plantErrors[0].message : "Failed to update plant.");
-        }
-
-        // Update local state
-        setPlantsState(prevPlants => prevPlants.map(p => p.id === plantId ? updatedPlant as Plant : p));
-
-        // Return the updated plant data from the backend
-        return updatedPlant as Plant;
-
-    } catch (error) {
-        console.error(`Exception updating plant ${plantId}:`, error);
-        throw error; // Re-throw the error after logging
-    } finally {
-        setIsLoading(false);
-    }
-
-  }, [user, plants, uploadImageToS3, t, toast]); // Removed `remove` from dependencies as it's not used for S3 deletion here
-
-  const deletePlant = useCallback(async (plantId: string): Promise<void> => {
-    if (!user) {
-      throw new Error("User not authenticated.");
-    }
-
-    setIsLoading(true); // Indicate deletion is in progress
-
-    try {
-        // Fetch associated photos and tasks to get their IDs and S3 keys for cleanup
-        const photosToDelete = plantPhotos.filter(photo => photo.plantId === plantId);
-        const tasksToDelete = careTasks.filter(task => task.plantId === plantId);
-
-        // Delete associated photos from S3 concurrently
-        await Promise.all(photosToDelete.map(photo =>
-            remove({ path: photo.url }).catch(e => {
-                console.error(`Failed to delete S3 image ${photo.url} for plant ${plantId}:`, e);
-                // Continue with other operations even if one deletion fails
-            })
-        ));
-
-        // Delete associated CareTask records from backend concurrently
-         await Promise.all(tasksToDelete.map(task =>
-             client.models.CareTask.delete({ id: task.id }, {authMode: 'userPool'}).catch(e => {
-                 console.error(`Failed to delete CareTask record ${task.id} for plant ${plantId}:`, e);
-             })
-         ));
-
-        // Delete associated PlantPhoto records from backend concurrently
-        await Promise.all(photosToDelete.map(photo =>
-            client.models.PlantPhoto.delete({ id: photo.id }, {authMode: 'userPool'}).catch(e => {
-                console.error(`Failed to delete PlantPhoto record ${photo.id} for plant ${plantId}:`, e);
-            })
-        ));
-
-        // Delete the Plant record from backend
-        const { errors: deleteErrors } = await client.models.Plant.delete({ id: plantId }, {authMode: 'userPool'});
-
-        if (deleteErrors) {
-            console.error(`Error deleting plant ${plantId} from Amplify Data:`, deleteErrors);
-            throw new Error(deleteErrors[0].message || "Failed to delete plant.");
-        }
-
-        // Update local state: remove the plant, its photos, and its tasks
-        setPlantsState(prevPlants => prevPlants.filter(plant => plant.id !== plantId));
-        setPlantPhotosState(prevPhotos => prevPhotos.filter(photo => photo.plantId !== plantId));
-        setCareTasksState(prevTasks => prevTasks.filter(task => task.plantId !== plantId));
-
-    } catch (error) {
-        console.error(`Exception deleting plant ${plantId}:`, error);
-        throw error; // Re-throw the error after logging
-    } finally {
-        setIsLoading(false); // Reset loading state
-    }
-
-  }, [user, plantPhotos, careTasks, remove]);
-
-  const deleteMultiplePlants = useCallback(async (plantIds: Set<string>): Promise<void> => {
-    if (!user) {
-      throw new Error("User not authenticated.");
-    }
-    setIsLoading(true); // Indicate deletion is in progress
-    const plantIdsArray = Array.from(plantIds);
-    // Use Promise.all to run deletions concurrently for better performance
-    await Promise.all(plantIdsArray.map(plantId => deletePlant(plantId).catch(e => {
-        console.error(`Failed to delete plant ${plantId} in batch operation:`, e);
-        // Decide if you want to stop or continue on error
-        // For now, we log and continue.
-    })));
-
-    // Local state updates happen within deletePlant calls, but a final filter ensures consistency
-    setPlantsState(prevPlants => prevPlants.filter(plant => !plantIds.has(plant.id)));
-    setPlantPhotosState(prevPhotos => prevPhotos.filter(photo => !plantIdsArray.includes(photo.plantId)));
-    setCareTasksState(prevTasks => prevTasks.filter(task => !plantIdsArray.includes(task.plantId)));
-
-    setIsLoading(false);
-
-  }, [user, deletePlant]);
-
-  const clearAllPlantData = useCallback(async (options?: { removeImages?: boolean }): Promise<void> => {
-    const currentUserId = user?.id;
-    if (currentUserId) {
-      setIsLoading(true);
-      try {
-        const userPhotos = plantPhotos;
-        const userTasks = careTasks;
-        const userPlants = plants;
-
-        const photoKeysToDelete: string[] = userPhotos.map(photo => photo.url);
-        const plantIdsToDelete: string[] = userPlants.map(plant => plant.id);
-        const photoIdsToDelete: string[] = userPhotos.map(photo => photo.id);
-        const taskIdsToDelete: string[] = userTasks.map(task => task.id);
-
-        const shouldRemoveImages = options?.removeImages ?? true;
-
-        if (shouldRemoveImages) {
-            await Promise.all(photoKeysToDelete.map(path =>
-                remove({ path }).catch(e => {
-                    console.error(`Failed to delete S3 image ${path} during clearAllPlantData:`, e);
-                })
-            ));
-        }
-
-         await Promise.all(taskIdsToDelete.map(taskId =>
-             client.models.CareTask.delete({ id: taskId }, {authMode: 'userPool'}).catch(e => {
-                 console.error(`Failed to delete CareTask record ${taskId} during clearAllPlantData:`, e);
-             })
-         ));
-
-        await Promise.all(photoIdsToDelete.map(photoId =>
-            client.models.PlantPhoto.delete({ id: photoId }, {authMode: 'userPool'}).catch(e => {
-                console.error(`Failed to delete PlantPhoto record ${photoId} during clearAllPlantData:`, e);
-            })
-        ));
-
-         await Promise.all(plantIdsToDelete.map(plantId =>
-             client.models.Plant.delete({ id: plantId }, {authMode: 'userPool'}).catch(e => {
-                 console.error(`Failed to delete Plant record ${plantId} during clearAllPlantData:`, e);
-             })
-         ));
-
-
-        setPlantsState([]);
-        setPlantPhotosState([]);
-        setCareTasksState([]);
-
-      } catch (error) {
-        console.error(`Error clearing plant data for user ${currentUserId}:`, error);
-        throw error;
-      } finally {
-        setIsLoading(false);
       }
-    } else {
-      setPlantsState([]);
-      setPlantPhotosState([]);
-      setCareTasksState([]);
-      setIsLoading(false);
-    }
-  }, [user, plantPhotos, careTasks, plants, remove]);
+    },
+    [plantPhotos, careTasks]
+  );
 
-  const setAllPlants = useCallback(async (allNewPlants: Array<Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & { primaryPhotoDataUrl?: string | null, photos?: Array<Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & { imageDataUrl?: string | null }>, careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>> }>, options?: { removeImages?: boolean }): Promise<void> => {
-    if (!user) {
-      throw new Error("User not authenticated.");
-    }
-    setIsLoading(true); // Indicate import is in progress
+  // Update addPlant to use uploadImageToS3 with credentials
+  const addPlant = useCallback(
+    async (
+      newPlant: Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'>,
+      primaryPhotoFile?: File | null,
+      galleryPhotoFiles?: File[]
+    ): Promise<Plant> => {
+      if (!user?.id || !user?.identityId) {
+        throw new Error('User not authenticated or Identity ID not available');
+      }
 
-    const dataUrlToFile = (dataUrl: string, filename: string): File | null => {
-        try {
-            const arr = dataUrl.split(',');
-            if (arr.length < 2) return null;
-            const mimeMatch = arr[0].match(/:(.*?);/);
-            if (!mimeMatch) return null;
-            
-            const mime = mimeMatch[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            while (n--) {
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            return new File([u8arr], filename, { type: mime });
-        } catch (error) {
-            console.error("Failed to convert data URL to file:", error);
-            return null;
+      try {
+        let primaryPhotoS3Key: string | null = null;
+
+        // Upload primary photo if provided
+        if (primaryPhotoFile) {
+          const tempPlantId = `temp-${Date.now()}`;
+          primaryPhotoS3Key = await uploadImageToS3(tempPlantId, primaryPhotoFile);
         }
-    };
 
-    try {
-        // 1. Clear all existing data for the user
+        // Create plant in AppSync
+        const { data } = await client.mutate({
+          mutation: CREATE_PLANT,
+          variables: {
+            input: {
+              commonName: newPlant.commonName,
+              scientificName: newPlant.scientificName || null,
+              familyCategory: newPlant.familyCategory || null,
+              ageEstimateYears: newPlant.ageEstimateYears || null,
+              healthCondition: newPlant.healthCondition,
+              location: newPlant.location || null,
+              plantingDate: newPlant.plantingDate || null,
+              customNotes: newPlant.customNotes || null,
+              primaryPhotoUrl: primaryPhotoS3Key || null,
+            },
+          },
+        });
+
+        const createdPlant = data?.createPlant;
+        if (!createdPlant) {
+          throw new Error('Failed to create plant in AppSync');
+        }
+
+        // Upload gallery photos if provided
+        if (galleryPhotoFiles && galleryPhotoFiles.length > 0) {
+          const idToken = await getIdToken();
+          for (const file of galleryPhotoFiles) {
+            try {
+              const photoKey = `plants/${user.identityId}/${createdPlant.id}/photo-${Date.now()}.${
+                file.name.split('.').pop() || 'jpg'
+              }`;
+              await uploadFile(photoKey, file, idToken);
+
+              // Create photo record
+              await client.mutate({
+                mutation: CREATE_PLANT_PHOTO,
+                variables: {
+                  input: {
+                    plantId: createdPlant.id,
+                    url: photoKey,
+                    dateTaken: new Date().toISOString(),
+                    healthCondition: 'unknown',
+                  },
+                },
+              });
+            } catch (error) {
+              console.error('Failed to upload gallery photo:', error);
+            }
+          }
+        }
+
+        setPlantsState((prev: Plant[]) => [...prev, createdPlant]);
+        return createdPlant;
+      } catch (error) {
+        console.error('Error creating plant:', error);
+        throw error;
+      }
+    },
+    [user?.id, user?.identityId, uploadImageToS3, getIdToken]
+  );
+
+  const updatePlant = useCallback(
+    async (
+      plantId: string,
+      updatedPlantData: Partial<Omit<Plant, 'photos' | 'careTasks' | 'owner'>>,
+      primaryPhotoFile?: File | null,
+      diagnosedPhotoUrlFromForm?: string | null
+    ): Promise<Plant | undefined> => {
+      if (!user?.id || !user?.identityId) {
+        throw new Error('User not authenticated or Identity ID not available');
+      }
+
+      try {
+        let primaryPhotoUrl = updatedPlantData.primaryPhotoUrl;
+
+        // Handle primary photo update
+        if (primaryPhotoFile) {
+          const oldPrimaryPhotoUrl = plants.find((p) => p.id === plantId)?.primaryPhotoUrl;
+          const newPhotoS3Key = await uploadImageToS3(plantId, primaryPhotoFile);
+
+          if (oldPrimaryPhotoUrl && oldPrimaryPhotoUrl !== diagnosedPhotoUrlFromForm) {
+            try {
+              const idToken = await getIdToken();
+              await deleteFile(oldPrimaryPhotoUrl, idToken);
+            } catch (error) {
+              console.error('Failed to delete old primary photo:', error);
+            }
+          }
+
+          primaryPhotoUrl = newPhotoS3Key;
+        }
+
+        const { data } = await client.mutate({
+          mutation: UPDATE_PLANT,
+          variables: {
+            input: {
+              id: plantId,
+              commonName: updatedPlantData.commonName,
+              scientificName: updatedPlantData.scientificName,
+              familyCategory: updatedPlantData.familyCategory,
+              ageEstimateYears: updatedPlantData.ageEstimateYears,
+              healthCondition: updatedPlantData.healthCondition,
+              location: updatedPlantData.location,
+              plantingDate: updatedPlantData.plantingDate,
+              customNotes: updatedPlantData.customNotes,
+              primaryPhotoUrl,
+            },
+          },
+        });
+
+        toast({
+          title: t('plantDataContext.plantUpdatedTitle'),
+          description: t('plantDataContext.plantUpdatedDescription'),
+        });
+
+        return data?.updatePlant;
+      } catch (error: any) {
+        console.error('Failed to update plant:', error);
+        toast({
+          title: t('common.error'),
+          description: error.message || t('plantDataContext.updatePlantErrorDescription'),
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    [user?.id, user?.identityId, plants, uploadImageToS3, getIdToken, toast, t]
+  );
+
+  const deletePhoto = useCallback(
+    async (photoId: string): Promise<void> => {
+      try {
+        const photoToDelete = plantPhotos.find((p) => p.id === photoId);
+        if (photoToDelete?.url) {
+          try {
+            const idToken = await getIdToken();
+            await deleteFile(photoToDelete.url, idToken);
+          } catch (error) {
+            console.error('S3 cleanup failed:', error);
+          }
+        }
+
+        await client.mutate({
+          mutation: DELETE_PLANT_PHOTO,
+          variables: {
+            input: { id: photoId },
+          },
+        });
+
+        // Refresh photos
+        const photosResult = await client.query({
+          query: LIST_PLANT_PHOTOS,
+        });
+        if (photosResult.data?.listPlantPhotos?.items) {
+          setPlantPhotosState(photosResult.data.listPlantPhotos.items);
+        }
+      } catch (error: any) {
+        console.error('Failed to delete photo:', error);
+        toast({
+          title: t('common.error'),
+          description: error.message || t('plantDataContext.deletePhotoErrorDescription'),
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    [plantPhotos, getIdToken, toast, t]
+  );
+
+  // Update deletePlant to pass idToken
+  const deletePlant = useCallback(
+    async (plantId: string): Promise<void> => {
+      if (!user?.id || !user?.identityId) {
+        throw new Error('User not authenticated or Identity ID not available');
+      }
+
+      try {
+        const idToken = await getIdToken();
+
+        // Get plant photos to delete from S3
+        const plantPhotosToDelete = plantPhotos.filter(p => p.plantId === plantId);
+        
+        if (plantPhotosToDelete.length > 0) {
+          const photoKeys = plantPhotosToDelete
+            .map(p => p.url)
+            .filter((url): url is string => !!url);
+          
+          if (photoKeys.length > 0) {
+            await deleteMultipleFiles(photoKeys, idToken);
+          }
+        }
+
+        // Delete plant from AppSync
+        await client.mutate({
+          mutation: DELETE_PLANT,
+          variables: { input: { id: plantId } },
+        });
+
+        setPlantsState((prev: Plant[]) => prev.filter(p => p.id !== plantId));
+      } catch (error) {
+        console.error('Error deleting plant:', error);
+        throw error;
+      }
+    },
+    [user?.id, user?.identityId, plantPhotos, getIdToken]
+  );
+
+  const deleteMultiplePlants = useCallback(
+    async (plantIds: Set<string>): Promise<void> => {
+      for (const plantId of plantIds) {
+        try {
+          await deletePlant(plantId);
+        } catch (error) {
+          console.error(`Failed to delete plant ${plantId}:`, error);
+        }
+      }
+    },
+    [deletePlant]
+  );
+
+  const refreshAllData = useCallback(
+    async (): Promise<void> => {
+      try {
+        // Refresh plants
+        const plantsResult = await client.query({
+          query: LIST_PLANTS,
+        });
+        if (plantsResult.data?.listPlants?.items) {
+          setPlantsState(plantsResult.data.listPlants.items);
+        }
+
+        // Refresh photos
+        const photosResult = await client.query({
+          query: LIST_PLANT_PHOTOS,
+        });
+        if (photosResult.data?.listPlantPhotos?.items) {
+          setPlantPhotosState(photosResult.data.listPlantPhotos.items);
+        }
+
+        // Refresh care tasks
+        const tasksResult = await client.query({
+          query: LIST_CARE_TASKS,
+        });
+        if (tasksResult.data?.listCareTasks?.items) {
+          setCareTasksState(tasksResult.data.listCareTasks.items);
+        }
+      } catch (error) {
+        console.error('Failed to refresh plant data:', error);
+      }
+    },
+    []
+  );
+
+  const setAllPlants = useCallback(
+    async (
+      allNewPlants: Array<
+        Omit<Plant, 'id' | 'photos' | 'careTasks' | 'owner' | 'createdAt' | 'updatedAt'> & {
+          primaryPhotoDataUrl?: string | null;
+          photos?: Array<
+            Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'> & {
+              imageDataUrl?: string | null;
+            }
+          >;
+          careTasks?: Array<Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt' | 'owner'>>;
+        }
+      >,
+      options?: { removeImages?: boolean }
+    ): Promise<void> => {
+      if (!user?.id || !user?.identityId) {
+        throw new Error('User ID and Identity ID not available');
+      }
+
+      try {
+        // Clear all existing plant data (with option to preserve S3 images)
         await clearAllPlantData(options);
 
-        // 2. Create new data
-        const createdPlants: Plant[] = [];
-        const createdPhotos: PlantPhoto[] = [];
-        const createdTasks: CareTask[] = [];
+        // Get idToken once for S3 uploads
+        const idToken = await getIdToken();
 
-        for (const newPlant of allNewPlants) {
+        // Create all new plants
+        for (const plantToCreate of allNewPlants) {
+          let primaryPhotoKey: string | undefined;
+
+          // Upload primary photo if provided
+          if (plantToCreate.primaryPhotoDataUrl) {
             try {
-                 // Create the Plant record first, without a primary photo URL
-                 const { data: createdPlant, errors: plantErrors } = await client.models.Plant.create({
-                    commonName: newPlant.commonName,
-                    scientificName: newPlant.scientificName,
-                    familyCategory: newPlant.familyCategory,
-                    ageEstimateYears: newPlant.ageEstimateYears,
-                    healthCondition: newPlant.healthCondition,
-                    location: newPlant.location,
-                    plantingDate: newPlant.plantingDate,
-                    customNotes: newPlant.customNotes,
-                    primaryPhotoUrl: undefined, // Set later
-                 },{authMode: 'userPool'});
-
-                 if (plantErrors || !createdPlant) {
-                     console.error("Error creating plant during import:", plantErrors);
-                     continue; // Skip this plant on error
-                 }
-                 let finalPrimaryPhotoS3Key: string | undefined = undefined;
-                 const photosForThisPlant: PlantPhoto[] = [];
-
-                 // Upload photos from data URLs and create records
-                 if (newPlant.photos) {
-                     for (const photoData of newPlant.photos) {
-                         let photoS3Key: string | undefined = undefined;
-                         if (photoData.imageDataUrl) {
-                             const photoFile = dataUrlToFile(photoData.imageDataUrl, `import-photo-${Date.now()}.webp`);
-                             if (photoFile) {
-                                 try {
-                                     photoS3Key = await uploadImageToS3(createdPlant.id, photoFile);
-                                 } catch (uploadError) {
-                                     console.error(`Failed to upload imported photo for plant ${createdPlant.commonName}:`, uploadError);
-                                 }
-                             }
-                         } else if (photoData.url) {
-                             // For v1 exports, we keep the old S3 key
-                             photoS3Key = photoData.url;
-                         }
-
-                         if (photoS3Key) {
-                             try {
-                                 const { data: createdPhoto, errors: photoErrors } = await client.models.PlantPhoto.create({
-                                     plantId: createdPlant.id,
-                                     url: photoS3Key,
-                                     notes: photoData.notes,
-                                     dateTaken: photoData.dateTaken,
-                                     healthCondition: photoData.healthCondition,
-                                     diagnosisNotes: photoData.diagnosisNotes,
-                                 },{authMode: 'userPool'});
-                                 if (photoErrors || !createdPhoto) {
-                                     console.error("Error creating photo record during import:", photoErrors);
-                                 } else {
-                                     photosForThisPlant.push(createdPhoto as PlantPhoto);
-                                     // Check if this photo was the primary photo in the export file
-                                     if (newPlant.primaryPhotoUrl && photoData.url === newPlant.primaryPhotoUrl) {
-                                         finalPrimaryPhotoS3Key = photoS3Key;
-                                     }
-                                 }
-                             } catch (e) {
-                                 console.error("Exception creating photo record during import:", e);
-                             }
-                         }
-                     }
-                 }
-
-                 // Handle a primary photo that might not be in the gallery (from primaryPhotoDataUrl)
-                 if (newPlant.primaryPhotoDataUrl && !finalPrimaryPhotoS3Key) {
-                     const primaryPhotoFile = dataUrlToFile(newPlant.primaryPhotoDataUrl, `import-primary-photo-${Date.now()}.webp`);
-                     if (primaryPhotoFile) {
-                         try {
-                             const primaryS3Key = await uploadImageToS3(createdPlant.id, primaryPhotoFile);
-                             const { data: createdPrimaryPhoto, errors: primaryPhotoErrors } = await client.models.PlantPhoto.create({
-                                 plantId: createdPlant.id,
-                                 url: primaryS3Key,
-                                 dateTaken: new Date().toISOString(),
-                                 healthCondition: newPlant.healthCondition,
-                                 notes: "Imported primary photo",
-                             },{authMode: 'userPool'});
-                             if (primaryPhotoErrors || !createdPrimaryPhoto) {
-                                 console.error("Error creating primary photo record during import:", primaryPhotoErrors);
-                             } else {
-                                 photosForThisPlant.push(createdPrimaryPhoto as PlantPhoto);
-                                 finalPrimaryPhotoS3Key = primaryS3Key;
-                             }
-                         } catch (uploadError) {
-                             console.error(`Failed to upload imported primary photo for plant ${createdPlant.commonName}:`, uploadError);
-                         }
-                     }
-                 }
-
-                 // Update the plant with the final primary photo URL
-                 if (finalPrimaryPhotoS3Key) {
-                     const { data: updatedPlantWithPhoto, errors: updateErrors } = await client.models.Plant.update({
-                         id: createdPlant.id,
-                         primaryPhotoUrl: finalPrimaryPhotoS3Key,
-                     },{authMode: 'userPool'});
-                     createdPlants.push((updatedPlantWithPhoto || createdPlant) as Plant);
-                 } else {
-                     createdPlants.push(createdPlant as Plant);
-                 }
-
-                 createdPhotos.push(...photosForThisPlant);
-
-                 // Create CareTask records
-                 if (newPlant.careTasks) {
-                     for (const taskData of newPlant.careTasks) {
-                         try {
-                             const { data: createdTask, errors: taskErrors } = await client.models.CareTask.create({
-                                 plantId: createdPlant.id,
-                                 name: taskData.name,
-                                 description: taskData.description,
-                                 frequency: taskData.frequency,
-                                 timeOfDay: taskData.timeOfDay,
-                                 nextDueDate: taskData.nextDueDate,
-                                 isPaused: taskData.isPaused ?? false,
-                                 level: taskData.level,
-                             },{authMode: 'userPool'});
-                             if (taskErrors || !createdTask) {
-                                 console.error("Error creating task record during import:", taskErrors);
-                             } else {
-                                 createdTasks.push(createdTask as CareTask);
-                             }
-                         } catch (e) {
-                             console.error("Exception creating task record during import:", e);
-                         }
-                     }
-                 }
-
-            } catch (error) {
-                console.error("Exception creating plant during import:", error);
+              const file = new File(
+                [await (await fetch(plantToCreate.primaryPhotoDataUrl)).blob()],
+                'primary-photo.jpg',
+                { type: 'image/jpeg' }
+              );
+              const timestamp = Date.now();
+              const ext = file.type.split('/')[1];
+              primaryPhotoKey = `plants/${user.identityId}/${crypto.randomUUID()}/photo-${timestamp}.${ext}`;
+              await uploadFile(primaryPhotoKey, file, idToken);
+            } catch (err) {
+              console.error('Failed to upload primary photo during import:', err);
+              // Continue without primary photo
             }
+          }
+
+          // Create the plant
+          const { data: createPlantData } = await client.mutate({
+            mutation: CREATE_PLANT,
+            variables: {
+              input: {
+                commonName: plantToCreate.commonName,
+                scientificName: plantToCreate.scientificName || null,
+                familyCategory: plantToCreate.familyCategory || null,
+                ageEstimateYears: plantToCreate.ageEstimateYears || null,
+                healthCondition: plantToCreate.healthCondition,
+                location: plantToCreate.location || null,
+                plantingDate: plantToCreate.plantingDate || null,
+                customNotes: plantToCreate.customNotes || null,
+                primaryPhotoUrl: primaryPhotoKey || null,
+              },
+            },
+          });
+
+          const createdPlant = createPlantData?.createPlant;
+          if (!createdPlant?.id) {
+            throw new Error('Failed to create plant');
+          }
+
+          // Upload gallery photos
+          if (plantToCreate.photos && Array.isArray(plantToCreate.photos)) {
+            for (const photo of plantToCreate.photos) {
+              try {
+                let photoUrl = photo.url;
+
+                // If imageDataUrl is provided, upload it to S3
+                if (photo.imageDataUrl) {
+                  const file = new File(
+                    [await (await fetch(photo.imageDataUrl)).blob()],
+                    'photo.jpg',
+                    { type: 'image/jpeg' }
+                  );
+                  const timestamp = Date.now();
+                  const ext = file.type.split('/')[1];
+                  photoUrl = `plants/${user.identityId}/${createdPlant.id}/photo-${timestamp}.${ext}`;
+                  await uploadFile(photoUrl, file, idToken);
+                }
+
+                // Create photo record
+                await client.mutate({
+                  mutation: CREATE_PLANT_PHOTO,
+                  variables: {
+                    input: {
+                      url: photoUrl,
+                      notes: photo.notes || null,
+                      dateTaken: photo.dateTaken || new Date().toISOString(),
+                      healthCondition: photo.healthCondition || 'unknown',
+                      diagnosisNotes: photo.diagnosisNotes || null,
+                      plantId: createdPlant.id,
+                    },
+                  },
+                });
+              } catch (err) {
+                console.error('Failed to upload gallery photo during import:', err);
+                // Continue with next photo
+              }
+            }
+          }
+
+          // Create care tasks
+          if (plantToCreate.careTasks && Array.isArray(plantToCreate.careTasks)) {
+            for (const task of plantToCreate.careTasks) {
+              try {
+                await client.mutate({
+                  mutation: CREATE_CARE_TASK,
+                  variables: {
+                    input: {
+                      plantId: createdPlant.id,
+                      name: task.name,
+                      description: task.description || null,
+                      frequency: task.frequency,
+                      frequencyEvery: task.frequencyEvery || null,
+                      timeOfDay: task.timeOfDay || null,
+                      nextDueDate: task.nextDueDate || new Date().toISOString(),
+                      isPaused: task.isPaused ?? false,
+                      level: task.level,
+                    },
+                  },
+                });
+              } catch (err) {
+                console.error('Failed to create care task during import:', err);
+                // Continue with next task
+              }
+            }
+          }
         }
-         // Update local state with successfully created records
-        setPlantsState(createdPlants);
-        setPlantPhotosState(createdPhotos);
-        setCareTasksState(createdTasks);
 
-    } catch (error) {
-        console.error(`Error during setAllPlants (import):`, error);
+        // Refresh all data
+        await refreshAllData();
+        toast({ title: t('common.success'), description: t('profilePage.toasts.importSuccessDesc') });
+      } catch (error) {
+        console.error('Error in setAllPlants:', error);
         throw error;
-    } finally {
-        setIsLoading(false);
-    }
+      }
+    },
+    [user?.id, user?.identityId, toast, t]
+  );
 
-   }, [user, clearAllPlantData, uploadImageToS3]);
-  
-  // --- methods for nested data ---
-
-  const addPhotoToPlant = useCallback(async (plantId: string, photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>, photoFile: File): Promise<PlantPhoto | undefined> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
+  const clearAllPlantData = useCallback(
+    async (options?: { removeImages?: boolean }): Promise<void> => {
       try {
-          // 1. Upload image to S3
-          const photoS3Key = await uploadImageToS3(plantId, photoFile);
+        const allPhotoKeys = plantPhotos
+          .map((p) => p.url)
+          .filter((url): url is string => url !== null && url !== undefined);
 
-          // 2. Create PlantPhoto record
-          const { data: createdPhoto, errors } = await client.models.PlantPhoto.create({
-              plantId: plantId,
-              url: photoS3Key, // Store S3 key
-              notes: photo.notes,
+        if (allPhotoKeys.length > 0 && options?.removeImages) {
+          try {
+            const idToken = await getIdToken();
+            await deleteMultipleFiles(allPhotoKeys, idToken);
+          } catch (error) {
+            console.error('S3 cleanup failed:', error);
+          }
+        }
+
+        for (const task of careTasks) {
+          try {
+            await client.mutate({
+              mutation: DELETE_CARE_TASK,
+              variables: { input: { id: task.id } },
+            });
+          } catch (error) {
+            console.error(`Failed to delete task ${task.id}:`, error);
+          }
+        }
+
+        for (const photo of plantPhotos) {
+          try {
+            await client.mutate({
+              mutation: DELETE_PLANT_PHOTO,
+              variables: { input: { id: photo.id } },
+            });
+          } catch (error) {
+            console.error(`Failed to delete photo ${photo.id}:`, error);
+          }
+        }
+
+        for (const plant of plants) {
+          try {
+            await client.mutate({
+              mutation: DELETE_PLANT,
+              variables: { input: { id: plant.id } },
+            });
+          } catch (error) {
+            console.error(`Failed to delete plant ${plant.id}:`, error);
+          }
+        }
+
+        // Clear state
+        setPlantsState([]);
+        setPlantPhotosState([]);
+        setCareTasksState([]);
+      } catch (error: any) {
+        console.error('Failed to clear all plant data:', error);
+        throw error;
+      }
+    },
+    [plants, plantPhotos, careTasks, getIdToken]
+  );
+
+  // Update addPhotoToPlant to use credentials
+  const addPhotoToPlant = useCallback(
+    async (
+      plantId: string,
+      photo: Omit<PlantPhoto, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>,
+      photoFile: File
+    ): Promise<PlantPhoto | undefined> => {
+      if (!user?.id || !user?.identityId) {
+        throw new Error('User not authenticated or Identity ID not available');
+      }
+
+      try {
+        const photoKey = await uploadImageToS3(plantId, photoFile);
+
+        const { data } = await client.mutate({
+          mutation: CREATE_PLANT_PHOTO,
+          variables: {
+            input: {
+              plantId,
+              url: photoKey,
+              notes: photo.notes || null,
               dateTaken: photo.dateTaken,
               healthCondition: photo.healthCondition,
-              diagnosisNotes: photo.diagnosisNotes,
-          },{authMode: 'userPool'});
+              diagnosisNotes: photo.diagnosisNotes || null,
+            },
+          },
+        });
 
-          if (errors || !createdPhoto) {
-              console.error("Error adding photo record:", errors);
-              // Clean up S3 photo if record creation failed
-              try { await remove({ path: photoS3Key }); } catch (e) { console.error("Failed to clean up S3 photo:", e); }
-              throw new Error(errors ? errors[0].message : "Failed to add photo record.");
-          }
+        const createdPhoto = data?.createPlantPhoto;
+        if (createdPhoto) {
+          setPlantPhotosState((prev: PlantPhoto[]) => [...prev, createdPhoto]);
+        }
 
-          // 3. Update local state: add the new photo to plantPhotos
-          setPlantPhotosState(prevPhotos => [...prevPhotos, createdPhoto as PlantPhoto]);
-
-          return createdPhoto as PlantPhoto;
-
+        return createdPhoto;
       } catch (error) {
-          console.error("Exception adding photo to plant:", error);
-          throw error;
-      } finally {
-          setIsLoading(false);
+        console.error('Error adding photo to plant:', error);
+        throw error;
       }
-  }, [user, uploadImageToS3, remove]);
+    },
+    [user?.id, user?.identityId, uploadImageToS3]
+  );
 
-  const updatePhotoDetails = useCallback(async (photoId: string, updatedDetails: Partial<Omit<PlantPhoto, 'plant'>>): Promise<PlantPhoto | undefined> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
+  const updatePhotoDetails = useCallback(
+    async (
+      photoId: string,
+      updatedDetails: Partial<Omit<PlantPhoto, 'plant'>>
+    ): Promise<PlantPhoto | undefined> => {
       try {
-          // Amplify Data update requires the id
-          const { data: updatedPhoto, errors } = await client.models.PlantPhoto.update({
+        const { data } = await client.mutate({
+          mutation: UPDATE_PLANT_PHOTO,
+          variables: {
+            input: {
               id: photoId,
-              ...updatedDetails,
-              // Ensure relationship fields are not updated directly here
-          },{authMode: 'userPool'});
+              notes: updatedDetails.notes,
+              healthCondition: updatedDetails.healthCondition,
+              diagnosisNotes: updatedDetails.diagnosisNotes,
+            },
+          },
+        });
 
-          if (errors || !updatedPhoto) {
-              console.error(`Error updating photo ${photoId}:`, errors);
-              throw new Error(errors ? errors[0].message : "Failed to update photo details.");
-          }
-
-          // Update local state: update the photo in plantPhotos
-          setPlantPhotosState(prevPhotos =>
-              prevPhotos.map(photo =>
-                  photo.id === photoId ? updatedPhoto as PlantPhoto : photo
-              )
-          );
-
-          return updatedPhoto as PlantPhoto;
-
-      } catch (error) {
-          console.error(`Exception updating photo ${photoId}:`, error);
-          throw error;
-      } finally {
-          setIsLoading(false);
+        return data?.updatePlantPhoto;
+      } catch (error: any) {
+        console.error('Failed to update photo details:', error);
+        throw error;
       }
-  }, [user]);
+    },
+    []
+  );
 
-  const addCareTaskToPlant = useCallback(async (
-    plantId: string, 
-    task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'> & { frequency: string; frequencyEvery?: number }
-  ): Promise<CareTask | undefined> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
+  const addCareTaskToPlant = useCallback(
+    async (
+      plantId: string,
+      task: Omit<CareTask, 'id' | 'plant' | 'plantId' | 'createdAt' | 'updatedAt'>
+    ): Promise<CareTask | undefined> => {
+      // Guard clause: ensure identityId is available
+      if (!user?.identityId) {
+        throw new Error('Identity ID not available for plant operations');
+      }
+
       try {
-          // Create CareTask record
-          const { data: createdTask, errors } = await client.models.CareTask.create({
-              plantId: plantId,
+        const { data } = await client.mutate({
+          mutation: CREATE_CARE_TASK,
+          variables: {
+            input: {
+              plantId,
               name: task.name,
-              description: task.description,
+              description: task.description || null,
               frequency: task.frequency,
-              frequencyEvery: task.frequencyEvery,
-              timeOfDay: task.timeOfDay,
-              nextDueDate: task.nextDueDate,
+              frequencyEvery: task.frequencyEvery || null,
+              timeOfDay: task.timeOfDay || null,
+              nextDueDate: task.nextDueDate || new Date().toISOString(),
               isPaused: task.isPaused,
               level: task.level,
-          },{authMode: 'userPool'});
+            },
+          },
+        });
 
-          if (errors || !createdTask) {
-            console.error("Error adding care task:", errors);
-            throw new Error(errors ? errors[0].message : "Error adding care task");
-          }
+        // Refresh tasks
+        const tasksResult = await client.query({
+          query: LIST_CARE_TASKS,
+        });
+        if (tasksResult.data?.listCareTasks?.items) {
+          setCareTasksState(tasksResult.data.listCareTasks.items);
+        }
 
-          // Update local state: add the new task to careTasks
-          setCareTasksState(prevTasks => [...prevTasks, createdTask as CareTask]);
-
-          return createdTask as CareTask;
-
-      } catch (error) {
-          console.error("Exception adding care task:", error);
-          throw error;
-      } finally {
-          setIsLoading(false);
+        return data?.createCareTask;
+      } catch (error: any) {
+        console.error('Failed to add care task:', error);
+        throw error;
       }
-  }, [user]);
-
-  const updateCareTask = useCallback(async (taskId: string, updatedDetails: Partial<Omit<CareTask, 'plant'>>): Promise<CareTask | undefined> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
-      try {
-          // Amplify Data update requires the id
-          const { data: updatedTask, errors } = await client.models.CareTask.update({
-              id: taskId,
-              ...updatedDetails,
-              // frequency and frequencyEvery should be part of updatedDetails if they change
-              // Ensure relationship fields are not updated directly here
-          },{authMode: 'userPool'});
-
-          if (errors || !updatedTask) {
-              console.error(`Error updating care task ${taskId}:`, errors);
-              throw new Error(errors ? errors[0].message : "Failed to update care task.");
-          }
-
-          // Update local state
-          setCareTasksState(prevTasks =>
-              prevTasks.map(task =>
-                  task.id === taskId ? updatedTask as CareTask : task
-              )
-          );
-
-          return updatedTask as CareTask;
-
-      } catch (error) {
-          console.error(`Exception updating care task ${taskId}:`, error);
-          throw error;
-      } finally {
-          setIsLoading(false);
-      }
-  }, [user]);
-
-  const deleteCareTask = useCallback(async (taskId: string): Promise<void> => {
-      if (!user) throw new Error("User not authenticated.");
-      setIsLoading(true);
-      try {
-          // Delete CareTask record
-          const { errors } = await client.models.CareTask.delete({ id: taskId },{authMode: 'userPool'});
-
-          if (errors) {
-              console.error(`Error deleting care task ${taskId}:`, errors);
-              throw new Error(errors[0].message || "Failed to delete care task.");
-          }
-
-          // Update local state
-          setCareTasksState(prevTasks => prevTasks.filter(task => task.id !== taskId));
-
-      } catch (error) {
-          console.error(`Exception deleting care task ${taskId}:`, error);
-          throw error;
-      } finally {
-          setIsLoading(false);
-      }
-  }, [user]);
-
-  return (
-    <PlantContext.Provider value={{
-        plants,
-        plantPhotos,
-        careTasks,
-        isLoading,
-        getPlantById,
-        addPlant,
-        updatePlant,
-        deletePlant,
-        deleteMultiplePlants,
-        setAllPlants,
-        clearAllPlantData,
-        addPhotoToPlant,
-        updatePhotoDetails,
-        deletePhoto,
-        addCareTaskToPlant,
-        updateCareTask,
-        deleteCareTask,
-    }}>
-      {children}
-    </PlantContext.Provider>
+    },
+    [user?.identityId]
   );
+
+  const updateCareTask = useCallback(
+    async (taskId: string, updatedDetails: Partial<Omit<CareTask, 'plant'>>): Promise<CareTask | undefined> => {
+      try {
+        const { data } = await client.mutate({
+          mutation: UPDATE_CARE_TASK,
+          variables: {
+            input: {
+              id: taskId,
+              name: updatedDetails.name,
+              description: updatedDetails.description,
+              frequency: updatedDetails.frequency,
+              frequencyEvery: updatedDetails.frequencyEvery,
+              timeOfDay: updatedDetails.timeOfDay,
+              nextDueDate: updatedDetails.nextDueDate,
+              isPaused: updatedDetails.isPaused,
+              level: updatedDetails.level,
+            },
+          },
+        });
+
+        return data?.updateCareTask;
+      } catch (error: any) {
+        console.error('Failed to update care task:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  const deleteCareTask = useCallback(
+    async (taskId: string): Promise<void> => {
+      try {
+        await client.mutate({
+          mutation: DELETE_CARE_TASK,
+          variables: { input: { id: taskId } },
+        });
+
+        // Refresh tasks
+        const tasksResult = await client.query({
+          query: LIST_CARE_TASKS,
+        });
+        if (tasksResult.data?.listCareTasks?.items) {
+          setCareTasksState(tasksResult.data.listCareTasks.items);
+        }
+      } catch (error: any) {
+        console.error('Failed to delete care task:', error);
+        throw error;
+      }
+    },
+    []
+  );
+
+  const value: PlantDataContextType = {
+    plants,
+    plantPhotos,
+    careTasks,
+    isLoading,
+    getPlantById,
+    addPlant,
+    updatePlant,
+    deletePlant,
+    deleteMultiplePlants,
+    setAllPlants,
+    clearAllPlantData,
+    addPhotoToPlant,
+    updatePhotoDetails,
+    deletePhoto,
+    addCareTaskToPlant,
+    updateCareTask,
+    deleteCareTask,
+  };
+
+  return <PlantContext.Provider value={value}>{children}</PlantContext.Provider>;
 }
 
 export function usePlantData() {
   const context = useContext(PlantContext);
-  if (context === undefined) {
-    throw new Error('usePlantData must be used within a PlantDataProvider');
+  if (!context) {
+    throw new Error('usePlantData must be used within PlantDataProvider');
   }
   return context;
 }

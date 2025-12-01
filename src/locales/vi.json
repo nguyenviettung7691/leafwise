@@ -668,7 +668,36 @@
     "signInButton": "Đăng nhập",
     "noAccountText": "Chưa có tài khoản?",
     "signUpLink": "Đăng ký",
-    "backToHomepageLink": "Quay lại Trang chủ"
+    "backToHomepageLink": "Quay lại Trang chủ",
+    "forgotPasswordLink": "Quên mật khẩu?"
+  },
+  "forgotPasswordPage": {
+    "title": "Đặt lại mật khẩu",
+    "description": "Nhập email của bạn để nhận mã đặt lại mật khẩu",
+    "emailLabel": "Địa chỉ email",
+    "emailPlaceholder": "you@example.com",
+    "emailHint": "Chúng tôi sẽ gửi mã xác minh đến email này",
+    "sendCodeButton": "Gửi mã xác minh",
+    "backToLoginText": "Nhớ mật khẩu của bạn?",
+    "backToLoginLink": "Quay lại đăng nhập",
+    "successMessage": "Kiểm tra email của bạn để nhận mã xác minh"
+  },
+  "resetPasswordPage": {
+    "title": "Đặt mật khẩu mới",
+    "description": "Nhập mã từ email của bạn và mật khẩu mới",
+    "emailLabel": "Địa chỉ email",
+    "codeLabel": "Mã xác minh",
+    "codePlaceholder": "000000",
+    "codeHint": "Mã 6 chữ số được gửi đến email của bạn",
+    "newPasswordLabel": "Mật khẩu mới",
+    "newPasswordPlaceholder": "Ít nhất 6 ký tự",
+    "confirmPasswordLabel": "Xác nhận mật khẩu",
+    "confirmPasswordPlaceholder": "Nhập lại mật khẩu của bạn",
+    "passwordMismatch": "Mật khẩu không khớp",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
+    "resetButton": "Đặt lại mật khẩu",
+    "backToLoginText": "Sẵn sàng đăng nhập?",
+    "backToLoginLink": "Đi đến đăng nhập"
   },
   "registerPage": {
     "title": "Tạo tài khoản",
@@ -724,7 +753,11 @@
     "loggedOutDescription": "Bạn đã đăng xuất thành công.",
     "profileUpdatedTitle": "Hồ sơ Đã cập nhật!",
     "profileUpdatedDescription": "Hồ sơ của bạn đã được cập nhật thành công.",
-    "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại."
+    "errorNoUserSession": "Không tìm thấy phiên người dùng. Vui lòng đăng nhập lại.",
+    "forgotPasswordSentTitle": "Mã đã được gửi",
+    "forgotPasswordSentDescription": "Kiểm tra email của bạn để lấy mã xác minh",
+    "passwordResetSuccessTitle": "Đặt lại mật khẩu",
+    "passwordResetSuccessDescription": "Mật khẩu của bạn đã được đặt lại. Vui lòng đăng nhập bằng mật khẩu mới"
   },
   "authErrors": {
     "userNotFound": "Tên đăng nhập hoặc mật khẩu không hợp lệ.",
@@ -736,7 +769,14 @@
     "limitExceeded": "Đã vượt quá giới hạn số lần thử, vui lòng thử lại sau.",
     "tooManyRequests": "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
     "generalLoginFailed": "Đăng nhập thất bại. Vui lòng thử lại.",
-    "generalRegistrationFailed": "Đăng ký thất bại. Vui lòng thử lại."
+    "generalRegistrationFailed": "Đăng ký thất bại. Vui lòng thử lại.",
+    "forgotPasswordFailed": "Không thể gửi mã đặt lại mật khẩu",
+    "passwordResetFailed": "Không thể đặt lại mật khẩu",
+    "invalidEmail": "Địa chỉ email không hợp lệ",
+    "codeExpired": "Mã xác minh đã hết hạn",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
+    "sessionExpired": "Phiên của bạn đã hết hạn. Vui lòng đăng nhập lại.",
+    "apolloUnauthorized": "Bạn không được phép thực hiện hành động này."
   },
   "networkIndicator": {
     "online": "Đã kết nối internet",

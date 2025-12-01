@@ -667,7 +667,36 @@
     "signInButton": "Sign In",
     "noAccountText": "Don't have an account?",
     "signUpLink": "Sign up",
-    "backToHomepageLink": "Back to Homepage"
+    "backToHomepageLink": "Back to Homepage",
+    "forgotPasswordLink": "Forgot password?"
+  },
+  "forgotPasswordPage": {
+    "title": "Reset Password",
+    "description": "Enter your email to receive a password reset code",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "emailHint": "We'll send a verification code to this email",
+    "sendCodeButton": "Send Verification Code",
+    "backToLoginText": "Remember your password?",
+    "backToLoginLink": "Back to sign in",
+    "successMessage": "Check your email for the verification code"
+  },
+  "resetPasswordPage": {
+    "title": "Set New Password",
+    "description": "Enter the code from your email and your new password",
+    "emailLabel": "Email Address",
+    "codeLabel": "Verification Code",
+    "codePlaceholder": "000000",
+    "codeHint": "6-digit code sent to your email",
+    "newPasswordLabel": "New Password",
+    "newPasswordPlaceholder": "At least 6 characters",
+    "confirmPasswordLabel": "Confirm Password",
+    "confirmPasswordPlaceholder": "Re-enter your password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "resetButton": "Reset Password",
+    "backToLoginText": "Ready to sign in?",
+    "backToLoginLink": "Go to sign in"
   },
   "registerPage": {
     "title": "Create Your Account",
@@ -723,7 +752,11 @@
     "loggedOutDescription": "You have been successfully logged out.",
     "profileUpdatedTitle": "Profile Updated!",
     "profileUpdatedDescription": "Your profile has been successfully updated.",
-    "errorNoUserSession": "No user session found. Please log in again."
+    "errorNoUserSession": "No user session found. Please log in again.",
+    "forgotPasswordSentTitle": "Code Sent",
+    "forgotPasswordSentDescription": "Check your email for the verification code",
+    "passwordResetSuccessTitle": "Password Reset",
+    "passwordResetSuccessDescription": "Your password has been reset. Please sign in with your new password"
   },
   "authErrors": {
     "userNotFound": "Invalid username or password.",
@@ -735,7 +768,14 @@
     "limitExceeded": "Attempt limit exceeded, please try again later.",
     "tooManyRequests": "Too many requests. Please try again later.",
     "generalLoginFailed": "Login failed. Please try again.",
-    "generalRegistrationFailed": "Registration failed. Please try again."
+    "generalRegistrationFailed": "Registration failed. Please try again.",
+    "forgotPasswordFailed": "Failed to send password reset code",
+    "passwordResetFailed": "Failed to reset password",
+    "invalidEmail": "Invalid email address",
+    "codeExpired": "Verification code has expired",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "apolloUnauthorized": "You are not authorized to perform this action."
   },
   "networkIndicator": {
     "online": "Connected to the internet",

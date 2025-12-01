@@ -10,6 +10,7 @@ backend:
     build:
       commands:
         - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
 frontend:
   phases:
     build:
@@ -28,8 +29,3 @@ frontend:
   cache:
     paths:
       - .next/cache/**/*
-rewrites:
-  - source: '/<*>'
-    target: '/not-found'
-    status: '404'
-    type: 'Rewrite' # Use 'Rewrite' or '200'
