@@ -16,9 +16,6 @@
     "aws:login": "aws sso login",
     "aws:sandbox": "npx dotenvx run --env-file=.env -- ampx sandbox"
   },
-  "overrides": {
-    "graphql": "16.12.0"
-  },
   "dependencies": {
     "@apollo/client": "^4.0.9",
     "@aws-sdk/client-cognito-identity-provider": "^3.940.0",
