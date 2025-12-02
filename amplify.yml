@@ -5,8 +5,10 @@ backend:
       commands:
         - nvm install 20
         - nvm use 20
+        - npm cache clean --cache .npm --force
+        - rm -rf node_modules
         - npm cache verify --cache .npm
-        - npm ci --prefer-offline --no-audit || npm install --prefer-offline --no-audit
+        - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:
         - npx -y @aws-amplify/backend-cli@1.8.0 pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
