@@ -3,16 +3,14 @@ backend:
   phases:
     preBuild:
       commands:
-        - nvm install 20
-        - nvm use 20
-        - npm cache clean --cache .npm --force
-        - rm -rf node_modules
+        - nvm install 22
+        - nvm use 22
         - npm cache verify --cache .npm
         - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:
-        - npx -y @aws-amplify/backend-cli@1.8.0 pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
-        - npx -y @aws-amplify/backend-cli@1.8.0 generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
 frontend:
   phases:
     build:
