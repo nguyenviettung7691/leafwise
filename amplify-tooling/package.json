@@ -1,5 +1,5 @@
 {
-  "name": "amplify",
+  "name": "amplify-tooling",
   "version": "1.0.0",
   "private": true,
   "description": "Isolated package for Amplify backend tooling and pipeline deploy (pins graphql@15.x)",

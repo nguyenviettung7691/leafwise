@@ -6,12 +6,14 @@ backend:
         - nvm install 22
         - nvm use 22
         - npm cache verify --cache .npm
-        - cd amplify
         - npm install --cache .npm --prefer-offline --no-audit
+        - cd amplify-tooling
+        - npm install --cache ../.npm --prefer-offline --no-audit
+        - cd ..
     build:
       commands:
-        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
-        - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
+        - ./amplify-tooling/node_modules/.bin/ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        - ./amplify-tooling/node_modules/.bin/ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
 frontend:
   phases:
     build:
@@ -20,7 +22,7 @@ frontend:
         - npm run build
     postBuild:
       commands:
-        - ls out
+        - ls .next
         - aws s3 sync out s3://$S3_BUCKET_NAME --delete
         - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   artifacts:
