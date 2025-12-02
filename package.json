@@ -16,6 +16,9 @@
     "aws:login": "aws sso login",
     "aws:sandbox": "npx dotenvx run --env-file=.env -- ampx sandbox"
   },
+  "overrides": {
+    "graphql": "15.10.1"
+  },
   "dependencies": {
     "@apollo/client": "^4.0.9",
     "@aws-sdk/client-cognito-identity-provider": "^3.940.0",
@@ -50,6 +53,7 @@
     "dotenv": "^16.6.1",
     "framer-motion": "^11.18.2",
     "genkit": "^1.24.0",
+    "graphql": "15.10.1",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-themes": "^0.3.0",
@@ -64,7 +68,6 @@
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.18.0",
-    "@aws-amplify/backend-cli": "^1.8.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "@types/node": "^24.10.1",
     "@types/react": "^18.3.27",
