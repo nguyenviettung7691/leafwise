@@ -6,6 +6,7 @@ backend:
         - nvm install 22
         - nvm use 22
         - npm cache verify --cache .npm
+        - cd amplify
         - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:

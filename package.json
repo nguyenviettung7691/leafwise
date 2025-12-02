@@ -65,7 +65,6 @@
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.18.0",
-    "@aws-amplify/backend-cli": "^1.8.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "@types/node": "^24.10.1",
     "@types/react": "^18.3.27",

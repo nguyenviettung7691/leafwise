@@ -1,3 +1,22 @@
 {
-  "type": "module"
+  "name": "amplify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated package for Amplify backend tooling and pipeline deploy (pins graphql@15.x)",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "ci": "npm ci",
+    "deploy:backend": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --yes",
+    "deploy": "npm run ci && npm run deploy:backend"
+  },
+  "dependencies": {
+    "@aws-amplify/backend-cli": "1.8.0",
+    "graphql": "15.10.1"
+  },
+  "overrides": {
+    "graphql": "15.10.1"
+  },
+  "license": "UNLICENSED"
 }
