@@ -14,7 +14,9 @@
     "typecheck": "tsc --noEmit",
     "aws:config": "aws configure sso",
     "aws:login": "aws sso login",
-    "aws:sandbox": "npx dotenvx run --env-file=.env -- ampx sandbox"
+    "aws:sandbox": "npx dotenvx run --env-file=.env -- ampx sandbox",
+    "pipeline-deploy": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug",
+    "generate-outputs": "npm ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir ."
   },
   "dependencies": {
     "@apollo/client": "^4.0.9",
@@ -65,10 +67,13 @@
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.18.0",
+    "@aws-amplify/backend-cli": "^1.8.0",
     "@dotenvx/dotenvx": "^1.51.1",
     "@types/node": "^24.10.1",
     "@types/react": "^18.3.27",
     "@types/react-dom": "^18.3.7",
+    "aws-cdk-lib": "^2.231.0",
+    "constructs": "^10.4.3",
     "esbuild": "^0.25.12",
     "genkit-cli": "^1.24.0",
     "postcss": "^8.5.6",

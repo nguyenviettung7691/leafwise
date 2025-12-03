@@ -6,18 +6,13 @@ backend:
         - nvm install 22
         - nvm use 22
         - npm cache verify --cache .npm
-        - cd amplify-tooling
-        - npm install --cache ../.npm --prefer-offline --no-audit
+        - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:
         - npm run pipeline-deploy
         - npm run generate-outputs
 frontend:
   phases:
-    preBuild:
-      commands:
-        - cd ..
-        - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:
         - env | grep -e GOOGLE_API_KEY >> .env.production
