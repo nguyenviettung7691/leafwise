@@ -7,7 +7,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "pipeline-deploy": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --yes",
+    "pipeline-deploy": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug",
     "generate-outputs": "npm ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir ."
   },
   "dependencies": {
