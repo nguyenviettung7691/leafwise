@@ -16,7 +16,8 @@
     "graphql": "15.10.1"
   },
   "overrides": {
-    "graphql": "15.10.1"
+    "graphql": "15.10.1",
+    "@aws-sdk/types": "^3.0.0"
   },
   "license": "UNLICENSED"
 }
