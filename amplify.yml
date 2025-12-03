@@ -14,7 +14,7 @@ backend:
         - npm run generate-outputs
 frontend:
   phases:
-  preBuild:
+    preBuild:
       commands:
         - cd ..
         - npm install --cache .npm --prefer-offline --no-audit
