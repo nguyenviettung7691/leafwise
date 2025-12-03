@@ -60,5 +60,6 @@ next-env.d.ts
 .amplify
 amplify_outputs*
 amplifyconfiguration*
+/amplify-tooling/node_modules/
 
 certificates

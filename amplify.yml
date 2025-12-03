@@ -6,16 +6,18 @@ backend:
         - nvm install 22
         - nvm use 22
         - npm cache verify --cache .npm
-        - npm install --cache .npm --prefer-offline --no-audit
         - cd amplify-tooling
         - npm install --cache ../.npm --prefer-offline --no-audit
-        - cd ..
     build:
       commands:
-        - ./amplify-tooling/node_modules/.bin/ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
-        - ./amplify-tooling/node_modules/.bin/ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
+        - npm run pipeline-deploy
+        - npm run generate-outputs
 frontend:
   phases:
+  preBuild:
+      commands:
+        - cd ..
+        - npm install --cache .npm --prefer-offline --no-audit
     build:
       commands:
         - env | grep -e GOOGLE_API_KEY >> .env.production

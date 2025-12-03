@@ -7,13 +7,18 @@
     "node": ">=18"
   },
   "scripts": {
-    "ci": "npm ci",
-    "deploy:backend": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --yes",
-    "deploy": "npm run ci && npm run deploy:backend"
+    "pipeline-deploy": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --yes",
+    "generate-outputs": "npm ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir ."
   },
   "dependencies": {
+    "@aws-amplify/backend": "^1.0.0",
     "@aws-amplify/backend-cli": "1.8.0",
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0",
     "graphql": "15.10.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
   },
   "overrides": {
     "graphql": "15.10.1",
