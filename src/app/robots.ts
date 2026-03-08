@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: '/profile/',
     },
-    sitemap: 'https://leafwise.nvtung.com/sitemap.xml',
+    sitemap: 'https://leafwise.nguyenviettung.id.vn/sitemap.xml',
   }
 }
