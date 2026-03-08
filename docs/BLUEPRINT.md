@@ -92,7 +92,7 @@ The application will include the following core features:
 
 ## 4. Technical Stack
 
-*   **Framework**: Next.js (App Router)
+*   **Framework**: Next.js (App Router) with **static export** (`output: 'export'`)
 *   **Language**: TypeScript
 *   **UI Components**: ShadCN UI (Radix UI + Tailwind CSS)
 *   **Styling**: Tailwind CSS
@@ -100,13 +100,17 @@ The application will include the following core features:
 *   **State Management**: React Context API, `useState`, `useEffect`
 *   **Forms**: React Hook Form with Zod for validation
 *   **Date Management**: `date-fns`
-*   **Client-Side Storage**:
+*   **Frontend AWS Integration**: **AWS SDK v3** directly (no Amplify browser SDKs)
+    *   `@aws-sdk/client-cognito-identity-provider` for authentication
+    *   `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` for image storage
+    *   Apollo Client for AppSync GraphQL with Cognito auth header injection
 *   **Backend & Data Persistence**:
-    *   **Backend as a Service (BaaS)**: AWS Amplify Gen 2.
-    *   **Authentication**: AWS Amplify Auth (Amazon Cognito) for user management.
-    *   **Data Storage**: AWS Amplify Data (AWS AppSync & Amazon DynamoDB) for storing structured data like user profiles, plant details, and care tasks.
-    *   **File Storage**: AWS Amplify Storage (Amazon S3) for storing user-uploaded images (avatars, plant photos).
-*   **PWA**: `@ducanh2912/next-pwa`
+    *   **Backend as a Service (BaaS)**: AWS Amplify Gen 2 (provisions Cognito, AppSync, S3, Lambda).
+    *   **Authentication**: Amazon Cognito user pools (managed by Amplify Auth; frontend uses SDK v3).
+    *   **Data Storage**: AWS AppSync (GraphQL) + Amazon DynamoDB (managed by Amplify Data; frontend uses Apollo Client).
+    *   **File Storage**: Amazon S3 (managed by Amplify Storage; frontend uses S3 SDK v3).
+*   **Deployment**: Static export to **S3 + CloudFront** (not Amplify Hosting)
+*   **PWA**: Custom service worker (`public/sw.js`) with Workbox
 *   **Internationalization (i18n)**: Support for English and Vietnamese using React Context and JSON files.
 
 ## 5. Data Model (AWS Amplify)
@@ -134,5 +138,5 @@ The data model is defined in the Amplify GraphQL schema (`amplify/data/resource.
     *   `plant`: Relationship to `Plant` (belongs to)
     *   `name`, `description?`, `frequency`, `frequencyEvery?`, `timeOfDay?`, `nextDueDate?`, `isPaused`, `level`
 
-This blueprint outlines the core vision of the LeafWise application, now powered by AWS Amplify.
+This blueprint outlines the core vision of the LeafWise application, powered by AWS Amplify Gen 2 (backend) and AWS SDK v3 (frontend), deployed as a static site on S3 + CloudFront.
     

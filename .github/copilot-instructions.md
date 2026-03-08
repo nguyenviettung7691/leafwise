@@ -21,7 +21,7 @@ Key service files:
 |------|------|
 | `src/lib/awsConfig.ts` | Centralized env-var loading; provides `getCognitoConfig()`, `getAppSyncConfig()`, `getS3Config()` |
 | `src/lib/apolloClient.ts` | Apollo Client with Cognito auth header injection (raw JWT, no Bearer prefix) |
-| `src/lib/serverClient.ts` | `createServerApolloClient()` for server components / route handlers — create per-request |
+| `src/lib/serverClient.ts` | Re-exports `createServerApolloClient()` — available for build-time data fetching (not used at runtime in static export) |
 | `src/lib/s3Utils.ts` | `uploadFile()`, `deleteFile()`, `deleteMultipleFiles()` using Cognito Identity credentials |
 | `src/hooks/useS3Image.ts` | Generates short-lived presigned URLs for S3 images |
 
@@ -29,8 +29,8 @@ Key service files:
 
 - `AuthContext` manages Cognito user-pool auth (sign-up, login, token refresh)
 - Tokens stored in `localStorage`; auto-refresh 5 min before expiry
-- `cognito_id_token` **cookie** is set for server-side GraphQL reads
-- Middleware (`src/middleware.ts`) checks the cookie for route protection — runs in Node.js edge, no browser APIs
+- `cognito_id_token` **cookie** is set for dev-mode middleware route protection
+- Middleware (`src/middleware.ts`) checks the cookie for route protection — **runs during `next dev` and build only; does not run in the deployed static site (S3 + CloudFront)**
 
 ### Data Layer
 

@@ -22,11 +22,11 @@ frontend:
         - npm run build
     postBuild:
       commands:
-        - ls .next
+        - ls out
         - aws s3 sync out s3://$S3_BUCKET_NAME --delete
         - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   artifacts:
-    baseDirectory: .next
+    baseDirectory: out
     files:
       - '**/*'
   cache:

@@ -5,16 +5,18 @@ This document provides a high-level overview of the LeafWise application's archi
 
 ## Frontend
 
-*   **Framework**: Next.js (App Router)
+*   **Framework**: Next.js (App Router) with **static export** (`output: 'export'` in `next.config.ts`)
 *   **Language**: TypeScript
 *   **UI Library**: ShadCN UI (built on Radix UI and Tailwind CSS)
 *   **Styling**: Tailwind CSS
+*   **AWS Integration**: **AWS SDK v3** directly (no Amplify browser SDKs) — see service files in `src/lib/`
+*   **GraphQL**: Apollo Client for AppSync; typed operations via `TypedDocumentNode` in `src/lib/graphql/operations.ts`
 *   **State Management**:
     *   React Context API (for global state like Auth, Language, Plant Data, Progress)
     *   Local component state (`useState`, `useEffect`) for UI-specific logic.
 *   **Forms**: React Hook Form with Zod for validation.
 *   **Date Management**: `date-fns`
-*   **Client-Side Routing**: Handled by Next.js App Router.
+*   **Client-Side Routing**: Handled by Next.js App Router. All pages are pre-rendered at build time and served as static HTML/JS from S3 + CloudFront.
 
 ## Generative AI Integration
 
@@ -56,12 +58,28 @@ Browser ──HTTP POST──▶ Lambda Function URL (/api/ai/{flowName})
 
 ## Backend & Data Storage
 
-*   **Platform**: **AWS Amplify** is used for authentication, data and file storage.
-*   **Authentication**: Cognito user pools managed by Amplify Auth. All API calls are signed with the user's session token.
-*   **Data**: Plant records, photos, care tasks and user preferences are defined as Amplify Data models with owner-based authorization.
-*   **Images**: Uploaded photos and avatars are stored in S3 via Amplify Storage. Database records keep the S3 key for each file.
+*   **Backend Infrastructure**: **AWS Amplify Gen 2** (`amplify/` folder, `npx ampx`) provisions and manages backend resources (Cognito, AppSync, S3, Lambda). No Amplify browser SDKs are used — the frontend communicates with these services using **AWS SDK v3** and **Apollo Client** directly.
+*   **Authentication**: Cognito user pools managed by Amplify Auth. The frontend uses `@aws-sdk/client-cognito-identity-provider` for sign-up, login, and token management (`AuthContext`). Tokens are stored in `localStorage` and auto-refreshed 5 minutes before expiry. A `cognito_id_token` cookie is set for dev-mode middleware route protection.
+*   **Data (GraphQL)**: Apollo Client communicates with AppSync (`src/lib/apolloClient.ts`). All GraphQL operations are defined as `TypedDocumentNode` in `src/lib/graphql/operations.ts`. Components use Apollo's `useQuery` and `useMutation` hooks. `PlantDataContext` provides centralized CRUD for plants, photos, and care tasks.
+*   **Images**: Uploaded photos and avatars are stored in S3 using `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` (`src/lib/s3Utils.ts`). Database records store S3 keys; presigned URLs are generated at read time via `useS3Image` hook.
 *   **Import/Export**: The Profile page supports exporting all plant data, including embedded image data (as Data URLs), to a self-contained JSON file. During import, this embedded image data is re-uploaded to S3, generating new S3 keys for the restored `PlantPhoto` records. This ensures a complete backup and restoration of user data, including images, independent of original S3 keys.
-*   **Offline**: The application still functions offline for cached pages and will queue network requests when possible, but data primarily resides in the Amplify backend.
+*   **Offline**: The application still functions offline for cached pages and will queue network requests when possible, but data primarily resides in the backend.
+
+### Key Frontend Service Files
+
+| File | Role |
+|------|------|
+| `src/lib/awsConfig.ts` | Centralized env-var loading; provides `getCognitoConfig()`, `getAppSyncConfig()`, `getS3Config()` |
+| `src/lib/apolloClient.ts` | Apollo Client with Cognito auth header injection (raw JWT, no Bearer prefix) |
+| `src/lib/s3Utils.ts` | `uploadFile()`, `deleteFile()`, `deleteMultipleFiles()` using Cognito Identity credentials |
+| `src/hooks/useS3Image.ts` | Generates short-lived presigned URLs for S3 images |
+| `src/lib/serverClient.ts` | Re-exports `createServerApolloClient()` — available for build-time data fetching (not used at runtime in static export) |
+
+### Route Protection
+
+*   `src/middleware.ts` enforces authentication-based access rules using the `cognito_id_token` cookie.
+*   `src/lib/auth/routes.ts` defines protected/public routes and redirect logic.
+*   **Note**: Next.js middleware runs during `next dev` and at build time, but does **not** run in the deployed static site (S3 + CloudFront). In production, route protection relies on API-level authorization (AppSync owner rules, Cognito tokens) and client-side auth state in `AuthContext`.
 
 ## Progressive Web App (PWA)
 
@@ -83,8 +101,29 @@ Browser ──HTTP POST──▶ Lambda Function URL (/api/ai/{flowName})
 *   **Storage**: Selected language preference is stored in `localStorage`.
 *   **Implementation**: Static UI text is translated using JSON files (`src/locales/en.json`, `src/locales/vi.json`). AI-generated content is requested in the selected language. Date formatting adapts to the selected locale.
 
+## Deployment (S3 + CloudFront)
+
+The frontend is statically exported and deployed to **Amazon S3 + CloudFront** (not Amplify Hosting).
+
+```
+npm run build  →  out/  →  S3 bucket  →  CloudFront CDN
+```
+
+*   **Build**: `next build` with `output: 'export'` generates a fully static site in `out/`.
+*   **Upload**: `aws s3 sync out s3://<BUCKET> --delete` pushes assets to S3.
+*   **CDN**: CloudFront serves the site globally. Custom error response (404 → `/index.html`, status 200) enables client-side SPA routing.
+*   **CI/CD**: `amplify.yml` orchestrates both backend deployment (`npx ampx pipeline-deploy`) and frontend upload (`aws s3 sync` + `cloudfront create-invalidation`).
+
+### Why S3 + CloudFront (not Amplify Hosting)
+
+*   Full control over caching, headers, and distribution
+*   No dependency on Amplify Hosting or SSR runtime
+*   Tree-shakeable AWS SDK v3 bundles keep the client lightweight
+*   Backend (Cognito, AppSync, S3, Lambda) is still managed by Amplify Gen 2
+
 ## Future Enhancements
 
+*   **Client-Side Route Guards**: Add `AuthContext`-based redirect logic on protected pages so production static sites enforce auth without middleware.
 *   **Advanced Backend Features**: The Amplify backend can be extended with custom functions, additional authorization rules and scheduled tasks.
 *   **Analytics & Monitoring**: Integrate usage analytics and error monitoring.
 *   **Server-Driven Notifications**: Explore push notifications and background jobs for reminders.
