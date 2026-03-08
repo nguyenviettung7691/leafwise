@@ -18,6 +18,9 @@
     "pipeline-deploy": "npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --debug",
     "generate-outputs": "npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir ."
   },
+  "overrides": {
+    "graphql": "16.12.0"
+  },
   "dependencies": {
     "@apollo/client": "^4.0.9",
     "@aws-sdk/client-cognito-identity-provider": "^3.940.0",
