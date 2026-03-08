@@ -4,7 +4,7 @@
  * Centralizes all AWS service configuration (Cognito, AppSync, S3)
  * that was previously provided by amplify_outputs.json.
  *
- * Environment variables (prefixed with REACT_APP_) are loaded at build time
+ * Environment variables (prefixed with NEXT_PUBLIC_) are loaded at build time
  * and must be set in:
  * - Development: .env.local (git-ignored)
  * - Production: AWS Amplify Console → Environment variables
@@ -46,13 +46,13 @@ export interface AWSConfig {
  */
 function validateEnvVars(): void {
   const requiredVars: (keyof NodeJS.ProcessEnv)[] = [
-    'REACT_APP_COGNITO_REGION',
-    'REACT_APP_COGNITO_USER_POOL_ID',
-    'REACT_APP_COGNITO_CLIENT_ID',
-    'REACT_APP_COGNITO_IDENTITY_POOL_ID',
-    'REACT_APP_APPSYNC_ENDPOINT',
-    'REACT_APP_S3_BUCKET_NAME',
-    'REACT_APP_S3_REGION',
+    'NEXT_PUBLIC_COGNITO_REGION',
+    'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
+    'NEXT_PUBLIC_COGNITO_CLIENT_ID',
+    'NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID',
+    'NEXT_PUBLIC_APPSYNC_ENDPOINT',
+    'NEXT_PUBLIC_S3_BUCKET_NAME',
+    'NEXT_PUBLIC_S3_REGION',
   ];
 
   const missing = requiredVars.filter((varName) => !process.env[varName]);
@@ -82,17 +82,17 @@ function loadConfig(): AWSConfig {
 
     return {
       cognito: {
-        region: process.env.REACT_APP_COGNITO_REGION ?? '',
-        userPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID ?? '',
-        clientId: process.env.REACT_APP_COGNITO_CLIENT_ID ?? '',
-        identityPoolId: process.env.REACT_APP_COGNITO_IDENTITY_POOL_ID ?? '',
+        region: process.env.NEXT_PUBLIC_COGNITO_REGION ?? '',
+        userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
+        clientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID ?? '',
+        identityPoolId: process.env.NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID ?? '',
       },
       appSync: {
-        endpoint: process.env.REACT_APP_APPSYNC_ENDPOINT ?? '',
+        endpoint: process.env.NEXT_PUBLIC_APPSYNC_ENDPOINT ?? '',
       },
       s3: {
-        bucketName: process.env.REACT_APP_S3_BUCKET_NAME ?? '',
-        region: process.env.REACT_APP_S3_REGION ?? '',
+        bucketName: process.env.NEXT_PUBLIC_S3_BUCKET_NAME ?? '',
+        region: process.env.NEXT_PUBLIC_S3_REGION ?? '',
       },
     };
   } catch (error) {

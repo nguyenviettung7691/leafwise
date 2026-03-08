@@ -42,17 +42,17 @@ LeafWise is a plant care application built with Next.js and TypeScript. It integ
    NEXT_PUBLIC_AI_API_URL=http://localhost:4100
 
    # AWS Cognito
-   REACT_APP_COGNITO_REGION=us-east-1
-   REACT_APP_COGNITO_USER_POOL_ID=us-east-1_xxxxx
-   REACT_APP_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxx
-   REACT_APP_COGNITO_IDENTITY_POOL_ID=us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+   NEXT_PUBLIC_COGNITO_REGION=us-east-1
+   NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxx
+   NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxx
+   NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID=us-east-1:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
    # AWS AppSync
-   REACT_APP_APPSYNC_ENDPOINT=https://xxx.appsync-api.us-east-1.amazonaws.com/graphql
+   NEXT_PUBLIC_APPSYNC_ENDPOINT=https://xxx.appsync-api.us-east-1.amazonaws.com/graphql
 
    # Amazon S3
-   REACT_APP_S3_BUCKET_NAME=leafwise
-   REACT_APP_S3_REGION=us-east-1
+   NEXT_PUBLIC_S3_BUCKET_NAME=leafwise
+   NEXT_PUBLIC_S3_REGION=us-east-1
    ```
    See `.env.example` for reference. All variables are required.
 3. Start the AI dev server (in a separate terminal):
@@ -97,7 +97,7 @@ To work with the AWS Amplify backend (e.g., modify data models, authentication r
 #### Amplify Console Configuration (CI/CD)
 
 - Set environment variables in Amplify Console (not from `.env.local`):
-   - All required build-time vars: `GOOGLE_API_KEY`, `NEXT_PUBLIC_AI_API_URL`, `REACT_APP_COGNITO_REGION`, `REACT_APP_COGNITO_USER_POOL_ID`, `REACT_APP_COGNITO_CLIENT_ID`, `REACT_APP_COGNITO_IDENTITY_POOL_ID`, `REACT_APP_APPSYNC_ENDPOINT`, `REACT_APP_S3_BUCKET_NAME`, `REACT_APP_S3_REGION`
+   - All required build-time vars: `GOOGLE_API_KEY`, `NEXT_PUBLIC_AI_API_URL`, `NEXT_PUBLIC_COGNITO_REGION`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_CLIENT_ID`, `NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID`, `NEXT_PUBLIC_APPSYNC_ENDPOINT`, `NEXT_PUBLIC_S3_BUCKET_NAME`, `NEXT_PUBLIC_S3_REGION`
    - `GOOGLE_API_KEY` must also be added in **Manage secrets** (for Lambda runtime access)
    - Deployment vars: `S3_BUCKET_NAME` (target static site bucket), `CF_DIST_ID` (CloudFront distribution ID)
 - The Amplify build runs:
