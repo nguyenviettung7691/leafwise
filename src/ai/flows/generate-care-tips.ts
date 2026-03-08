@@ -1,5 +1,4 @@
 // src/ai/flows/generate-care-tips.ts
-'use server';
 
 /**
  * @fileOverview Generates custom care tips for a given plant species and location.

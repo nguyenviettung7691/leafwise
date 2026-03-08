@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Proactively reviews a plant's current care plan based on its
  * current details and suggests updates or new tasks.

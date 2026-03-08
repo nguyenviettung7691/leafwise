@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Generates a detailed care plan for a plant, including specific tasks.
  *

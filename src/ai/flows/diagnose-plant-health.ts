@@ -1,4 +1,3 @@
-'use server';
 /**
  * @fileOverview A plant problem diagnosis AI agent.
  *

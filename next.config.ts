@@ -1,4 +1,5 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   output: 'export',
@@ -17,6 +18,18 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      const stubPath = path.resolve(__dirname, 'src/ai/genkit-stub.js');
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'genkit': stubPath,
+        '@genkit-ai/googleai': stubPath,
+        '@genkit-ai/core': stubPath,
+      };
+    }
+    return config;
   },
 };
 

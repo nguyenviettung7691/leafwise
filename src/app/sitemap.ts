@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+export const dynamic = "force-static";
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://leafwise.nguyenviettung.id.vn'; // Replace with your actual domain if different
   const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format

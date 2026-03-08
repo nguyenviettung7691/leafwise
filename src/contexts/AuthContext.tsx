@@ -177,9 +177,9 @@ async function performTokenRefresh(
   refreshToken: string
 ): Promise<StoredTokens | null> {
   try {
-    const response = await cognitoClient.send(
+    const response = await getCognitoClient().send(
       new InitiateAuthCommand({
-        ClientId: cognitoConfig.clientId,
+        ClientId: getCognitoConfig().clientId,
         AuthFlow: 'REFRESH_TOKEN_AUTH',
         AuthParameters: {
           REFRESH_TOKEN: refreshToken,
@@ -209,16 +209,31 @@ async function performTokenRefresh(
 }
 
 // ============================================================================
-// COGNITO CLIENTS
+// COGNITO CLIENTS (lazy-initialized to avoid build-time "Region is missing" errors)
 // ============================================================================
 
-const cognitoConfig = getCognitoConfig();
-const cognitoClient = new CognitoIdentityProviderClient({
-  region: cognitoConfig.region,
-});
-const cognitoIdentityClient = new CognitoIdentityClient({
-  region: cognitoConfig.region,
-});
+let _cognitoClient: CognitoIdentityProviderClient | null = null;
+let _cognitoIdentityClient: CognitoIdentityClient | null = null;
+
+function getCognitoClient(): CognitoIdentityProviderClient {
+  if (!_cognitoClient) {
+    const cognitoConfig = getCognitoConfig();
+    _cognitoClient = new CognitoIdentityProviderClient({
+      region: cognitoConfig.region,
+    });
+  }
+  return _cognitoClient;
+}
+
+function getCognitoIdentityClientInstance(): CognitoIdentityClient {
+  if (!_cognitoIdentityClient) {
+    const cognitoConfig = getCognitoConfig();
+    _cognitoIdentityClient = new CognitoIdentityClient({
+      region: cognitoConfig.region,
+    });
+  }
+  return _cognitoIdentityClient;
+}
 
 // ============================================================================
 // COGNITO IDENTITY - GET IDENTITY ID
@@ -234,12 +249,12 @@ const cognitoIdentityClient = new CognitoIdentityClient({
 async function getCognitoIdentityId(idToken: string): Promise<string> {
   try {
     const command = new GetIdCommand({
-      IdentityPoolId: cognitoConfig.identityPoolId,
+      IdentityPoolId: getCognitoConfig().identityPoolId,
       Logins: {
-        [`cognito-idp.${cognitoConfig.region}.amazonaws.com/${cognitoConfig.userPoolId}`]: idToken,
+        [`cognito-idp.${getCognitoConfig().region}.amazonaws.com/${getCognitoConfig().userPoolId}`]: idToken,
       },
     });
-    const response = await cognitoIdentityClient.send(command);
+    const response = await getCognitoIdentityClientInstance().send(command);
     if (!response.IdentityId) {
       throw new Error('Failed to get identity ID from Cognito Identity');
     }
@@ -495,9 +510,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         // Initiate auth with username/password
-        const response = await cognitoClient.send(
+        const response = await getCognitoClient().send(
           new InitiateAuthCommand({
-            ClientId: cognitoConfig.clientId,
+            ClientId: getCognitoConfig().clientId,
             AuthFlow: 'USER_PASSWORD_AUTH',
             AuthParameters: {
               USERNAME: email,
@@ -582,9 +597,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         // Sign up user
-        const response = await cognitoClient.send(
+        const response = await getCognitoClient().send(
           new SignUpCommand({
-            ClientId: cognitoConfig.clientId,
+            ClientId: getCognitoConfig().clientId,
             Username: email,
             Password: password,
             UserAttributes: [
@@ -643,9 +658,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         // Confirm sign up
-        await cognitoClient.send(
+        await getCognitoClient().send(
           new ConfirmSignUpCommand({
-            ClientId: cognitoConfig.clientId,
+            ClientId: getCognitoConfig().clientId,
             Username: email,
             ConfirmationCode: confirmationCode,
           })
@@ -691,9 +706,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         // Initiate forgot password flow
-        await cognitoClient.send(
+        await getCognitoClient().send(
           new ForgotPasswordCommand({
-            ClientId: cognitoConfig.clientId,
+            ClientId: getCognitoConfig().clientId,
             Username: email,
           })
         );
@@ -747,9 +762,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Confirm forgot password with verification code
-        await cognitoClient.send(
+        await getCognitoClient().send(
           new ConfirmForgotPasswordCommand({
-            ClientId: cognitoConfig.clientId,
+            ClientId: getCognitoConfig().clientId,
             Username: email,
             ConfirmationCode: code,
             Password: newPassword,
@@ -806,7 +821,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Global sign out (invalidate all tokens)
       if (accessToken) {
         try {
-          await cognitoClient.send(
+          await getCognitoClient().send(
             new GlobalSignOutCommand({
               AccessToken: accessToken,
             })
@@ -877,7 +892,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // 1. Update user name attribute if provided
         if (updatedData.name !== undefined && updatedData.name !== user.name) {
-          await cognitoClient.send(
+          await getCognitoClient().send(
             new UpdateUserAttributesCommand({
               AccessToken: accessToken,
               UserAttributes: [

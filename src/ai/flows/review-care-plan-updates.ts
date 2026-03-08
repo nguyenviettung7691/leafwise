@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Reviews a plant's current care plan against a new diagnosis
  * and suggests updates to existing tasks or new tasks.

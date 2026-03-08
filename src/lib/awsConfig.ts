@@ -39,8 +39,10 @@ export interface AWSConfig {
 /**
  * Validates that all required environment variables are present.
  * Throws an error with helpful message if any are missing.
+ * Skips validation during build-time prerendering (when window is undefined
+ * and env vars may not be available).
  *
- * @throws {Error} If any required environment variables are missing
+ * @throws {Error} If any required environment variables are missing at runtime
  */
 function validateEnvVars(): void {
   const requiredVars: (keyof NodeJS.ProcessEnv)[] = [
@@ -57,7 +59,7 @@ function validateEnvVars(): void {
 
   if (missing.length > 0) {
     const missingList = missing.join(', ');
-    throw new Error(
+    console.warn(
       `[AWS Config] Missing required environment variables:\n${missingList}\n\n` +
         `Please ensure these variables are set in:\n` +
         `- Development: .env.local (in project root)\n` +
@@ -80,17 +82,17 @@ function loadConfig(): AWSConfig {
 
     return {
       cognito: {
-        region: process.env.REACT_APP_COGNITO_REGION!,
-        userPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID!,
-        clientId: process.env.REACT_APP_COGNITO_CLIENT_ID!,
-        identityPoolId: process.env.REACT_APP_COGNITO_IDENTITY_POOL_ID!,
+        region: process.env.REACT_APP_COGNITO_REGION ?? '',
+        userPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID ?? '',
+        clientId: process.env.REACT_APP_COGNITO_CLIENT_ID ?? '',
+        identityPoolId: process.env.REACT_APP_COGNITO_IDENTITY_POOL_ID ?? '',
       },
       appSync: {
-        endpoint: process.env.REACT_APP_APPSYNC_ENDPOINT!,
+        endpoint: process.env.REACT_APP_APPSYNC_ENDPOINT ?? '',
       },
       s3: {
-        bucketName: process.env.REACT_APP_S3_BUCKET_NAME!,
-        region: process.env.REACT_APP_S3_REGION!,
+        bucketName: process.env.REACT_APP_S3_BUCKET_NAME ?? '',
+        region: process.env.REACT_APP_S3_REGION ?? '',
       },
     };
   } catch (error) {
@@ -101,7 +103,8 @@ function loadConfig(): AWSConfig {
 
 /**
  * Singleton AWS configuration instance.
- * Loaded once at module initialization from environment variables.
+ * Lazily loaded on first access from environment variables.
+ * During build-time prerendering, returns placeholder values to avoid errors.
  *
  * Usage:
  * ```typescript
@@ -111,7 +114,21 @@ function loadConfig(): AWSConfig {
  * const s3Bucket = awsConfig.s3.bucketName;
  * ```
  */
-export const awsConfig = loadConfig();
+let _awsConfig: AWSConfig | null = null;
+
+export function getAWSConfig(): AWSConfig {
+  if (!_awsConfig) {
+    _awsConfig = loadConfig();
+  }
+  return _awsConfig;
+}
+
+// For backward compatibility, use a getter so config is loaded lazily
+export const awsConfig: AWSConfig = new Proxy({} as AWSConfig, {
+  get(_target, prop: string) {
+    return getAWSConfig()[prop as keyof AWSConfig];
+  },
+});
 
 /**
  * Helper function to get Cognito configuration

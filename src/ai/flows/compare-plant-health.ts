@@ -1,5 +1,4 @@
 
-'use server';
 /**
  * @fileOverview Compares a plant's current overall health with a new diagnosis
  * and suggests if the overall health status should be updated.
