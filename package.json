@@ -19,7 +19,7 @@
     "generate-outputs": "npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir ."
   },
   "overrides": {
-    "graphql": "16.8.1"
+    "graphql": "16.6.0"
   },
   "dependencies": {
     "@apollo/client": "^4.0.9",
@@ -55,7 +55,7 @@
     "dotenv": "^16.6.1",
     "framer-motion": "^11.18.2",
     "genkit": "^1.24.0",
-    "graphql": "16.8.1",
+    "graphql": "16.6.0",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-themes": "^0.3.0",
