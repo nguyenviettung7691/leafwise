@@ -19,6 +19,7 @@ function LeafWiseLogoIcon({ size = 24, className = "" } : { size?: number, class
       className={className}
       placeholder="blur"
       priority
+      unoptimized
     />
   );
 }
