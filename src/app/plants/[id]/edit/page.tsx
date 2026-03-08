@@ -30,7 +30,7 @@ export default function EditPlantPage() {
   useEffect(() => {
     const loadPlantData = async () => {
       setIsLoadingPage(true);
-      const foundPlant = getPlantById(id);
+      const foundPlant = await getPlantById(id);
       if (foundPlant) {
         setPlant(foundPlant);
 
