@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Compares a plant's current overall health with a new diagnosis
  * and suggests if the overall health status should be updated.
@@ -8,9 +7,9 @@
  * - ComparePlantHealthOutput - Output type for the comparison.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '../genkit';
 import { z } from 'genkit';
-import type { PlantHealthCondition } from '@/types';
+import type { PlantHealthCondition } from '../types';
 
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
@@ -86,6 +85,3 @@ const comparePlantHealthFlow = ai.defineFlow(
     return output;
   }
 );
-
-
-    

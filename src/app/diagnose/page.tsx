@@ -3,9 +3,8 @@
 
 import { useState, type FormEvent, useRef } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { diagnosePlantHealth, type DiagnosePlantHealthOutput, type DiagnosePlantHealthInput as DiagnoseInput } from '@/ai/flows/diagnose-plant-health';
-import { generateDetailedCarePlan, type GenerateDetailedCarePlanInput } from '@/ai/flows/generate-detailed-care-plan';
-import type { GenerateDetailedCarePlanOutput, AIGeneratedTask, Plant, PlantFormData } from '@/types';
+import { diagnosePlantHealth, generateDetailedCarePlan } from '@/lib/aiClient';
+import type { DiagnosePlantHealthOutput, DiagnosePlantHealthInput as DiagnoseInput, GenerateDetailedCarePlanInput, GenerateDetailedCarePlanOutput, AIGeneratedTask, Plant, PlantFormData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';

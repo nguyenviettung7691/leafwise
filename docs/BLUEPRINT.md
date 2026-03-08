@@ -96,7 +96,7 @@ The application will include the following core features:
 *   **Language**: TypeScript
 *   **UI Components**: ShadCN UI (Radix UI + Tailwind CSS)
 *   **Styling**: Tailwind CSS
-*   **AI Integration**: Genkit (Google Gemini models)
+*   **AI Integration**: Genkit (Google Gemini models) — runs on AWS Lambda with Function URL; frontend calls flows over HTTP
 *   **State Management**: React Context API, `useState`, `useEffect`
 *   **Forms**: React Hook Form with Zod for validation
 *   **Date Management**: `date-fns`

@@ -1,14 +1,14 @@
 
 # LeafWise - Future Features & Enhancements
 
-This document outlines potential future features and improvements for the LeafWise application, building upon its current UI prototype stage and existing AWS Amplify backend.
+This document outlines potential future features and improvements for the LeafWise application, building upon its existing AWS Amplify backend and Lambda-based AI flows.
 
 ## Core Functionality Enhancements
 
 1.  **Full Backend Implementation**:
     *   **Expand Existing AWS Amplify Backend**: Leverage and extend the current AWS Amplify backend for more complex data models, advanced business logic, and integrations.
-    *   **Advanced APIs & Custom Logic**: Implement custom backend logic (e.g., using AWS Lambda functions) for features that go beyond standard GraphQL operations provided by Amplify Data.
-    *   Implement secure, JWT-based user authentication with password hashing, refresh tokens, etc.
+    *   **Advanced APIs & Custom Logic**: Extend the existing Lambda function (AI flows) or add new Lambda functions for features that go beyond standard GraphQL operations provided by Amplify Data.
+    *   ~~Implement secure, JWT-based user authentication with password hashing, refresh tokens, etc.~~ *(Done — Cognito auth with JWT validation)*
     *   **Integrate with External Services**: Connect the backend to third-party APIs for enhanced functionality (e.g., advanced weather data, plant-specific knowledge bases).
     *   **Refine Data Models**: Optimize and potentially denormalize data models within Amplify Data for performance and specific query patterns.
 

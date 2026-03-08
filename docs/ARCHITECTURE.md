@@ -1,7 +1,7 @@
 
 # LeafWise Architecture Overview
 
-This document provides a high-level overview of the LeafWise application's architecture as a frontend UI prototype.
+This document provides a high-level overview of the LeafWise application's architecture.
 
 ## Frontend
 
@@ -25,7 +25,34 @@ This document provides a high-level overview of the LeafWise application's archi
     *   Detailed Care Plan Generation
     *   Health Comparison between diagnoses
     *   Care Plan Review and Update Suggestions
-*   **Implementation**: Genkit flows are defined as server-side functions (`'use server';`) within the Next.js application, callable from client components.
+    *   Proactive Care Plan Review
+*   **Runtime**: AI flows run on an **AWS Lambda** function with a **Function URL**, deployed alongside the Amplify backend. The static-exported Next.js frontend calls flows over HTTP.
+
+### AI Flows Architecture
+
+```
+Browser ──HTTP POST──▶ Lambda Function URL (/api/ai/{flowName})
+                          │
+                          ├─ JWT validation (aws-jwt-verify, Cognito ID token)
+                          ├─ Route to flow function
+                          └─ Genkit + Gemini execution
+```
+
+**Key files:**
+
+| Location | Purpose |
+|----------|---------|
+| `amplify/functions/ai-flows/handler.ts` | Lambda HTTP router — validates JWT, routes to flow |
+| `amplify/functions/ai-flows/jwt-validator.ts` | Cognito JWT verification via `aws-jwt-verify` |
+| `amplify/functions/ai-flows/genkit.ts` | Genkit initialization (googleAI plugin, Gemini 2.0 Flash) |
+| `amplify/functions/ai-flows/flows/` | All flow implementations (6 files) |
+| `amplify/functions/ai-flows/resource.ts` | Amplify `defineFunction` — 300s timeout, 1 GB RAM, `GOOGLE_API_KEY` secret |
+| `amplify/functions/ai-flows/dev-server.ts` | Local HTTP dev server (port 4100) mirroring Lambda API |
+| `src/lib/aiClient.ts` | Frontend HTTP client with typed wrappers for each flow |
+
+**Local development:** Run `npm run ai:dev` to start the local AI server on port 4100, then `npm run dev` for the Next.js frontend. Set `NEXT_PUBLIC_AI_API_URL=http://localhost:4100` in `.env.local`.
+
+**Secrets:** `GOOGLE_API_KEY` is provided as an Amplify secret (set via `npx ampx sandbox secret set GOOGLE_API_KEY`). `COGNITO_USER_POOL_ID` is injected automatically by the CDK stack.
 
 ## Backend & Data Storage
 

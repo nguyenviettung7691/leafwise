@@ -20,6 +20,16 @@ Thank you for your interest in contributing to LeafWise! Whether it's bug report
 
 Please refer to the main `README.md` for instructions on setting up the development environment.
 
+### AI Flows Development
+
+AI flows run on a Lambda function (defined in `amplify/functions/ai-flows/`). For local development:
+
+1. Set `NEXT_PUBLIC_AI_API_URL=http://localhost:4100` in `.env.local`.
+2. Run `npm run ai:dev` to start the local AI dev server (port 4100).
+3. Run `npm run dev` in a separate terminal for the Next.js frontend.
+
+The local dev server mirrors the Lambda handler API without JWT validation.
+
 ## Coding Style
 
 *   Follow existing coding patterns.

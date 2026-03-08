@@ -2,11 +2,11 @@
 import { config } from 'dotenv';
 config();
 
-import '@/ai/flows/generate-care-tips.ts';
-import '@/ai/flows/diagnose-plant-health.ts';
-import '@/ai/flows/generate-detailed-care-plan.ts';
-import '@/ai/flows/compare-plant-health.ts'; // Added new flow for health comparison
-import '@/ai/flows/review-care-plan-updates.ts'; // Added new flow for care plan review
-import '@/ai/flows/proactive-care-plan-review.ts'; // Added new flow for proactive review
+import '../../amplify/functions/ai-flows/flows/generate-care-tips';
+import '../../amplify/functions/ai-flows/flows/diagnose-plant-health';
+import '../../amplify/functions/ai-flows/flows/generate-detailed-care-plan';
+import '../../amplify/functions/ai-flows/flows/compare-plant-health';
+import '../../amplify/functions/ai-flows/flows/review-care-plan-updates';
+import '../../amplify/functions/ai-flows/flows/proactive-care-plan-review';
 
     

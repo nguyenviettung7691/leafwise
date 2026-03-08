@@ -6,9 +6,9 @@
  * - DiagnosePlantHealthOutput - The return type for the diagnosePlantHealth function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../genkit';
 import {z} from 'genkit';
-import type { PlantHealthCondition } from '@/types';
+import type { PlantHealthCondition } from '../types';
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 
@@ -112,27 +112,25 @@ const diagnosePlantHealthFlow = ai.defineFlow(
     const errorMsg = lang === 'vi' ? "Không thể phân tích hình ảnh." : "Unable to analyze image.";
     const isPlantMsg = lang === 'vi' ? "Hình ảnh không phải là thực vật." : "Image does not appear to be a plant.";
 
-    if (!output || !output.healthAssessment) { // Added check for healthAssessment
+    if (!output || !output.healthAssessment) {
         console.warn('Diagnose plant health prompt returned null or malformed output. Returning default structure.');
         return {
             identification: {
               isPlant: false,
               commonName: isPlantMsg,
-              scientificName: undefined, // Explicitly undefined
-              familyCategory: undefined, // Explicitly undefined
-              ageEstimateYears: undefined, // Explicitly undefined
+              scientificName: undefined,
+              familyCategory: undefined,
+              ageEstimateYears: undefined,
             },
-            healthAssessment: { status: 'unknown', diagnosis: errorMsg, confidence: 'low' }, // 'unknown' is a valid PlantHealthCondition
-            careRecommendations: [], // [] is a valid array
-        } as DiagnosePlantHealthOutput; // Explicitly cast to the output type
+            healthAssessment: { status: 'unknown', diagnosis: errorMsg, confidence: 'low' },
+            careRecommendations: [],
+        } as DiagnosePlantHealthOutput;
     }
 
-    // Ensure status is always one of the enum values, even if AI fails
     const validStatus = ['healthy', 'needs_attention', 'sick', 'unknown'].includes(output.healthAssessment.status)
-      ? output.healthAssessment.status as PlantHealthCondition // Cast here after check
-      : 'unknown' as PlantHealthCondition; // Cast default as well
+      ? output.healthAssessment.status as PlantHealthCondition
+      : 'unknown' as PlantHealthCondition;
 
-    // Construct the return object explicitly to ensure correct typing
     const validatedOutput: DiagnosePlantHealthOutput = {
         identification: {
             isPlant: output.identification?.isPlant ?? false,
@@ -142,7 +140,7 @@ const diagnosePlantHealthFlow = ai.defineFlow(
             ageEstimateYears: output.identification?.ageEstimateYears ?? undefined,
         },
         healthAssessment: {
-            status: validStatus, // Use the validated status
+            status: validStatus,
             diagnosis: output.healthAssessment?.diagnosis ?? undefined,
             confidence: output.healthAssessment?.confidence ?? undefined,
         },

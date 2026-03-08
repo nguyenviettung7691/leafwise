@@ -1,5 +1,3 @@
-// src/ai/flows/generate-care-tips.ts
-
 /**
  * @fileOverview Generates custom care tips for a given plant species and location.
  *
@@ -8,7 +6,7 @@
  * - GenerateCareTipsOutput - The return type for the generateCareTips function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai} from '../genkit';
 import {z} from 'genkit';
 
 const GenerateCareTipsInputSchema = z.object({

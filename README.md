@@ -10,7 +10,7 @@ LeafWise is a plant care application built with Next.js and TypeScript. It integ
 
 - **User accounts** powered by AWS Cognito (register, log in, profile updates).
 - **Plant management** with images stored on Amazon S3.
-- **AI plant diagnosis** and **care plan generation** via Genkit flows.
+- **AI plant diagnosis** and **care plan generation** via Genkit flows running on AWS Lambda.
 - **Detailed plant pages** showing growth photos, health trends and editable care tasks.
 - **Calendar view** of upcoming care tasks.
 - **Data Import/Export**: Comprehensive backup and restoration of all user data, including plant details, care tasks, and embedded image data.
@@ -22,7 +22,7 @@ LeafWise is a plant care application built with Next.js and TypeScript. It integ
 - Next.js 15 (App Router) + TypeScript
 - AWS Amplify Gen 2 (backend infrastructure: `auth`, `data`, `storage`)
 - AWS SDK v3 (Cognito Identity Provider, S3, S3 presigner)
-- Genkit with Google Gemini models
+- Genkit with Google Gemini models (runs on AWS Lambda with Function URL)
 - Apollo Client for AppSync (GraphQL with auth header injection)
 - ShadCN UI and Tailwind CSS
 - React Context API and React Hook Form
@@ -38,6 +38,9 @@ LeafWise is a plant care application built with Next.js and TypeScript. It integ
    ```env
    GOOGLE_API_KEY=YOUR_GOOGLE_AI_API_KEY
 
+   # AI Flows Lambda Function URL (use http://localhost:4100 for local dev)
+   NEXT_PUBLIC_AI_API_URL=http://localhost:4100
+
    # AWS Cognito
    REACT_APP_COGNITO_REGION=us-east-1
    REACT_APP_COGNITO_USER_POOL_ID=us-east-1_xxxxx
@@ -52,7 +55,11 @@ LeafWise is a plant care application built with Next.js and TypeScript. It integ
    REACT_APP_S3_REGION=us-east-1
    ```
    See `.env.example` for reference. All variables are required.
-3. Start the Next.js dev server:
+3. Start the AI dev server (in a separate terminal):
+   ```bash
+   npm run ai:dev
+   ```
+4. Start the Next.js dev server:
    ```bash
    npm run dev
    ```
@@ -78,15 +85,20 @@ To work with the AWS Amplify backend (e.g., modify data models, authentication r
     ```
     This command deploys your backend infrastructure (Cognito, AppSync, S3) to AWS. Configuration is loaded from environment variables (see step 2 above).
 
-3.  **(Optional)** Run Genkit flows in a separate terminal for AI features:
+3.  **(Optional)** Run the Genkit dev UI for flow debugging in a separate terminal:
    ```bash
    npm run genkit:dev
+   ```
+   For the AI HTTP server (same API as Lambda), use instead:
+   ```bash
+   npm run ai:dev
    ```
 
 #### Amplify Console Configuration (CI/CD)
 
 - Set environment variables in Amplify Console (not from `.env.local`):
-   - All required build-time vars: `GOOGLE_API_KEY`, `REACT_APP_COGNITO_REGION`, `REACT_APP_COGNITO_USER_POOL_ID`, `REACT_APP_COGNITO_CLIENT_ID`, `REACT_APP_COGNITO_IDENTITY_POOL_ID`, `REACT_APP_APPSYNC_ENDPOINT`, `REACT_APP_S3_BUCKET_NAME`, `REACT_APP_S3_REGION`
+   - All required build-time vars: `GOOGLE_API_KEY`, `NEXT_PUBLIC_AI_API_URL`, `REACT_APP_COGNITO_REGION`, `REACT_APP_COGNITO_USER_POOL_ID`, `REACT_APP_COGNITO_CLIENT_ID`, `REACT_APP_COGNITO_IDENTITY_POOL_ID`, `REACT_APP_APPSYNC_ENDPOINT`, `REACT_APP_S3_BUCKET_NAME`, `REACT_APP_S3_REGION`
+   - `GOOGLE_API_KEY` must also be added in **Manage secrets** (for Lambda runtime access)
    - Deployment vars: `S3_BUCKET_NAME` (target static site bucket), `CF_DIST_ID` (CloudFront distribution ID)
 - The Amplify build runs:
    - `npx ampx pipeline-deploy` (backend)

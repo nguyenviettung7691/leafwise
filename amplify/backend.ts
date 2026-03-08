@@ -2,6 +2,9 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { storage } from './storage/resource';
+import { aiFlows } from './functions/ai-flows/resource';
+import { FunctionUrlAuthType, Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda';
+import { CfnOutput } from 'aws-cdk-lib';
 
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
@@ -9,7 +12,26 @@ import { storage } from './storage/resource';
 const backend = defineBackend({
   auth,
   data,
-  storage
+  storage,
+  aiFlows,
+});
+
+// Enable Lambda Function URL for AI flows (auth handled inside Lambda via JWT validation)
+const aiFlowsLambda = backend.aiFlows.resources.lambda as LambdaFunction;
+const fnUrl = aiFlowsLambda.addFunctionUrl({
+  authType: FunctionUrlAuthType.NONE,
+});
+
+// Pass the User Pool ID to the Lambda so it can validate JWTs
+aiFlowsLambda.addEnvironment(
+  'COGNITO_USER_POOL_ID',
+  backend.auth.resources.userPool.userPoolId
+);
+
+// Output the Function URL for frontend configuration
+new CfnOutput(backend.stack, 'AiFlowsFunctionUrl', {
+  value: fnUrl.url,
+  description: 'Lambda Function URL for AI flows',
 });
 
 // extract L1 CfnUserPool resources

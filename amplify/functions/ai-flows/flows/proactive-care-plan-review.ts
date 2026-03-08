@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Proactively reviews a plant's current care plan based on its
  * current details and suggests updates or new tasks.
@@ -8,9 +7,8 @@
  * - ReviewCarePlanOutput - Output type for the flow (reused from review-care-plan-updates).
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '../genkit';
 import { z } from 'genkit';
-import type { ReviewCarePlanOutput } from '@/types';
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
 
@@ -37,8 +35,6 @@ const ProactiveCarePlanReviewInputSchema = z.object({
 export type ProactiveCarePlanReviewInput = z.infer<typeof ProactiveCarePlanReviewInputSchema>;
 
 
-// Reusing ReviewCarePlanOutputSchema from review-care-plan-updates flow if suitable
-// If not, define a specific one here. For now, assume reuse is okay.
 const AITaskSuggestionDetailsSchemaForOutput = z.object({
     name: z.string().optional().describe("Suggested new task name. MUST be in the specified languageCode."),
     description: z.string().optional().describe("Suggested new task description. MUST be in the specified languageCode."),
@@ -68,11 +64,10 @@ const ReviewCarePlanOutputSchema = z.object({
   taskModifications: z.array(ExistingTaskModificationSuggestionSchema).describe("Suggestions for modifying existing tasks."),
   newTasks: z.array(AIGeneratedTaskSchemaForOutput).describe("Suggestions for entirely new tasks to add to the care plan."),
 });
-// Re-exporting ReviewCarePlanOutput type from types/index.ts is better
-// export type ReviewCarePlanOutput = z.infer<typeof ReviewCarePlanOutputSchema>;
 
+type ProactiveReviewOutput = z.infer<typeof ReviewCarePlanOutputSchema>;
 
-export async function proactiveCarePlanReview(input: ProactiveCarePlanReviewInput): Promise<ReviewCarePlanOutput> {
+export async function proactiveCarePlanReview(input: ProactiveCarePlanReviewInput): Promise<ProactiveReviewOutput> {
   return proactiveCarePlanReviewFlow(input);
 }
 
@@ -135,7 +130,7 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     inputSchema: ProactiveCarePlanReviewInputSchema,
     outputSchema: ReviewCarePlanOutputSchema,
   },
-  async (input: ProactiveCarePlanReviewInput) => {
+  async (input) => {
     const saneInput = {
       ...input,
       currentCareTasks: Array.isArray(input.currentCareTasks) ? input.currentCareTasks : [],
@@ -144,8 +139,7 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     const lang = input.languageCode === 'vi' ? 'vi' : 'en';
     const defaultAssessment = lang === 'vi' ? "Đánh giá của AI không được cung cấp." : "AI assessment was not provided.";
 
-    // Helper to sanitize updatedDetails (convert null to undefined for name/description)
-    function sanitizeUpdatedDetails(details: any) {
+    function sanitizeUpdatedDetails(details: Record<string, unknown> | null | undefined) {
       if (!details) return undefined;
       return {
         ...details,
@@ -157,18 +151,16 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
       };
     }
 
-    // Helper to sanitize taskModifications
-    function sanitizeTaskModifications(mods: any[]) {
+    function sanitizeTaskModifications(mods: Array<Record<string, unknown>>) {
       if (!Array.isArray(mods)) return [];
       return mods.map((mod) => ({
         ...mod,
-        updatedDetails: sanitizeUpdatedDetails(mod.updatedDetails),
+        updatedDetails: sanitizeUpdatedDetails(mod.updatedDetails as Record<string, unknown> | null | undefined),
         reasoning: mod.reasoning == null ? undefined : mod.reasoning,
       }));
     }
 
-    // Helper to sanitize newTasks (taskName/taskDescription must not be null)
-    function sanitizeNewTasks(tasks: any[]) {
+    function sanitizeNewTasks(tasks: Array<Record<string, unknown>>) {
       if (!Array.isArray(tasks)) return [];
       return tasks.map((task) => ({
         ...task,
@@ -190,11 +182,8 @@ const proactiveCarePlanReviewFlow = ai.defineFlow(
     }
     return {
       overallAssessment: output.overallAssessment || defaultAssessment,
-      taskModifications: sanitizeTaskModifications(output.taskModifications),
-      newTasks: sanitizeNewTasks(output.newTasks),
-    };
+      taskModifications: sanitizeTaskModifications(output.taskModifications as Array<Record<string, unknown>>),
+      newTasks: sanitizeNewTasks(output.newTasks as Array<Record<string, unknown>>),
+    } as ProactiveReviewOutput;
   }
 );
-    
-
-    

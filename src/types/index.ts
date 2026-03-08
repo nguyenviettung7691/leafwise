@@ -65,11 +65,11 @@ export interface GenerateDetailedCarePlanOutput {
 }
 
 export interface AITaskSuggestionDetails {
-    name?: string | null;
-    description?: string | null;
-    frequency?: string | null;
-    timeOfDay?: string | null;
-    level?: 'basic' | 'advanced' | null;
+  name?: string | undefined;
+  description?: string | undefined;
+  frequency?: string | undefined;
+  timeOfDay?: string | undefined;
+  level?: 'basic' | 'advanced' | undefined;
 }
 
 export interface ExistingTaskModificationSuggestion {
@@ -184,6 +184,25 @@ export interface ComparePlantHealthInput {
     newPhotoHealthStatus: PlantHealthCondition;
     languageCode?: string | undefined;
 }
+
+export interface ComparePlantHealthOutput {
+    comparisonSummary: string;
+    shouldUpdateOverallHealth: boolean;
+    suggestedOverallHealth?: PlantHealthCondition;
+}
+
+export interface GenerateDetailedCarePlanInput {
+    plantCommonName: string;
+    plantScientificName?: string | null;
+    diagnosisNotes?: string | null;
+    carePlanMode: 'basic' | 'advanced';
+    locationClimate?: string | null;
+    languageCode?: string | null;
+}
+
+// Aliases matching the names exported by the AI flow files
+export type DiagnosePlantHealthInput = DiagnosePlantHealthFlowInput;
+export type DiagnosePlantHealthOutput = DiagnosePlantHealthFlowOutput;
 
 // Update the interface to match the AI flow's Zod schema for ProactiveCarePlanReviewInput
 export interface ProactiveCarePlanReviewInput {

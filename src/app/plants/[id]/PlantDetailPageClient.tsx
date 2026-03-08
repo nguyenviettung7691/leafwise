@@ -75,11 +75,9 @@ import { usePlantData } from '@/contexts/PlantDataContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { useAuth } from '@/contexts/AuthContext';
 
-// AI Flows
-import { diagnosePlantHealth, type DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow } from '@/ai/flows/diagnose-plant-health';
-import { comparePlantHealthAndUpdateSuggestion, type ComparePlantHealthOutput as ComparePlantHealthOutputFlowType } from '@/ai/flows/compare-plant-health';
-import { reviewAndSuggestCarePlanUpdates } from '@/ai/flows/review-care-plan-updates';
-import { proactiveCarePlanReview, type ProactiveCarePlanReviewInput } from '@/ai/flows/proactive-care-plan-review';
+// AI Flows (HTTP client)
+import { diagnosePlantHealth, comparePlantHealthAndUpdateSuggestion, reviewAndSuggestCarePlanUpdates, proactiveCarePlanReview } from '@/lib/aiClient';
+import type { DiagnosePlantHealthOutput as DiagnosePlantHealthOutputFlow, ComparePlantHealthOutput as ComparePlantHealthOutputFlowType, ProactiveCarePlanReviewInput } from '@/types';
 
 // Types
 import type { 

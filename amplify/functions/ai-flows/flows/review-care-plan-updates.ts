@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Reviews a plant's current care plan against a new diagnosis
  * and suggests updates to existing tasks or new tasks.
@@ -8,7 +7,7 @@
  * - ReviewCarePlanOutput - Output type for the flow.
  */
 
-import { ai } from '@/ai/genkit';
+import { ai } from '../genkit';
 import { z } from 'genkit';
 
 const PlantHealthConditionSchema = z.enum(['healthy', 'needs_attention', 'sick', 'unknown']);
@@ -147,6 +146,3 @@ const reviewCarePlanFlow = ai.defineFlow(
     };
   }
 );
-
-
-    
