@@ -42,9 +42,7 @@ export default function NewPlantPage() {
     try {
         const createdPlant = await addPlant(
           newPlantData as Omit<Plant, 'id' | 'photos' | 'careTasks' | 'createdAt' | 'updatedAt'>,
-          primaryPhotoFile,
-          undefined,
-          'manual'
+          primaryPhotoFile
         );
 
         toast({
