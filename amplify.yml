@@ -6,7 +6,7 @@ backend:
         - nvm install 20
         - nvm use 20
         - npm cache verify --cache .npm
-        - npm install --cache .npm --prefer-offline --no-audit
+        - npm install --cache .npm --prefer-offline --no-audit --legacy-peer-deps
     build:
       commands:
         - npm run pipeline-deploy
