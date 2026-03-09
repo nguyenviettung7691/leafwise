@@ -165,11 +165,11 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
 /**
  * HTTP link to AppSync endpoint
- * Uses credentials: 'include' to send cookies with requests
+ * Auth is handled via Authorization header (JWT), not cookies,
+ * so credentials are omitted to avoid CORS issues with AppSync's wildcard origin.
  */
 const httpLink = new HttpLink({
   uri: appSyncConfig.endpoint,
-  credentials: 'include',
 });
 
 /**
