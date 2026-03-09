@@ -87,7 +87,7 @@ async function getCognitoIdentityCredentials(
  * @param idToken - Cognito ID token for authentication
  * @returns Configured S3Client instance with temporary credentials
  */
-async function createS3ClientWithCredentials(idToken: string): Promise<S3Client> {
+export async function createS3ClientWithCredentials(idToken: string): Promise<S3Client> {
   try {
     const identityId = await getCognitoIdentityId(idToken);
     const credentials = await getCognitoIdentityCredentials(idToken, identityId);

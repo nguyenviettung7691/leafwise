@@ -3,11 +3,26 @@
 
 import { useState, useEffect } from 'react';
 import { getS3Config } from '@/lib/awsConfig';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createS3ClientWithCredentials } from '@/lib/s3Utils';
 import { useAuth } from '@/contexts/AuthContext';
 
 const s3Config = getS3Config();
+
+const TOKEN_STORAGE_KEY = 'cognito_tokens';
+
+function getIdToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
+  if (!stored) return null;
+  try {
+    const tokens = JSON.parse(stored);
+    return tokens?.idToken ?? null;
+  } catch {
+    return null;
+  }
+}
 
 interface UseS3ImageReturn {
   imageUrl: string | null;
@@ -16,16 +31,17 @@ interface UseS3ImageReturn {
 }
 
 /**
- * Generates a signed S3 URL using AWS SDK v3 presigner
+ * Generates a signed S3 URL using AWS SDK v3 presigner with Cognito credentials
  * The signed URL is valid for 1 hour (3600 seconds) and includes SigV4 authorization
  * 
  * @param photoKey - S3 object key (e.g., 'avatars/{userId}/avatar-123.jpg')
+ * @param idToken - Cognito ID token for obtaining temporary AWS credentials
  * @returns Signed URL string that can be used directly in img src
- * @throws Error if signing fails or config is missing
+ * @throws Error if signing fails or credentials are missing
  */
-async function generateSignedUrl(photoKey: string): Promise<string> {
+async function generateSignedUrl(photoKey: string, idToken: string): Promise<string> {
   try {
-    const s3Client = new S3Client({ region: s3Config.region });
+    const s3Client = await createS3ClientWithCredentials(idToken);
     
     const command = new GetObjectCommand({
       Bucket: s3Config.bucketName,
@@ -72,8 +88,12 @@ export function useS3Image(
       setIsLoading(true);
       setError(null);
       try {
-        // Generate signed URL using AWS SDK v3
-        const signedUrl = await generateSignedUrl(photoKey);
+        const idToken = getIdToken();
+        if (!idToken) {
+          throw new Error('No ID token available. User must be authenticated.');
+        }
+        // Generate signed URL using AWS SDK v3 with Cognito credentials
+        const signedUrl = await generateSignedUrl(photoKey, idToken);
         setImageUrl(signedUrl);
       } catch (e: any) {
         console.error(
