@@ -37,25 +37,24 @@ export interface AWSConfig {
 }
 
 /**
- * Validates that all required environment variables are present.
- * Throws an error with helpful message if any are missing.
- * Skips validation during build-time prerendering (when window is undefined
- * and env vars may not be available).
- *
- * @throws {Error} If any required environment variables are missing at runtime
+ * Validates that all required config values resolved to non-empty strings.
+ * Uses the already-resolved config (which has build-time inlined values)
+ * rather than dynamic process.env access, because Next.js only replaces
+ * static references like `process.env.NEXT_PUBLIC_X` at build time —
+ * dynamic `process.env[varName]` always returns undefined in the browser.
  */
-function validateEnvVars(): void {
-  const requiredVars: (keyof NodeJS.ProcessEnv)[] = [
-    'NEXT_PUBLIC_COGNITO_REGION',
-    'NEXT_PUBLIC_COGNITO_USER_POOL_ID',
-    'NEXT_PUBLIC_COGNITO_CLIENT_ID',
-    'NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID',
-    'NEXT_PUBLIC_APPSYNC_ENDPOINT',
-    'NEXT_PUBLIC_S3_BUCKET_NAME',
-    'NEXT_PUBLIC_S3_REGION',
+function validateConfig(config: AWSConfig): void {
+  const checks: [string, string][] = [
+    ['NEXT_PUBLIC_COGNITO_REGION', config.cognito.region],
+    ['NEXT_PUBLIC_COGNITO_USER_POOL_ID', config.cognito.userPoolId],
+    ['NEXT_PUBLIC_COGNITO_CLIENT_ID', config.cognito.clientId],
+    ['NEXT_PUBLIC_COGNITO_IDENTITY_POOL_ID', config.cognito.identityPoolId],
+    ['NEXT_PUBLIC_APPSYNC_ENDPOINT', config.appSync.endpoint],
+    ['NEXT_PUBLIC_S3_BUCKET_NAME', config.s3.bucketName],
+    ['NEXT_PUBLIC_S3_REGION', config.s3.region],
   ];
 
-  const missing = requiredVars.filter((varName) => !process.env[varName]);
+  const missing = checks.filter(([, value]) => !value).map(([name]) => name);
 
   if (missing.length > 0) {
     const missingList = missing.join(', ');
@@ -78,9 +77,7 @@ function validateEnvVars(): void {
  */
 function loadConfig(): AWSConfig {
   try {
-    validateEnvVars();
-
-    return {
+    const config: AWSConfig = {
       cognito: {
         region: process.env.NEXT_PUBLIC_COGNITO_REGION ?? '',
         userPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
@@ -95,6 +92,10 @@ function loadConfig(): AWSConfig {
         region: process.env.NEXT_PUBLIC_S3_REGION ?? '',
       },
     };
+
+    validateConfig(config);
+
+    return config;
   } catch (error) {
     console.error(error);
     throw error;

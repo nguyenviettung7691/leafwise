@@ -89,8 +89,12 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
 
   // Load plants data via direct client.query() on mount
   useEffect(() => {
-    if (!user?.id || !user?.identityId || isLoadingAuth) {
-      setIsLoading(true);
+    if (isLoadingAuth) {
+      return;
+    }
+
+    if (!user?.id || !user?.identityId) {
+      setIsLoading(false);
       return;
     }
 

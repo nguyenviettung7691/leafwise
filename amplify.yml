@@ -18,7 +18,7 @@ frontend:
         - nvm use 20
         - npx ampx generate outputs --branch $AWS_BRANCH --app-id $AWS_APP_ID --out-dir .
         - node scripts/extract-amplify-env.mjs
-        - env | grep -e GOOGLE_API_KEY >> .env.production
+        - env | grep -e GOOGLE_API_KEY >> .env.production || true
         - env | grep -e NEXT_PUBLIC_AI_API_URL >> .env.production || true
         - npm install graphql@16.6.0 --no-save --legacy-peer-deps
         - npm run build
