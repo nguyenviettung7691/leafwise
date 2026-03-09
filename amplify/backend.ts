@@ -47,6 +47,13 @@ cfnUserPool.policies = {
   },
 };
 
+// Enable USER_PASSWORD_AUTH flow on the app client (required for direct username/password login)
+const { cfnUserPoolClient } = backend.auth.resources.cfnResources;
+cfnUserPoolClient.explicitAuthFlows = [
+  ...(cfnUserPoolClient.explicitAuthFlows as string[] || []),
+  'ALLOW_USER_PASSWORD_AUTH',
+];
+
 // enable Transfer Acceleration on the bucket
 // const s3Bucket = backend.storage.resources.bucket;
 // const cfnBucket = s3Bucket.node.defaultChild as s3.CfnBucket;
