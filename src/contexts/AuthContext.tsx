@@ -981,12 +981,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // When preferences explicitly provide an avatarS3Key (e.g. during
+        // JSON import) and no avatar file operation was requested, apply it.
+        if (updatedData.avatarFile === undefined && updatedData.preferences?.avatarS3Key !== undefined) {
+          newAvatarS3Key = updatedData.preferences.avatarS3Key;
+        }
+
         // 3. Update preferences in AppSync
         if (updatedData.preferences !== undefined || newAvatarS3Key !== user.avatarS3Key) {
           // Only include fields defined in UpdateUserPreferencesInput.
           // Spreading currentPreferences would include read-only fields
           // (createdAt, updatedAt, owner) that are not accepted by the mutation.
-          const preferencesToUpdate: { id: string; avatarS3Key?: string | null } = {
+          const preferencesToUpdate = {
             id: user.id,
             avatarS3Key: newAvatarS3Key,
           };
