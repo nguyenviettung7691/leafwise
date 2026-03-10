@@ -26,6 +26,9 @@ frontend:
       commands:
         - ls out
         - aws s3 sync out s3://$S3_BUCKET_NAME --delete
+        # Configure CloudFront to serve 404.html for missing paths (SPA deep-linking support)
+        # This allows the smart not-found page to handle client-side routing for dynamic routes
+        - node scripts/configure-cloudfront-spa.mjs
         - aws cloudfront create-invalidation --distribution-id $CF_DIST_ID --paths "/*"
   artifacts:
     baseDirectory: .next

@@ -12,11 +12,11 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import { useAuth } from '@/contexts/AuthContext';
 
-export default function EditPlantPageClient() {
+export default function EditPlantPageClient({ plantId }: { plantId?: string }) {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = plantId || (params.id as string);
   const { toast } = useToast();
   const { t } = useLanguage(); 
   const { getPlantById, updatePlant } = usePlantData();

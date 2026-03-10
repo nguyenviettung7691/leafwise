@@ -10,6 +10,7 @@ import { PlantDataProvider } from '@/contexts/PlantDataContext';
 import { ProgressProvider } from '@/contexts/ProgressContext';
 import { ProgressBar } from '@/components/layout/ProgressBar';
 import { Toaster } from '@/components/ui/toaster';
+import { RouteGuard } from '@/components/layout/RouteGuard';
 import { NetworkStatusIndicator } from '@/components/layout/NetworkStatusIndicator';
 import { InstallPrompt } from '@/components/layout/InstallPrompt';
 
@@ -59,7 +60,9 @@ export function ClientLayoutProvidersAndContent({ children }: { children: ReactN
         <PlantDataProvider>
           <ProgressProvider>
             <ProgressBar />
-            {children}
+            <RouteGuard>
+              {children}
+            </RouteGuard>
             <Toaster />
             <NetworkStatusIndicator />
             <InstallPrompt />
