@@ -17,9 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { useS3Image } from '@/hooks/useS3Image';
 import { compressImage, PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
-import { deleteFile } from '@/lib/s3Utils';
+import { deleteFile, createS3ClientWithCredentials } from '@/lib/s3Utils';
 import { getS3Config } from '@/lib/awsConfig';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Plant, PlantPhoto, CareTask, UserPreferences } from '@/types';
 import { DELETE_USER_PREFERENCES } from '@/lib/graphql/operations';
@@ -204,10 +204,17 @@ export default function ProfilePage() {
      * @param s3Key - The S3 object key (e.g., 'plants/{identityId}/photo-123.jpg')
      * @returns Signed URL valid for 1 hour, or null if key is invalid/missing
      */
+    const idToken = getIdTokenForS3();
+    if (!idToken) {
+      toast({ title: t('common.error'), description: t('profilePage.toasts.exportError'), variant: "destructive" });
+      setIsExporting(false);
+      return;
+    }
+    const s3Client = await createS3ClientWithCredentials(idToken);
+
     const generateSignedS3Url = async (s3Key: string | null | undefined): Promise<string | null> => {
       if (!s3Key) return null;
       try {
-        const s3Client = new S3Client({ region: s3Config.region });
         const command = new GetObjectCommand({
           Bucket: s3Config.bucketName,
           Key: s3Key,
