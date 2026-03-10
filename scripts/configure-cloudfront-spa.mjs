@@ -70,6 +70,10 @@ function handler(event) {
 
 let cfFunctionARN;
 
+// Write function code to a temp file (used by both create and update paths)
+const funcCodeFile = resolve(tmpdir(), 'cf-function-code.js');
+writeFileSync(funcCodeFile, CF_FUNCTION_CODE, 'utf-8');
+
 // Try to describe the function first (it may already exist)
 try {
   const describeOutput = execSync(
@@ -80,10 +84,6 @@ try {
   const funcETag = described.ETag;
 
   console.log(`${TAG} Updating existing CloudFront Function: ${CF_FUNCTION_NAME}`);
-
-  // Write function code to temp file
-  const funcCodeFile = resolve(tmpdir(), 'cf-function-code.js');
-  writeFileSync(funcCodeFile, CF_FUNCTION_CODE, 'utf-8');
 
   const updateOutput = execSync(
     `aws cloudfront update-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --if-match ${funcETag} --output json`,
@@ -104,9 +104,6 @@ try {
 } catch {
   // Function doesn't exist — create it
   console.log(`${TAG} Creating CloudFront Function: ${CF_FUNCTION_NAME}`);
-
-  const funcCodeFile = resolve(tmpdir(), 'cf-function-code.js');
-  writeFileSync(funcCodeFile, CF_FUNCTION_CODE, 'utf-8');
 
   const createOutput = execSync(
     `aws cloudfront create-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --output json`,

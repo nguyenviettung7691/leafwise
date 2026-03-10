@@ -107,8 +107,8 @@ export default function NotFound() {
 
     // No route matched — show actual 404
     setRouteMatch({ type: 'not-found' });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount; router is stable
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- router is stable (Next.js guarantee); effect reads window.location on mount only
+  }, [router]);
 
   // Still determining the route, or navigating to a static route
   if (routeMatch === null || routeMatch.type === 'navigating') {
