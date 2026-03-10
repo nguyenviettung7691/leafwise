@@ -153,7 +153,7 @@ const GalleryPhotoItem = ({ photo, isPrimary, isSelected, isManagingPhotos, plan
             isSelected && isManagingPhotos ? 'ring-2 ring-primary ring-offset-1 brightness-75' : '',
           )}
           data-ai-hint="plant growth"
-          onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`; }}
+          onError={(e) => { const target = e.target as HTMLImageElement; target.onerror = null; target.src = `https://placehold.co/200x200.png?text=${encodeURIComponent(plantCommonName + ' Error')}`; }}
         />
       )}
       {!isManagingPhotos && !isLoadingImage && imageUrl && (
