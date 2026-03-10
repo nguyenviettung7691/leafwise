@@ -147,14 +147,14 @@ const DialogPhotoDisplay: React.FC<DialogPhotoDisplayProps> = ({
   );
 };
 
-export default function PlantDetailPageClient() {
+export default function PlantDetailPageClient({ plantId }: { plantId?: string }) {
   const { user } = useAuth();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
   const { t, language, dateFnsLocale } = useLanguage();
   const isStandalonePWA = usePWAStandalone();
-  const id = params.id as string;
+  const id = plantId || (params.id as string);
   // Get all plants, photos, and tasks from the context
   const {
     plants: allContextPlants,
