@@ -189,10 +189,16 @@ export async function uploadFile(
   try {
     const s3Client = await createS3ClientWithCredentials(idToken);
 
+    // Convert File/Blob to Uint8Array so the AWS SDK doesn't attempt to
+    // call ReadableStream.getReader() on it, which fails for File objects
+    // created programmatically (e.g. from data-URL blobs during import).
+    const arrayBuffer = await file.arrayBuffer();
+    const body = new Uint8Array(arrayBuffer);
+
     const command = new PutObjectCommand({
       Bucket: s3Config.bucketName,
       Key: key,
-      Body: file,
+      Body: body,
       ContentType: file.type,
     });
 
