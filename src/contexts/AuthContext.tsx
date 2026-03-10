@@ -28,6 +28,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "./LanguageContext";
 import type { User, UserPreferences } from "@/types";
 import client from '@/lib/apolloClient';
+import { invalidateS3CredentialsCache } from '@/lib/s3Utils';
+import { invalidatePresignedUrlCache } from '@/hooks/useS3Image';
 import { 
   GET_USER_PREFERENCES, 
   CREATE_USER_PREFERENCES, 
@@ -73,11 +75,13 @@ function saveTokens(tokens: StoredTokens): void {
 }
 
 /**
- * Clear tokens from localStorage
+ * Clear tokens from localStorage and invalidate related caches
  */
 function clearTokens(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_STORAGE_KEY);
+  invalidateS3CredentialsCache();
+  invalidatePresignedUrlCache();
 }
 
 /**

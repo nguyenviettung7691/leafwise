@@ -16,6 +16,34 @@ import {
 const s3Config = getS3Config();
 const cognitoConfig = getCognitoConfig();
 
+/** Cache TTL for Cognito credentials in milliseconds (55 minutes).
+ *  Cognito temporary credentials are valid for ~1 hour; we refresh
+ *  5 minutes early to avoid using stale credentials. */
+const CREDENTIALS_CACHE_TTL_MS = 55 * 60 * 1000;
+
+/** Cached Cognito credentials and associated S3 client */
+interface CredentialsCache {
+  idToken: string;
+  identityId: string;
+  credentials: { AccessKeyId: string; SecretKey: string; SessionToken: string };
+  s3Client: S3Client;
+  expiresAt: number;
+}
+
+let credentialsCache: CredentialsCache | null = null;
+
+/** In-flight credential request promise to deduplicate concurrent calls */
+let pendingCredentialRequest: Promise<S3Client> | null = null;
+
+/**
+ * Invalidate the cached credentials and S3 client.
+ * Call this on logout or when credentials are known to be expired.
+ */
+export function invalidateS3CredentialsCache(): void {
+  credentialsCache = null;
+  pendingCredentialRequest = null;
+}
+
 /**
  * Get Cognito Identity ID from ID token
  * Required for obtaining temporary AWS credentials
@@ -81,29 +109,62 @@ async function getCognitoIdentityCredentials(
 }
 
 /**
- * Create S3Client with Cognito Identity credentials
- * Uses temporary AWS credentials obtained from Cognito Identity Pool
+ * Create S3Client with Cognito Identity credentials.
+ * Caches credentials and the S3 client for up to 55 minutes to avoid
+ * redundant Cognito Identity requests on every image load.
  * 
  * @param idToken - Cognito ID token for authentication
  * @returns Configured S3Client instance with temporary credentials
  */
 export async function createS3ClientWithCredentials(idToken: string): Promise<S3Client> {
-  try {
-    const identityId = await getCognitoIdentityId(idToken);
-    const credentials = await getCognitoIdentityCredentials(idToken, identityId);
-
-    return new S3Client({
-      region: s3Config.region,
-      credentials: {
-        accessKeyId: credentials.AccessKeyId,
-        secretAccessKey: credentials.SecretKey,
-        sessionToken: credentials.SessionToken,
-      },
-    });
-  } catch (error) {
-    console.error('Failed to create S3Client with credentials:', error);
-    throw error;
+  // Return cached client if credentials are still valid and token hasn't changed
+  if (
+    credentialsCache &&
+    credentialsCache.idToken === idToken &&
+    Date.now() < credentialsCache.expiresAt
+  ) {
+    return credentialsCache.s3Client;
   }
+
+  // Deduplicate concurrent requests: if a credential fetch is already in
+  // flight, await it instead of firing a second Cognito round-trip.
+  if (pendingCredentialRequest) {
+    return pendingCredentialRequest;
+  }
+
+  const request = (async () => {
+    try {
+      const identityId = await getCognitoIdentityId(idToken);
+      const credentials = await getCognitoIdentityCredentials(idToken, identityId);
+
+      const s3Client = new S3Client({
+        region: s3Config.region,
+        credentials: {
+          accessKeyId: credentials.AccessKeyId,
+          secretAccessKey: credentials.SecretKey,
+          sessionToken: credentials.SessionToken,
+        },
+      });
+
+      credentialsCache = {
+        idToken,
+        identityId,
+        credentials,
+        s3Client,
+        expiresAt: Date.now() + CREDENTIALS_CACHE_TTL_MS,
+      };
+
+      return s3Client;
+    } catch (error) {
+      console.error('Failed to create S3Client with credentials:', error);
+      throw error;
+    } finally {
+      pendingCredentialRequest = null;
+    }
+  })();
+
+  pendingCredentialRequest = request;
+  return request;
 }
 
 /**
