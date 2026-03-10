@@ -26,6 +26,13 @@ if (!CF_DIST_ID) {
   process.exit(1);
 }
 
+// Validate CF_DIST_ID format to prevent command injection
+// CloudFront distribution IDs are alphanumeric (e.g., E1A2B3C4D5E6F7)
+if (!/^[A-Z0-9]+$/i.test(CF_DIST_ID)) {
+  console.error(`[configure-cloudfront-spa] ERROR: Invalid CF_DIST_ID format: ${CF_DIST_ID}`);
+  process.exit(1);
+}
+
 console.log(`[configure-cloudfront-spa] Configuring CloudFront distribution: ${CF_DIST_ID}`);
 
 // --- 1. Fetch current distribution config ---
@@ -38,6 +45,12 @@ const rawConfig = execSync(
 const parsed = JSON.parse(rawConfig);
 const etag = parsed.ETag;
 const distConfig = parsed.DistributionConfig;
+
+// Validate ETag format (alphanumeric string from AWS API)
+if (!etag || !/^[A-Za-z0-9]+$/.test(etag)) {
+  console.error(`[configure-cloudfront-spa] ERROR: Invalid or missing ETag from distribution config.`);
+  process.exit(1);
+}
 
 console.log(`[configure-cloudfront-spa] Current ETag: ${etag}`);
 

@@ -22,26 +22,25 @@ export function RouteGuard({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !isLoading && user !== null;
 
-  // Determine if a redirect is needed (computed synchronously to avoid flash)
-  const needsRedirect = !isLoading && (
-    (isAuthenticated && isPublicAuthRoute(pathname)) ||
-    (!isAuthenticated && isProtectedRoute(pathname))
-  );
+  // Compute redirect targets once per render to avoid duplicate route checks
+  const shouldRedirectToHome = !isLoading && isAuthenticated && isPublicAuthRoute(pathname);
+  const shouldRedirectToLogin = !isLoading && !isAuthenticated && isProtectedRoute(pathname);
+  const needsRedirect = shouldRedirectToHome || shouldRedirectToLogin;
 
   // Perform the redirect as a side effect
   useEffect(() => {
     if (isLoading) return;
 
-    if (isAuthenticated && isPublicAuthRoute(pathname)) {
+    if (shouldRedirectToHome) {
       router.replace('/');
       return;
     }
 
-    if (!isAuthenticated && isProtectedRoute(pathname)) {
+    if (shouldRedirectToLogin) {
       const loginUrl = `/login?from=${encodeURIComponent(pathname)}`;
       router.replace(loginUrl);
     }
-  }, [isLoading, isAuthenticated, pathname, router]);
+  }, [isLoading, shouldRedirectToHome, shouldRedirectToLogin, pathname, router]);
 
   // Show loading state while auth is being determined or redirect is pending
   if (isLoading || needsRedirect) {
