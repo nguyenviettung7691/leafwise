@@ -903,6 +903,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ],
             })
           );
+
+          // Refresh tokens so the ID token contains the updated name attribute.
+          // Without this, the stale ID token in localStorage still holds the old
+          // name and a page refresh would show the previous value.
+          const currentTokens = getStoredTokens();
+          if (currentTokens?.refreshToken) {
+            const refreshedTokens = await performTokenRefresh(currentTokens.refreshToken);
+            if (refreshedTokens) {
+              // Preserve identityId which isn't returned by REFRESH_TOKEN_AUTH
+              refreshedTokens.identityId = currentTokens.identityId;
+              saveTokens(refreshedTokens);
+            }
+          }
         }
 
         // 2. Handle avatar upload
