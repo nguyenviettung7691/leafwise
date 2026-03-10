@@ -29,7 +29,8 @@ function corsHeaders(): Record<string, string> {
 }
 
 function extractFlowName(pathname: string): string | null {
-  const match = pathname.match(/^\/api\/ai\/([a-z-]+)$/);
+  const normalized = pathname.replace(/\/+/g, '/');
+  const match = normalized.match(/^\/api\/ai\/([a-z-]+)$/);
   return match ? match[1] : null;
 }
 

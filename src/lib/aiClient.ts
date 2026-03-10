@@ -12,7 +12,7 @@ import type {
   ProactiveCarePlanReviewInput,
 } from '@/types';
 
-const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_URL || '';
+const AI_API_BASE = (process.env.NEXT_PUBLIC_AI_API_URL || '').replace(/\/+$/, '');
 
 function getIdToken(): string | null {
   if (typeof window === 'undefined') return null;

@@ -39,7 +39,8 @@ function jsonResponse(statusCode: number, body: unknown): APIGatewayProxyResultV
  * Expects path format: /api/ai/{flowName}
  */
 function extractFlowName(rawPath: string): string | null {
-  const match = rawPath.match(/^\/api\/ai\/([a-z-]+)$/);
+  const normalized = rawPath.replace(/\/+/g, '/');
+  const match = normalized.match(/^\/api\/ai\/([a-z-]+)$/);
   return match ? match[1] : null;
 }
 
