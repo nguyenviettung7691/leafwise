@@ -371,7 +371,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         return preferences || null;
       } catch (error: any) {
-        console.error(`Failed to fetch user preferences for ${userId}:`, error);
+        console.warn(`Failed to fetch user preferences for ${userId}:`, error);
         return null;
       }
     },
@@ -464,10 +464,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Fetch preferences
-      let userPreferences = await fetchUserPreferences(userId);
-      if (!userPreferences) {
-        userPreferences = await createDefaultUserPreferences(userId);
+      // Fetch preferences (non-blocking: network failures should not prevent authentication)
+      let userPreferences: UserPreferences | null = null;
+      try {
+        userPreferences = await fetchUserPreferences(userId);
+        if (!userPreferences) {
+          userPreferences = await createDefaultUserPreferences(userId);
+        }
+      } catch (prefError) {
+        console.warn('Could not load user preferences, will use defaults:', prefError);
       }
 
       return {
