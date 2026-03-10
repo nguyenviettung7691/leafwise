@@ -76,6 +76,14 @@ export default function ProfilePage() {
     authUser?.id
   );
 
+  useEffect(() => {
+    if (authUser) {
+      setEditedName(authUser.name);
+      setAvatarFile(undefined);
+      setAvatarPreviewUrl(null);
+    }
+  }, [authUser]);
+
   // Middleware handles route protection; this is just a safety check for component rendering
   if (!authLoading && !authUser) {
     return (
@@ -84,14 +92,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (authUser) {
-      setEditedName(authUser.name);
-      setAvatarFile(undefined);
-      setAvatarPreviewUrl(null);
-    }
-  }, [authUser]);
 
   const handleEditToggle = () => {
     if (isEditing) {
