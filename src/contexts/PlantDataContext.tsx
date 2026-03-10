@@ -516,8 +516,9 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
               );
               const timestamp = Date.now();
               const ext = file.type.split('/')[1];
-              primaryPhotoKey = `plants/${user.identityId}/${crypto.randomUUID()}/photo-${timestamp}.${ext}`;
-              await uploadFile(primaryPhotoKey, file, idToken);
+              const candidateKey = `plants/${user.identityId}/${crypto.randomUUID()}/photo-${timestamp}.${ext}`;
+              await uploadFile(candidateKey, file, idToken);
+              primaryPhotoKey = candidateKey;
             } catch (err) {
               console.error('Failed to upload primary photo during import:', err);
               // Continue without primary photo
