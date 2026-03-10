@@ -43,6 +43,17 @@ export function NetworkStatusIndicator() {
     };
   }, []);
 
+  // Periodically update lastConnectedTime while online to reflect real-time status
+  useEffect(() => {
+    if (!isOnline) return;
+
+    const intervalId = setInterval(() => {
+      setLastConnectedTime(new Date());
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [isOnline]);
+
   const formatLastConnected = () => {
     if (!isOnline && !lastConnectedTime) {
       return t('networkIndicator.neverConnected');
