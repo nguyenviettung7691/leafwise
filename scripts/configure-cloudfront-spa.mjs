@@ -68,136 +68,164 @@ function handler(event) {
 }
 `.trim();
 
-let cfFunctionARN;
+let cfFunctionARN = null;
 
 // Write function code to a temp file (used by both create and update paths)
 const funcCodeFile = resolve(tmpdir(), 'cf-function-code.js');
 writeFileSync(funcCodeFile, CF_FUNCTION_CODE, 'utf-8');
 
-// Try to describe the function first (it may already exist)
+// Try to create or update the CloudFront Function.
+// This is optional — if the build role lacks cloudfront:CreateFunction /
+// cloudfront:UpdateFunction permissions, we fall back to custom error
+// responses only.  The smart not-found page handles all routes client-side.
 try {
-  const describeOutput = execSync(
-    `aws cloudfront describe-function --name ${CF_FUNCTION_NAME} --output json`,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-  const described = JSON.parse(describeOutput);
-  const funcETag = described.ETag;
+  // Try to describe the function first (it may already exist)
+  try {
+    const describeOutput = execSync(
+      `aws cloudfront describe-function --name ${CF_FUNCTION_NAME} --output json`,
+      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const described = JSON.parse(describeOutput);
+    const funcETag = described.ETag;
 
-  console.log(`${TAG} Updating existing CloudFront Function: ${CF_FUNCTION_NAME}`);
+    console.log(`${TAG} Updating existing CloudFront Function: ${CF_FUNCTION_NAME}`);
 
-  const updateOutput = execSync(
-    `aws cloudfront update-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --if-match ${funcETag} --output json`,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-  const updated = JSON.parse(updateOutput);
-  const updatedETag = updated.ETag;
+    const updateOutput = execSync(
+      `aws cloudfront update-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --if-match ${funcETag} --output json`,
+      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const updated = JSON.parse(updateOutput);
+    const updatedETag = updated.ETag;
 
-  // Publish the updated function
-  const publishOutput = execSync(
-    `aws cloudfront publish-function --name ${CF_FUNCTION_NAME} --if-match ${updatedETag} --output json`,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-  const published = JSON.parse(publishOutput);
-  cfFunctionARN = published.FunctionSummary.FunctionMetadata.FunctionARN;
+    // Publish the updated function
+    const publishOutput = execSync(
+      `aws cloudfront publish-function --name ${CF_FUNCTION_NAME} --if-match ${updatedETag} --output json`,
+      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const published = JSON.parse(publishOutput);
+    cfFunctionARN = published.FunctionSummary.FunctionMetadata.FunctionARN;
 
-  console.log(`${TAG} CloudFront Function updated and published: ${cfFunctionARN}`);
-} catch {
-  // Function doesn't exist — create it
-  console.log(`${TAG} Creating CloudFront Function: ${CF_FUNCTION_NAME}`);
+    console.log(`${TAG} CloudFront Function updated and published: ${cfFunctionARN}`);
+  } catch {
+    // Function doesn't exist — create it
+    console.log(`${TAG} Creating CloudFront Function: ${CF_FUNCTION_NAME}`);
 
-  const createOutput = execSync(
-    `aws cloudfront create-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --output json`,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-  const created = JSON.parse(createOutput);
-  const createETag = created.ETag;
+    const createOutput = execSync(
+      `aws cloudfront create-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --output json`,
+      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const created = JSON.parse(createOutput);
+    const createETag = created.ETag;
 
-  // Publish the function
-  const publishOutput = execSync(
-    `aws cloudfront publish-function --name ${CF_FUNCTION_NAME} --if-match ${createETag} --output json`,
-    { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-  );
-  const published = JSON.parse(publishOutput);
-  cfFunctionARN = published.FunctionSummary.FunctionMetadata.FunctionARN;
+    // Publish the function
+    const publishOutput = execSync(
+      `aws cloudfront publish-function --name ${CF_FUNCTION_NAME} --if-match ${createETag} --output json`,
+      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    const published = JSON.parse(publishOutput);
+    cfFunctionARN = published.FunctionSummary.FunctionMetadata.FunctionARN;
 
-  console.log(`${TAG} CloudFront Function created and published: ${cfFunctionARN}`);
+    console.log(`${TAG} CloudFront Function created and published: ${cfFunctionARN}`);
+  }
+} catch (err) {
+  console.warn(`${TAG} WARNING: Could not create/update CloudFront Function.`);
+  console.warn(`${TAG} The build role may lack cloudfront:CreateFunction / cloudfront:UpdateFunction permissions.`);
+  console.warn(`${TAG} Deep-linking will still work via custom error responses and the smart 404 page.`);
+  if (err?.stderr) {
+    console.warn(`${TAG} AWS error: ${String(err.stderr).trim()}`);
+  }
 }
 
 // ─── 2. Fetch current distribution config ─────────────────────────────────
 
-const rawConfig = execSync(
-  `aws cloudfront get-distribution-config --id ${CF_DIST_ID} --output json`,
-  { encoding: 'utf-8' }
-);
+try {
+  const rawConfig = execSync(
+    `aws cloudfront get-distribution-config --id ${CF_DIST_ID} --output json`,
+    { encoding: 'utf-8' }
+  );
 
-const parsed = JSON.parse(rawConfig);
-const etag = parsed.ETag;
-const distConfig = parsed.DistributionConfig;
+  const parsed = JSON.parse(rawConfig);
+  const etag = parsed.ETag;
+  const distConfig = parsed.DistributionConfig;
 
-// Validate ETag format (alphanumeric string from AWS API)
-if (!etag || !/^[A-Za-z0-9]+$/.test(etag)) {
-  console.error(`${TAG} ERROR: Invalid or missing ETag from distribution config.`);
-  process.exit(1);
+  // Validate ETag format (alphanumeric string from AWS API)
+  if (!etag || !/^[A-Za-z0-9]+$/.test(etag)) {
+    console.error(`${TAG} ERROR: Invalid or missing ETag from distribution config.`);
+    process.exit(1);
+  }
+
+  console.log(`${TAG} Current ETag: ${etag}`);
+
+  // ─── 3. Set custom error responses for dynamic-route fallback ───────────
+
+  distConfig.CustomErrorResponses = {
+    Quantity: 2,
+    Items: [
+      {
+        ErrorCode: 403,
+        ResponsePagePath: '/404.html',
+        ResponseCode: '200',
+        ErrorCachingMinTTL: 0,
+      },
+      {
+        ErrorCode: 404,
+        ResponsePagePath: '/404.html',
+        ResponseCode: '200',
+        ErrorCachingMinTTL: 0,
+      },
+    ],
+  };
+
+  // ─── 4. Associate CloudFront Function with default cache behavior ───────
+
+  if (cfFunctionARN) {
+    const defaultBehavior = distConfig.DefaultCacheBehavior;
+    const existingAssociations = defaultBehavior.FunctionAssociations?.Items || [];
+
+    // Remove any existing viewer-request function association (we'll add ours)
+    const filteredAssociations = existingAssociations.filter(
+      (a) => a.EventType !== 'viewer-request'
+    );
+
+    // Add the URI rewrite function
+    filteredAssociations.push({
+      FunctionARN: cfFunctionARN,
+      EventType: 'viewer-request',
+    });
+
+    defaultBehavior.FunctionAssociations = {
+      Quantity: filteredAssociations.length,
+      Items: filteredAssociations,
+    };
+  } else {
+    console.log(`${TAG} Skipping CloudFront Function association (function not available).`);
+  }
+
+  // ─── 5. Write updated config to temp file and update distribution ───────
+
+  const tmpFile = resolve(tmpdir(), 'cf-dist-config.json');
+  writeFileSync(tmpFile, JSON.stringify(distConfig, null, 2), 'utf-8');
+
+  console.log(`${TAG} Updating distribution...`);
+
+  execSync(
+    `aws cloudfront update-distribution --id ${CF_DIST_ID} --distribution-config file://${tmpFile} --if-match ${etag}`,
+    { encoding: 'utf-8', stdio: 'inherit' }
+  );
+
+  console.log(`${TAG} CloudFront distribution updated successfully.`);
+  console.log(`${TAG} Configuration applied:`);
+  if (cfFunctionARN) {
+    console.log(`  CloudFront Function (viewer-request): ${CF_FUNCTION_NAME}`);
+  }
+  console.log('  Custom error responses:');
+  console.log('    403 → /404.html (200)');
+  console.log('    404 → /404.html (200)');
+} catch (err) {
+  console.warn(`${TAG} WARNING: Could not update CloudFront distribution config.`);
+  console.warn(`${TAG} The build role may lack cloudfront:GetDistributionConfig / cloudfront:UpdateDistribution permissions.`);
+  console.warn(`${TAG} Deep-linking will rely entirely on the smart 404 page for client-side routing.`);
+  if (err?.stderr) {
+    console.warn(`${TAG} AWS error: ${String(err.stderr).trim()}`);
+  }
 }
-
-console.log(`${TAG} Current ETag: ${etag}`);
-
-// ─── 3. Set custom error responses for dynamic-route fallback ─────────────
-
-distConfig.CustomErrorResponses = {
-  Quantity: 2,
-  Items: [
-    {
-      ErrorCode: 403,
-      ResponsePagePath: '/404.html',
-      ResponseCode: '200',
-      ErrorCachingMinTTL: 0,
-    },
-    {
-      ErrorCode: 404,
-      ResponsePagePath: '/404.html',
-      ResponseCode: '200',
-      ErrorCachingMinTTL: 0,
-    },
-  ],
-};
-
-// ─── 4. Associate CloudFront Function with default cache behavior ─────────
-
-const defaultBehavior = distConfig.DefaultCacheBehavior;
-const existingAssociations = defaultBehavior.FunctionAssociations?.Items || [];
-
-// Remove any existing viewer-request function association (we'll add ours)
-const filteredAssociations = existingAssociations.filter(
-  (a) => a.EventType !== 'viewer-request'
-);
-
-// Add the URI rewrite function
-filteredAssociations.push({
-  FunctionARN: cfFunctionARN,
-  EventType: 'viewer-request',
-});
-
-defaultBehavior.FunctionAssociations = {
-  Quantity: filteredAssociations.length,
-  Items: filteredAssociations,
-};
-
-// ─── 5. Write updated config to temp file and update distribution ─────────
-
-const tmpFile = resolve(tmpdir(), 'cf-dist-config.json');
-writeFileSync(tmpFile, JSON.stringify(distConfig, null, 2), 'utf-8');
-
-console.log(`${TAG} Updating distribution...`);
-
-execSync(
-  `aws cloudfront update-distribution --id ${CF_DIST_ID} --distribution-config file://${tmpFile} --if-match ${etag}`,
-  { encoding: 'utf-8', stdio: 'inherit' }
-);
-
-console.log(`${TAG} CloudFront distribution updated successfully.`);
-console.log(`${TAG} Configuration applied:`);
-console.log(`  CloudFront Function (viewer-request): ${CF_FUNCTION_NAME}`);
-console.log('  Custom error responses:');
-console.log('    403 → /404.html (200)');
-console.log('    404 → /404.html (200)');
