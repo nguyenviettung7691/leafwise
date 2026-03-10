@@ -1,12 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Leaf, SearchX, Loader2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+
+function DynamicRouteLoading() {
+  return (
+    <AppLayout>
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    </AppLayout>
+  );
+}
 
 // Dynamically import page components for client-side routing of dynamic routes
 // These are only loaded when the URL matches a dynamic route pattern
@@ -19,33 +29,31 @@ const EditPlantPageClient = dynamic(
   { loading: () => <DynamicRouteLoading /> }
 );
 
-function DynamicRouteLoading() {
-  return (
-    <AppLayout>
-      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    </AppLayout>
-  );
-}
-
 /**
- * Known static routes that exist in the app but may be served from 404.html
- * when S3 REST API origins can't resolve directory paths to index.html.
- * For these routes, we attempt client-side navigation via router.replace().
+ * Map of known static routes to their dynamically-imported page components.
+ * When CloudFront serves 404.html for these routes (because S3 can't resolve
+ * directory paths to index.html), we render the correct page component directly
+ * via dynamic import — the same proven pattern used for dynamic routes above.
+ *
+ * This replaces the previous router.replace() approach, which was unreliable
+ * from the not-found page context: the Next.js App Router would not complete
+ * the navigation when the browser URL already matched the target path.
  */
-const KNOWN_STATIC_ROUTES = [
-  '/login',
-  '/register',
-  '/confirm-signup',
-  '/forgot-password',
-  '/reset-password',
-  '/calendar',
-  '/profile',
-  '/settings',
-  '/diagnose',
-  '/plants/new',
-];
+const STATIC_PAGE_COMPONENTS: Record<string, ComponentType> = {
+  '/': dynamic(() => import('./page'), { loading: () => <DynamicRouteLoading /> }),
+  '/login': dynamic(() => import('./login/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/register': dynamic(() => import('./register/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/confirm-signup': dynamic(() => import('./confirm-signup/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/forgot-password': dynamic(() => import('./forgot-password/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/reset-password': dynamic(() => import('./reset-password/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/calendar': dynamic(() => import('./calendar/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/profile': dynamic(() => import('./profile/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/settings': dynamic(() => import('./settings/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/diagnose': dynamic(() => import('./diagnose/page'), { loading: () => <DynamicRouteLoading /> }),
+  '/plants/new': dynamic(() => import('./plants/new/page'), { loading: () => <DynamicRouteLoading /> }),
+};
+
+const KNOWN_STATIC_ROUTES = Object.keys(STATIC_PAGE_COMPONENTS);
 
 /**
  * Smart 404 page that handles client-side routing for both dynamic and
@@ -57,19 +65,19 @@ const KNOWN_STATIC_ROUTES = [
  *    possible ID. When CloudFront serves this 404 page, we match the URL and
  *    render the appropriate page component directly via dynamic import.
  *
- * 2. **Static routes** (e.g. `/calendar/`): S3 REST API origins return 403 for
- *    directory paths because they don't auto-resolve `index.html`. CloudFront
- *    catches the 403 and serves this 404 page. We use `router.replace()` to
- *    trigger client-side navigation, which fetches the route's RSC data file
- *    (e.g. `/calendar/index.txt`) — a direct file request that S3 CAN serve.
+ * 2. **Static routes** (e.g. `/calendar/`, `/`): S3 REST API origins return 403
+ *    for directory paths because they don't auto-resolve `index.html`. CloudFront
+ *    catches the 403 and serves this 404 page. We render the correct page
+ *    component directly via dynamic import — the same approach used for dynamic
+ *    routes, which is more reliable than router.replace() from the not-found
+ *    page context.
  */
 export default function NotFound() {
   const { t } = useLanguage();
-  const router = useRouter();
   const [routeMatch, setRouteMatch] = useState<
     | { type: 'plant-detail'; id: string }
     | { type: 'plant-edit'; id: string }
-    | { type: 'navigating' }
+    | { type: 'static-page'; route: string }
     | { type: 'not-found' }
     | null
   >(null);
@@ -95,24 +103,27 @@ export default function NotFound() {
       return;
     }
 
-    // For known static routes, attempt client-side navigation.
-    // This handles static routes whose directory paths S3 can't serve directly.
-    // The router fetches the .txt RSC data file (a specific file S3 CAN serve),
-    // then renders the page client-side.
+    // Match known static routes (including root '/') — render directly via
+    // dynamic import. This is more reliable than router.replace() which fails
+    // from the not-found page context when the URL already matches the target.
     if (KNOWN_STATIC_ROUTES.includes(normalizedPath)) {
-      setRouteMatch({ type: 'navigating' });
-      router.replace(pathname);
+      setRouteMatch({ type: 'static-page', route: normalizedPath });
       return;
     }
 
     // No route matched — show actual 404
     setRouteMatch({ type: 'not-found' });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- router is stable (Next.js guarantee); effect reads window.location on mount only
-  }, [router]);
+  }, []);
 
-  // Still determining the route, or navigating to a static route
-  if (routeMatch === null || routeMatch.type === 'navigating') {
+  // Still determining the route
+  if (routeMatch === null) {
     return <DynamicRouteLoading />;
+  }
+
+  // Render the matched static page component directly
+  if (routeMatch.type === 'static-page') {
+    const PageComponent = STATIC_PAGE_COMPONENTS[routeMatch.route];
+    if (PageComponent) return <PageComponent />;
   }
 
   // Render the matched dynamic route component
