@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Leaf, SearchX, Loader2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -29,19 +30,46 @@ function DynamicRouteLoading() {
 }
 
 /**
- * Smart 404 page that also handles client-side routing for dynamic routes.
+ * Known static routes that exist in the app but may be served from 404.html
+ * when S3 REST API origins can't resolve directory paths to index.html.
+ * For these routes, we attempt client-side navigation via router.replace().
+ */
+const KNOWN_STATIC_ROUTES = [
+  '/login',
+  '/register',
+  '/confirm-signup',
+  '/forgot-password',
+  '/reset-password',
+  '/calendar',
+  '/profile',
+  '/settings',
+  '/diagnose',
+  '/plants/new',
+];
+
+/**
+ * Smart 404 page that handles client-side routing for both dynamic and
+ * static routes when served as a CloudFront fallback.
  *
- * With Next.js static export (`output: 'export'`), dynamic routes like
- * `/plants/[id]` cannot be pre-rendered for every possible ID. When
- * CloudFront serves this 404 page as a fallback for missing paths,
- * we check the actual browser URL and render the appropriate page
- * component client-side if it matches a known dynamic route pattern.
+ * With Next.js static export (`output: 'export'`) deployed to S3 + CloudFront:
+ *
+ * 1. **Dynamic routes** (e.g. `/plants/[id]`): Cannot be pre-rendered for every
+ *    possible ID. When CloudFront serves this 404 page, we match the URL and
+ *    render the appropriate page component directly via dynamic import.
+ *
+ * 2. **Static routes** (e.g. `/calendar/`): S3 REST API origins return 403 for
+ *    directory paths because they don't auto-resolve `index.html`. CloudFront
+ *    catches the 403 and serves this 404 page. We use `router.replace()` to
+ *    trigger client-side navigation, which fetches the route's RSC data file
+ *    (e.g. `/calendar/index.txt`) — a direct file request that S3 CAN serve.
  */
 export default function NotFound() {
   const { t } = useLanguage();
+  const router = useRouter();
   const [routeMatch, setRouteMatch] = useState<
     | { type: 'plant-detail'; id: string }
     | { type: 'plant-edit'; id: string }
+    | { type: 'navigating' }
     | { type: 'not-found' }
     | null
   >(null);
@@ -53,26 +81,37 @@ export default function NotFound() {
       ? pathname.slice(0, -1)
       : pathname;
 
-    // Match /plants/[id]/edit
+    // Match /plants/[id]/edit — render directly via dynamic import
     const editMatch = normalizedPath.match(/^\/plants\/([^/]+)\/edit$/);
     if (editMatch && editMatch[1] !== 'placeholder') {
       setRouteMatch({ type: 'plant-edit', id: editMatch[1] });
       return;
     }
 
-    // Match /plants/[id]
+    // Match /plants/[id] — render directly via dynamic import
     const detailMatch = normalizedPath.match(/^\/plants\/([^/]+)$/);
     if (detailMatch && detailMatch[1] !== 'placeholder' && detailMatch[1] !== 'new') {
       setRouteMatch({ type: 'plant-detail', id: detailMatch[1] });
       return;
     }
 
-    // No dynamic route matched — show actual 404
+    // For known static routes, attempt client-side navigation.
+    // This handles static routes whose directory paths S3 can't serve directly.
+    // The router fetches the .txt RSC data file (a specific file S3 CAN serve),
+    // then renders the page client-side.
+    if (KNOWN_STATIC_ROUTES.includes(normalizedPath)) {
+      setRouteMatch({ type: 'navigating' });
+      router.replace(pathname);
+      return;
+    }
+
+    // No route matched — show actual 404
     setRouteMatch({ type: 'not-found' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount; router is stable
   }, []);
 
-  // Still determining the route
-  if (routeMatch === null) {
+  // Still determining the route, or navigating to a static route
+  if (routeMatch === null || routeMatch.type === 'navigating') {
     return <DynamicRouteLoading />;
   }
 

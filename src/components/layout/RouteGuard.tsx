@@ -32,7 +32,15 @@ export function RouteGuard({ children }: { children: ReactNode }) {
     if (isLoading) return;
 
     if (shouldRedirectToHome) {
-      router.replace('/');
+      // After login, redirect to the deep-linked URL if a `from` parameter exists
+      const searchParams = new URLSearchParams(window.location.search);
+      const from = searchParams.get('from');
+      // Only allow internal paths to prevent open-redirect attacks
+      if (from && from.startsWith('/') && !from.startsWith('//')) {
+        router.replace(from);
+      } else {
+        router.replace('/');
+      }
       return;
     }
 
