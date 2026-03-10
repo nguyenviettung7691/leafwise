@@ -100,7 +100,7 @@ export function PlantHeaderCard({
                   className="object-cover w-full h-full"
                   data-ai-hint="plant detail"
                   priority
-                  onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
+                  onError={(e) => { const target = e.target as HTMLImageElement; target.onerror = null; target.src = `https://placehold.co/800x450.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
                 />
               )}
               <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none">
@@ -143,7 +143,7 @@ export function PlantHeaderCard({
                 blurDataURL={PLACEHOLDER_DATA_URI}
                 className="rounded-md object-contain max-h-[80vh] w-full"
                 data-ai-hint="plant detail"
-                onError={(e) => { (e.target as HTMLImageElement).src = `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
+                onError={(e) => { const target = e.target as HTMLImageElement; target.onerror = null; target.src = `https://placehold.co/1200x675.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;}}
               />
             )}
             <DialogClose asChild>

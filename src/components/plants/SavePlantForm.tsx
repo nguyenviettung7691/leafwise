@@ -71,7 +71,7 @@ const GalleryPhotoThumbnail: React.FC<GalleryPhotoThumbnailProps> = ({ photo, is
           blurDataURL={PLACEHOLDER_DATA_URI}
           className="object-cover w-full h-full"
           data-ai-hint="plant gallery thumbnail"
-          onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/80x80.png?text=Error';}}
+          onError={(e) => { const target = e.target as HTMLImageElement; target.onerror = null; target.src = 'https://placehold.co/80x80.png?text=Error';}}
         />
       )}
     </button>
@@ -257,7 +257,7 @@ export function SavePlantForm({
                   blurDataURL={PLACEHOLDER_DATA_URI}
                   className="rounded-md object-contain max-h-[150px] shadow-md"
                   data-ai-hint="plant user-provided"
-                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/150x150.png?text=Error';}}
+                  onError={(e) => { const target = e.target as HTMLImageElement; target.onerror = null; target.src = 'https://placehold.co/150x150.png?text=Error';}}
                 />
               </div>
             ) : null }

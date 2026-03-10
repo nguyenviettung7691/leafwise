@@ -161,7 +161,9 @@ export function PlantCard({ plant, plantCareTasks, isManaging, isSelected, onTog
                   className="object-cover w-full h-full transition-transform duration-300 ease-in-out group-hover:scale-105"
                   data-ai-hint="plant nature"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://placehold.co/400x300.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;
+                    const target = e.target as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = `https://placehold.co/400x300.png?text=${encodeURIComponent(plant.commonName + ' Error')}`;
                   }}
                 />
               )}
