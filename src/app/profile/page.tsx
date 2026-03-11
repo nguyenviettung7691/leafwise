@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, getValidIdToken } from '@/contexts/AuthContext';
 import { usePlantData } from '@/contexts/PlantDataContext';
 import React, { useState, useEffect, useRef, FormEvent, ChangeEvent } from 'react';
 import { Loader2, LogOut, UserCircle, Trash2, Download, Save, Edit3, Camera, ImageUp, Info } from 'lucide-react';
@@ -28,18 +28,6 @@ import client from '@/lib/apolloClient';
 const AuthLoader = ({ className }: { className?: string }) => (
   <Loader2 className={className} />
 );
-
-function getIdTokenForS3(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem('cognito_tokens');
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed?.idToken ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export default function ProfilePage() {
   const { user: authUser, updateUser: updateAuthUser, isLoading: authLoading, logout } = useAuth();
@@ -204,7 +192,7 @@ export default function ProfilePage() {
      * @param s3Key - The S3 object key (e.g., 'plants/{identityId}/photo-123.jpg')
      * @returns Signed URL valid for 1 hour, or null if key is invalid/missing
      */
-    const idToken = getIdTokenForS3();
+    const idToken = await getValidIdToken();
     if (!idToken) {
       toast({ title: t('common.error'), description: t('profilePage.toasts.exportError'), variant: "destructive" });
       setIsExporting(false);
@@ -554,7 +542,7 @@ export default function ProfilePage() {
         }
         if (authUser.avatarS3Key) {
              try {
-                 const idToken = getIdTokenForS3();
+                 const idToken = await getValidIdToken();
                  if (!idToken) {
                    throw new Error('Missing ID token for S3 operation');
                  }

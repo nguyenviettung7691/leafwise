@@ -6,11 +6,9 @@ import { getS3Config } from '@/lib/awsConfig';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createS3ClientWithCredentials } from '@/lib/s3Utils';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, getValidIdToken } from '@/contexts/AuthContext';
 
 const s3Config = getS3Config();
-
-const TOKEN_STORAGE_KEY = 'cognito_tokens';
 
 /** Presigned URL cache TTL in milliseconds (50 minutes).
  *  Presigned URLs are valid for 1 hour (3600 s); we cache for 50 min
@@ -31,18 +29,6 @@ const urlCache = new Map<string, CachedUrl>();
  */
 export function invalidatePresignedUrlCache(): void {
   urlCache.clear();
-}
-
-function getIdToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-  if (!stored) return null;
-  try {
-    const tokens = JSON.parse(stored);
-    return tokens?.idToken ?? null;
-  } catch {
-    return null;
-  }
 }
 
 interface UseS3ImageReturn {
@@ -122,7 +108,7 @@ export function useS3Image(
       setIsLoading(true);
       setError(null);
       try {
-        const idToken = getIdToken();
+        const idToken = await getValidIdToken();
         if (!idToken) {
           throw new Error('No ID token available. User must be authenticated.');
         }
