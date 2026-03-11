@@ -267,7 +267,9 @@
       "saveCarePlanErrorNotFound": "Could not find the saved plant.",
       "carePlanSavedTitle": "Care Plan Saved!",
       "carePlanSavedDesc": "Care plan tasks added to {{plantName}}.",
-      "invalidFileType": "Invalid file type for diagnosis."
+      "invalidFileType": "Invalid file type for diagnosis.",
+      "plantSaveError": "Failed to save plant. Please try again.",
+      "saveCarePlanErrorGeneral": "Failed to save care plan. Please try again."
     },
     "resetPageButton": "Reset Diagnosis Page"
   },

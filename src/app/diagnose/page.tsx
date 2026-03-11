@@ -244,7 +244,7 @@ export default function DiagnosePlantPage() {
 
     } catch (error) {
         console.error("Error saving new plant from diagnose:", error);
-        toast({ title: t('common.error'), description: t('diagnosePage.toasts.imageSaveError'), variant: "destructive" });
+        toast({ title: t('common.error'), description: t('diagnosePage.toasts.plantSaveError'), variant: "destructive" });
     } finally {
         setIsSavingPlant(false);
     }

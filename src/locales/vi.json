@@ -267,7 +267,9 @@
       "saveCarePlanErrorNotFound": "Không tìm thấy cây đã lưu.",
       "carePlanSavedTitle": "Đã lưu kế hoạch chăm sóc!",
       "carePlanSavedDesc": "Các công việc trong kế hoạch chăm sóc đã được thêm vào {{plantName}}.",
-      "invalidFileType": "Loại tệp không hợp lệ để chẩn đoán."
+      "invalidFileType": "Loại tệp không hợp lệ để chẩn đoán.",
+      "plantSaveError": "Không thể lưu cây. Vui lòng thử lại.",
+      "saveCarePlanErrorGeneral": "Không thể lưu kế hoạch chăm sóc. Vui lòng thử lại."
     },
     "resetPageButton": "Đặt lại trang chẩn đoán"
   },

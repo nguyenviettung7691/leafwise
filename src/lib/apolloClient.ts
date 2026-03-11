@@ -7,6 +7,7 @@ import {
   HttpLink,
   Observable,
 } from '@apollo/client';
+import { RetryLink } from '@apollo/client/link/retry';
 import { ErrorLink } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { getAppSyncConfig } from '@/lib/awsConfig';
@@ -164,6 +165,33 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
 });
 
 /**
+ * Retry link that automatically retries failed requests due to network errors
+ * (e.g., ERR_CONNECTION_RESET on stale HTTP/2 connections).
+ * Only retries on transient network failures, not on GraphQL or server errors.
+ */
+const retryLink = new RetryLink({
+  delay: {
+    initial: 300,
+    max: 2000,
+    jitter: true,
+  },
+  attempts: {
+    max: 3,
+    retryIf: (error) => {
+      const isNetworkError =
+        !!error &&
+        (error.message === 'Failed to fetch' ||
+          error.message === 'NetworkError when attempting to fetch resource.' ||
+          error.message === 'Network request failed');
+      if (isNetworkError) {
+        console.log('[APOLLO_RETRY] Retrying due to network error:', error.message);
+      }
+      return isNetworkError;
+    },
+  },
+});
+
+/**
  * HTTP link to AppSync endpoint
  * Auth is handled via Authorization header (JWT), not cookies,
  * so credentials are omitted to avoid CORS issues with AppSync's wildcard origin.
@@ -175,12 +203,13 @@ const httpLink = new HttpLink({
 /**
  * Apollo Client instance for client-side usage
  * Link chain order:
- * 1. authLink - adds token to headers
- * 2. errorLink - intercepts 401 errors and retries
- * 3. httpLink - sends the request
+ * 1. retryLink - retries on transient network errors (e.g., connection reset)
+ * 2. authLink - adds token to headers
+ * 3. errorLink - intercepts 401 errors and retries with refreshed token
+ * 4. httpLink - sends the request
  */
 const client = new ApolloClient({
-  link: ApolloLink.from([authLink, errorLink, httpLink]),
+  link: ApolloLink.from([retryLink, authLink, errorLink, httpLink]),
   cache: new InMemoryCache(),
 });
 
