@@ -579,7 +579,7 @@ export const DELETE_CARE_TASK: TypedDocumentNode<
   DeleteCareTaskVariables
 > = gql`
   mutation DeleteCareTask($input: DeleteCareTaskInput!) {
-    deleteCareTa sk(input: $input) {
+    deleteCareTask(input: $input) {
       id
     }
   }

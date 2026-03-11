@@ -787,6 +787,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         // Refresh tasks
         const tasksResult = await client.query({
           query: LIST_CARE_TASKS,
+          fetchPolicy: 'network-only',
         });
         if (tasksResult.data?.listCareTasks?.items) {
           setCareTasksState(tasksResult.data.listCareTasks.items);
@@ -821,6 +822,15 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
           },
         });
 
+        // Refresh tasks
+        const tasksResult = await client.query({
+          query: LIST_CARE_TASKS,
+          fetchPolicy: 'network-only',
+        });
+        if (tasksResult.data?.listCareTasks?.items) {
+          setCareTasksState(tasksResult.data.listCareTasks.items);
+        }
+
         return data?.updateCareTask;
       } catch (error: any) {
         console.error('Failed to update care task:', error);
@@ -841,6 +851,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         // Refresh tasks
         const tasksResult = await client.query({
           query: LIST_CARE_TASKS,
+          fetchPolicy: 'network-only',
         });
         if (tasksResult.data?.listCareTasks?.items) {
           setCareTasksState(tasksResult.data.listCareTasks.items);
