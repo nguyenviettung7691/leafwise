@@ -68,6 +68,9 @@ export default function DiagnosePlantPage() {
   
     const everyXMonthsMatch = lowerFreqStr.match(/^every (\d+) months?$/i);
     if (everyXMonthsMatch) return { frequencyKey: 'every_x_months', frequencyEvery: parseInt(everyXMonthsMatch[1], 10) };
+
+    const everyXYearsMatch = lowerFreqStr.match(/^every (\d+) years?$/i);
+    if (everyXYearsMatch) return { frequencyKey: 'every_x_months', frequencyEvery: parseInt(everyXYearsMatch[1], 10) * 12 };
     
     console.warn(`Could not parse AI frequency string in DiagnosePage: "${freqStr}". Defaulting to adhoc.`);
     return { frequencyKey: 'adhoc' }; // Fallback
