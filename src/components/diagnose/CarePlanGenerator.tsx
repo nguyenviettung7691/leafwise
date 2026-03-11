@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, CheckCircle, AlertCircle, ClipboardList, Save, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, AlertCircle, ClipboardList, Save, Sparkles, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import React from 'react';
@@ -28,6 +28,7 @@ interface CarePlanGeneratorProps {
   carePlanMode: 'basic' | 'advanced';
   onCarePlanModeChange: (mode: 'basic' | 'advanced') => void;
   onGenerateCarePlan: (event: FormEvent) => void;
+  onCancelCarePlan: () => void;
   onSaveCarePlan: (plan: GenerateDetailedCarePlanOutput) => void;
   lastSavedPlantId?: string | null;
 }
@@ -93,6 +94,7 @@ export function CarePlanGenerator({
   carePlanMode,
   onCarePlanModeChange,
   onGenerateCarePlan,
+  onCancelCarePlan,
   onSaveCarePlan,
   lastSavedPlantId,
 }: CarePlanGeneratorProps) {
@@ -158,13 +160,20 @@ export function CarePlanGenerator({
               </div>
             </RadioGroup>
           </div>
-          <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName && !diagnosisResult)} className="w-full text-base py-2.5">
-            {isLoadingCarePlan ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.carePlanGenerator.getPlanButtonLoading')}</>
-            ) : (
-              <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.carePlanGenerator.getPlanButton')}</>
+          <div className="flex gap-2">
+            <Button type="submit" disabled={isLoadingCarePlan || (!diagnosisResult?.identification.isPlant && !diagnosisResult?.identification.commonName && !diagnosisResult)} className="flex-1 text-base py-2.5">
+              {isLoadingCarePlan ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.carePlanGenerator.getPlanButtonLoading')}</>
+              ) : (
+                <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.carePlanGenerator.getPlanButton')}</>
+              )}
+            </Button>
+            {isLoadingCarePlan && (
+              <Button type="button" variant="destructive" onClick={onCancelCarePlan} className="text-base py-2.5">
+                <XCircle className="mr-2 h-5 w-5" />{t('common.cancel')}
+              </Button>
             )}
-          </Button>
+          </div>
         </form>
 
         {carePlanError && (

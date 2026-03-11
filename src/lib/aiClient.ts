@@ -26,7 +26,7 @@ function getIdToken(): string | null {
   }
 }
 
-async function callFlow<TInput, TOutput>(flowName: string, input: TInput): Promise<TOutput> {
+async function callFlow<TInput, TOutput>(flowName: string, input: TInput, signal?: AbortSignal): Promise<TOutput> {
   const token = getIdToken();
   if (!token) {
     throw new Error('Not authenticated — no ID token found');
@@ -40,6 +40,7 @@ async function callFlow<TInput, TOutput>(flowName: string, input: TInput): Promi
       'Authorization': token,
     },
     body: JSON.stringify(input),
+    signal,
   });
 
   if (!response.ok) {
@@ -57,31 +58,36 @@ async function callFlow<TInput, TOutput>(flowName: string, input: TInput): Promi
 }
 
 export async function diagnosePlantHealth(
-  input: DiagnosePlantHealthInput
+  input: DiagnosePlantHealthInput,
+  signal?: AbortSignal
 ): Promise<DiagnosePlantHealthOutput> {
-  return callFlow('diagnose-plant-health', input);
+  return callFlow('diagnose-plant-health', input, signal);
 }
 
 export async function generateDetailedCarePlan(
-  input: GenerateDetailedCarePlanInput
+  input: GenerateDetailedCarePlanInput,
+  signal?: AbortSignal
 ): Promise<GenerateDetailedCarePlanOutput> {
-  return callFlow('generate-detailed-care-plan', input);
+  return callFlow('generate-detailed-care-plan', input, signal);
 }
 
 export async function comparePlantHealthAndUpdateSuggestion(
-  input: ComparePlantHealthInput
+  input: ComparePlantHealthInput,
+  signal?: AbortSignal
 ): Promise<ComparePlantHealthOutput> {
-  return callFlow('compare-plant-health', input);
+  return callFlow('compare-plant-health', input, signal);
 }
 
 export async function reviewAndSuggestCarePlanUpdates(
-  input: ReviewCarePlanInput
+  input: ReviewCarePlanInput,
+  signal?: AbortSignal
 ): Promise<ReviewCarePlanOutput> {
-  return callFlow('review-care-plan-updates', input);
+  return callFlow('review-care-plan-updates', input, signal);
 }
 
 export async function proactiveCarePlanReview(
-  input: ProactiveCarePlanReviewInput
+  input: ProactiveCarePlanReviewInput,
+  signal?: AbortSignal
 ): Promise<ReviewCarePlanOutput> {
-  return callFlow('proactive-care-plan-review', input);
+  return callFlow('proactive-care-plan-review', input, signal);
 }
