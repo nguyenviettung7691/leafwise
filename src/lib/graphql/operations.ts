@@ -362,6 +362,7 @@ interface UpdatePlantPhotoData {
 interface UpdatePlantPhotoVariables {
   input: {
     id: string;
+    dateTaken?: string | null;
     notes?: string | null;
     healthCondition?: string | null;
     diagnosisNotes?: string | null;

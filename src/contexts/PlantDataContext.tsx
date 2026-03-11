@@ -375,6 +375,7 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
         // Refresh photos
         const photosResult = await client.query({
           query: LIST_PLANT_PHOTOS,
+          fetchPolicy: 'network-only',
         });
         if (photosResult.data?.listPlantPhotos?.items) {
           setPlantPhotosState(photosResult.data.listPlantPhotos.items);
@@ -740,12 +741,22 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
           variables: {
             input: {
               id: photoId,
+              dateTaken: updatedDetails.dateTaken,
               notes: updatedDetails.notes,
               healthCondition: updatedDetails.healthCondition,
               diagnosisNotes: updatedDetails.diagnosisNotes,
             },
           },
         });
+
+        // Refresh photos
+        const photosResult = await client.query({
+          query: LIST_PLANT_PHOTOS,
+          fetchPolicy: 'network-only',
+        });
+        if (photosResult.data?.listPlantPhotos?.items) {
+          setPlantPhotosState(photosResult.data.listPlantPhotos.items);
+        }
 
         return data?.updatePlantPhoto;
       } catch (error: any) {
