@@ -3,7 +3,7 @@
 
 import type { LinkProps } from 'next/link';
 import NextLink from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import React, { startTransition, type MouseEvent, type ReactNode } from 'react';
 import { useProgressContext } from '@/contexts/ProgressContext';
 
@@ -21,34 +21,43 @@ export function ProgressBarLink({
   ...rest
 }: ProgressBarLinkProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const { start, done } = useProgressContext();
 
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (customOnClick) {
       customOnClick(event);
-      if (event.defaultPrevented) return;
     }
+
+    // Skip if the event was already handled by a child or custom onClick
+    if (event.defaultPrevented) return;
 
     // Check if it's a normal left-click, not a command/ctrl click or middle click
     if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
       const targetHref = href.toString();
-      // Don't run for external links or mailto/tel links
-      if (targetHref.startsWith('/') || targetHref.startsWith('#') || targetHref.startsWith(window.location.origin)) {
+
+      // Skip hash-only links (e.g. "#", "#section") — they don't navigate to a new page
+      if (targetHref.startsWith('#')) return;
+
+      // Only handle internal navigation links
+      if (targetHref.startsWith('/') || targetHref.startsWith(window.location.origin)) {
+        // Extract the pathname portion (without query string or hash)
+        const targetPath = targetHref.startsWith(window.location.origin)
+          ? targetHref.slice(window.location.origin.length).split(/[?#]/)[0]
+          : targetHref.split(/[?#]/)[0];
+
+        // Normalize trailing slashes for comparison
+        const normalize = (p: string) => p.replace(/\/+$/, '') || '/';
+
+        // Skip if navigating to the current page
+        if (normalize(targetPath) === normalize(pathname)) return;
+
         event.preventDefault();
         start();
         startTransition(() => {
           router.push(targetHref);
-          // done() will be called after router.push() is processed and new UI is rendered
-          // The actual visual completion of the bar is handled by the ProgressBar component
-          // and the useProgress hook's state transitions.
-          // Calling done() here signals the *intent* to complete.
           done();
         });
-      } else {
-        // For external links, let the browser handle it normally
-        // but still start and complete the progress bar quickly if desired.
-        // Or simply do nothing for external links to avoid showing progress.
-        // For now, we'll assume progress bar is for internal navigations only.
       }
     }
   };
