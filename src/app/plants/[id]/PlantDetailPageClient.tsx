@@ -226,6 +226,7 @@ export default function PlantDetailPageClient({ plantId }: { plantId?: string })
   const [isLoadingProactiveReview, setIsLoadingProactiveReview] = useState(false);
   const [isApplyingProactiveReviewChanges, setIsApplyingProactiveReviewChanges] = useState(false);
 
+  const newPhotoDiagnosisAbortControllerRef = useRef<AbortController | null>(null);
   const carePlanReviewAbortControllerRef = useRef<AbortController | null>(null);
   const proactiveReviewAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -411,6 +412,9 @@ useEffect(() => {
     setNewPhotoJournaled(false);
     setNewPhotoDiagnosisDialogState({open: false, isLoadingCarePlanReview: true, carePlanReviewResult: undefined, healthComparisonResult: undefined, newPhotoDiagnosisResult: undefined, newPhotoPreviewUrl: undefined});
 
+    newPhotoDiagnosisAbortControllerRef.current?.abort();
+    const newPhotoDiagnosisAbortController = new AbortController();
+    newPhotoDiagnosisAbortControllerRef.current = newPhotoDiagnosisAbortController;
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -431,7 +435,7 @@ useEffect(() => {
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`,
                 languageCode: language,
             };
-            const newPhotoDiagnosisResult = await diagnosePlantHealth(diagnosisInput);
+            const newPhotoDiagnosisResult = await diagnosePlantHealth(diagnosisInput, newPhotoDiagnosisAbortController.signal);
             const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisResult.healthAssessment.status;
 
 
@@ -454,7 +458,7 @@ useEffect(() => {
                 newPhotoHealthStatus: newPhotoDiagnosisHealthStatusKey,
                 languageCode: language || undefined,
             };
-            const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
+            const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput, newPhotoDiagnosisAbortController.signal);
 
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
@@ -499,7 +503,9 @@ useEffect(() => {
             toast({ title: t('common.error'), description: errorMsg, variant: "destructive" });
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
-            setIsDiagnosingNewPhoto(false);
+            if (!newPhotoDiagnosisAbortController.signal.aborted) {
+              setIsDiagnosingNewPhoto(false);
+            }
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -1007,6 +1013,15 @@ useEffect(() => {
     }));
   }, []);
 
+  const handleCancelNewPhotoDiagnosis = useCallback(() => {
+    newPhotoDiagnosisAbortControllerRef.current?.abort();
+    newPhotoDiagnosisAbortControllerRef.current = null;
+    carePlanReviewAbortControllerRef.current?.abort();
+    carePlanReviewAbortControllerRef.current = null;
+    setIsDiagnosingNewPhoto(false);
+    setNewPhotoDiagnosisDialogState({open: false});
+  }, []);
+
   const handleCancelProactiveReview = useCallback(() => {
     proactiveReviewAbortControllerRef.current?.abort();
     proactiveReviewAbortControllerRef.current = null;
@@ -1156,6 +1171,7 @@ useEffect(() => {
           onTriggerUploadFromGallery={handleTriggerUploadFromGallery}
           onTriggerTakePhoto={handleTriggerTakePhoto}
           isDiagnosingNewPhoto={isDiagnosingNewPhoto}
+          onCancelNewPhotoDiagnosis={handleCancelNewPhotoDiagnosis}
           onChartDotClick={handleChartDotClick}
           isManagingPhotos={isManagingPhotos}
           onToggleManagePhotos={toggleManagePhotosMode}
