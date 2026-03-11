@@ -313,6 +313,8 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
           }
 
           primaryPhotoUrl = newPhotoS3Key;
+        } else if (diagnosedPhotoUrlFromForm) {
+          primaryPhotoUrl = diagnosedPhotoUrlFromForm;
         }
 
         const { data } = await client.mutate({
