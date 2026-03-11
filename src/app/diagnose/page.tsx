@@ -105,7 +105,9 @@ export default function DiagnosePlantPage() {
 
   const fullResetDiagnosisForm = () => {
     diagnosisAbortControllerRef.current?.abort();
+    diagnosisAbortControllerRef.current = null;
     carePlanAbortControllerRef.current?.abort();
+    carePlanAbortControllerRef.current = null;
     setFile(null);
     setPreviewUrl(null);
     setDescription('');
