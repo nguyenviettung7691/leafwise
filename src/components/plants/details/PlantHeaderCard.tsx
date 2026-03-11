@@ -6,7 +6,7 @@ import type { Plant, PlantHealthCondition } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Edit, Trash2, Loader2, Expand, HeartPulse, History } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -130,6 +130,7 @@ export function PlantHeaderCard({
           <DialogContent className="max-w-3xl p-2 sm:p-4">
             <DialogHeader className="sr-only">
               <DialogTitle>{t('plantDetail.headerCard.fullSizePhotoTitle', { plantName: plant.commonName })}</DialogTitle>
+              <DialogDescription>{t('plantDetail.headerCard.fullSizePhotoTitle', { plantName: plant.commonName })}</DialogDescription>
             </DialogHeader>
             {isLoadingPrimaryImage ? (
                <Skeleton className="w-full h-[80vh] rounded-md" />
