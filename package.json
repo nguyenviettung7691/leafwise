@@ -1,6 +1,6 @@
 {
   "name": "leafwise-frontend-prototype",
-  "version": "sapling-kodama",
+  "version": "0.4.0",
   "private": true,
   "author": "Nguyen Viet Tung <matsu-guen@proton.me>",
   "description": "LeafWise is a plant care application built with Next.js and TypeScript. It uses AWS SDK v3 (Cognito, AppSync, S3) with Amplify Gen 2 backend infrastructure, and Genkit with Google Gemini models for plant health analysis and care plan generation. Deployed as a static site on S3 + CloudFront.",
