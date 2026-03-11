@@ -62,7 +62,10 @@
     "info": "Thông tin",
     "days": "Ngày",
     "weeks": "Tuần",
-    "hours": "Giờ"
+    "hours": "Giờ",
+    "backHome": "Về trang chủ",
+    "email": "Email",
+    "emailPlaceholder": "Nhập email của bạn"
   },
   "myPlantsPage": {
     "addNewPlant": "Thêm cây mới",
@@ -132,7 +135,8 @@
       "ascending": "Tăng dần",
       "descending": "Giảm dần",
       "resetAllButton": "Đặt lại tất cả bộ lọc"
-    }
+    },
+    "toastErrorSavingPlant": "Không thể lưu thay đổi cây. Vui lòng thử lại."
   },
   "addNewPlantPage": {
     "formTitle": "Thêm cây mới",
@@ -141,7 +145,8 @@
     "savingText": "Đang lưu cây...",
     "toastPlantAddedTitle": "Đã thêm cây!",
     "toastPlantAddedDescription": "{{plantName}} đã được thêm vào Cây của tôi.",
-    "initialDiagnosisNotes": "Được thêm thủ công vào bộ sưu tập."
+    "initialDiagnosisNotes": "Được thêm thủ công vào bộ sưu tập.",
+    "toastErrorSavingPlant": "Không thể lưu cây mới. Vui lòng thử lại."
   },
   "savePlantForm": {
     "formTitle": "Lưu vào Cây của tôi",
@@ -267,7 +272,9 @@
       "saveCarePlanErrorNotFound": "Không tìm thấy cây đã lưu.",
       "carePlanSavedTitle": "Đã lưu kế hoạch chăm sóc!",
       "carePlanSavedDesc": "Các công việc trong kế hoạch chăm sóc đã được thêm vào {{plantName}}.",
-      "invalidFileType": "Loại tệp không hợp lệ để chẩn đoán."
+      "invalidFileType": "Loại tệp không hợp lệ để chẩn đoán.",
+      "imageSaveError": "Không thể lưu hình ảnh. Vui lòng thử lại.",
+      "saveCarePlanErrorGeneral": "Không thể lưu kế hoạch chăm sóc. Vui lòng thử lại."
     },
     "resetPageButton": "Đặt lại trang chẩn đoán"
   },
@@ -456,7 +463,15 @@
       "plantDeletedDesc": "{{plantName}} đã được xóa khỏi bộ sưu tập của bạn.",
       "errorSettingPrimaryPhoto": "Không thể đặt ảnh chính cho {{plantName}}.",
       "errorDeletingPlant": "Không thể xóa {{plantName}}.",
-      "errorProactiveReview": "Đã xảy ra lỗi khi đánh giá kế hoạch chăm sóc."
+      "errorProactiveReview": "Đã xảy ra lỗi khi đánh giá kế hoạch chăm sóc.",
+      "errorAddingPhoto": "Không thể thêm ảnh. Vui lòng thử lại.",
+      "errorApplyingCarePlan": "Không thể áp dụng kế hoạch chăm sóc. Vui lòng thử lại.",
+      "errorDeletingPhotos": "Không thể xóa các ảnh đã chọn. Vui lòng thử lại.",
+      "errorDeletingTasks": "Không thể xóa các công việc đã chọn. Vui lòng thử lại.",
+      "errorSavingPhotoDetails": "Không thể lưu chi tiết ảnh. Vui lòng thử lại.",
+      "errorSavingTask": "Không thể lưu công việc. Vui lòng thử lại.",
+      "errorTogglingTask": "Không thể chuyển đổi trạng thái công việc. Vui lòng thử lại.",
+      "errorUpdatingHealth": "Không thể cập nhật sức khỏe cây. Vui lòng thử lại."
     },
     "footer": {
       "lastUpdated": "Cập nhật lần cuối: {{date}}"
@@ -511,15 +526,15 @@
     "addButton": "Thêm công việc",
     "savingButton": "Đang lưu...",
     "taskTypes": {
-        "watering": "Tưới nước",
-        "lighting_adjustment": "Điều chỉnh ánh sáng",
-        "fertilizing": "Bón phân",
-        "pruning": "Cắt tỉa",
-        "repotting": "Thay chậu",
-        "pest_check": "Kiểm tra sâu bệnh",
-        "soil_aeration": "Làm tơi đất",
-        "dusting_leaves": "Lau bụi lá",
-        "rotate_pot": "Xoay chậu"
+      "watering": "Tưới nước",
+      "lighting_adjustment": "Điều chỉnh ánh sáng",
+      "fertilizing": "Bón phân",
+      "pruning": "Cắt tỉa",
+      "repotting": "Thay chậu",
+      "pest_check": "Kiểm tra sâu bệnh",
+      "soil_aeration": "Làm tơi đất",
+      "dusting_leaves": "Lau bụi lá",
+      "rotate_pot": "Xoay chậu"
     }
   },
   "weeklyCareCalendar": {
@@ -655,7 +670,8 @@
       "destroyEmailMismatch": "Xác nhận email không thành công.",
       "destroySuccessTitle": "Đã xóa dữ liệu!",
       "destroySuccessDesc": "Tất cả dữ liệu cá nhân của bạn đã bị xóa.",
-      "destroyError": "Đã xảy ra lỗi trong quá trình xóa dữ liệu."
+      "destroyError": "Đã xảy ra lỗi trong quá trình xóa dữ liệu.",
+      "importError": "Đã xảy ra lỗi khi nhập dữ liệu. Vui lòng thử lại."
     }
   },
   "loginPage": {
@@ -732,7 +748,13 @@
     "confirmSuccessToastDescription": "Tài khoản của bạn đã được xác nhận thành công. Bây giờ bạn có thể đăng nhập.",
     "confirmErrorToastTitle": "Xác nhận thất bại",
     "confirmErrorToastDescription": "Mã xác nhận không hợp lệ hoặc đã xảy ra lỗi. Vui lòng thử lại.",
-    "backToLoginLink": "Quay lại Đăng nhập"
+    "backToLoginLink": "Quay lại Đăng nhập",
+    "confirmationCodeLabel": "Mã xác nhận",
+    "confirmationCodePlaceholder": "Nhập mã xác nhận",
+    "noCodeLabel": "Không nhận được mã?",
+    "registerAgainLink": "Đăng ký lại",
+    "resendButton": "Gửi lại mã",
+    "resendingButton": "Đang gửi lại..."
   },
   "editPlantPage": {
     "formTitle": "Chỉnh sửa Cây",
@@ -741,7 +763,8 @@
     "toastPlantUpdatedTitle": "Đã cập nhật Cây!",
     "toastPlantUpdatedDescription": "{{plantName}} đã được cập nhật.",
     "toastErrorFindingPlant": "Không tìm thấy cây để cập nhật.",
-    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới)."
+    "primaryPhotoUpdatedNote": "Ảnh chính đã được cập nhật qua biểu mẫu chỉnh sửa (tải lên mới).",
+    "toastErrorSavingPlant": "Không thể lưu thay đổi cây. Vui lòng thử lại."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Đăng nhập Thành công!",
@@ -757,7 +780,9 @@
     "forgotPasswordSentTitle": "Mã đã được gửi",
     "forgotPasswordSentDescription": "Kiểm tra email của bạn để lấy mã xác minh",
     "passwordResetSuccessTitle": "Đặt lại mật khẩu",
-    "passwordResetSuccessDescription": "Mật khẩu của bạn đã được đặt lại. Vui lòng đăng nhập bằng mật khẩu mới"
+    "passwordResetSuccessDescription": "Mật khẩu của bạn đã được đặt lại. Vui lòng đăng nhập bằng mật khẩu mới",
+    "confirmationSuccessTitle": "Tài khoản đã được xác nhận!",
+    "confirmationSuccessDescription": "Tài khoản của bạn đã được xác nhận. Bạn có thể đăng nhập ngay."
   },
   "authErrors": {
     "userNotFound": "Tên đăng nhập hoặc mật khẩu không hợp lệ.",
@@ -776,7 +801,9 @@
     "codeExpired": "Mã xác minh đã hết hạn",
     "passwordTooShort": "Mật khẩu phải có ít nhất 6 ký tự",
     "sessionExpired": "Phiên của bạn đã hết hạn. Vui lòng đăng nhập lại.",
-    "apolloUnauthorized": "Bạn không được phép thực hiện hành động này."
+    "apolloUnauthorized": "Bạn không được phép thực hiện hành động này.",
+    "userNotConfirmed": "Tài khoản của bạn chưa được xác nhận. Vui lòng kiểm tra email để lấy mã xác nhận.",
+    "confirmationFailed": "Xác nhận tài khoản thất bại. Vui lòng thử lại."
   },
   "networkIndicator": {
     "online": "Đã kết nối internet",
@@ -790,6 +817,11 @@
     "title": "Không tìm thấy trang",
     "description": "Không thể tìm thấy tài nguyên được yêu cầu.",
     "backToHomepage": "Quay lại Trang chủ"
+  },
+  "plantDataContext": {
+    "plantUpdatedTitle": "Đã cập nhật cây!",
+    "plantUpdatedDescription": "Cây của bạn đã được cập nhật thành công.",
+    "updatePlantErrorDescription": "Không thể cập nhật cây. Vui lòng thử lại.",
+    "deletePhotoErrorDescription": "Không thể xóa ảnh. Vui lòng thử lại."
   }
 }
-

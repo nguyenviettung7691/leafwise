@@ -62,7 +62,10 @@
     "info": "Information",
     "days": "Days",
     "weeks": "Weeks",
-    "hours": "Hours"
+    "hours": "Hours",
+    "backHome": "Back to Home",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email"
   },
   "myPlantsPage": {
     "addNewPlant": "Add New Plant",
@@ -132,7 +135,8 @@
       "ascending": "Ascending",
       "descending": "Descending",
       "resetAllButton": "Reset All Filters"
-    }
+    },
+    "toastErrorSavingPlant": "Failed to save plant changes. Please try again."
   },
   "addNewPlantPage": {
     "formTitle": "Add New Plant",
@@ -141,7 +145,8 @@
     "savingText": "Saving plant...",
     "toastPlantAddedTitle": "Plant Added!",
     "toastPlantAddedDescription": "{{plantName}} has been added to My Plants.",
-    "initialDiagnosisNotes": "Manually added to collection."
+    "initialDiagnosisNotes": "Manually added to collection.",
+    "toastErrorSavingPlant": "Failed to save the new plant. Please try again."
   },
   "savePlantForm": {
     "formTitle": "Save to My Plants",
@@ -267,7 +272,9 @@
       "saveCarePlanErrorNotFound": "Could not find the saved plant.",
       "carePlanSavedTitle": "Care Plan Saved!",
       "carePlanSavedDesc": "Care plan tasks added to {{plantName}}.",
-      "invalidFileType": "Invalid file type for diagnosis."
+      "invalidFileType": "Invalid file type for diagnosis.",
+      "imageSaveError": "Failed to save the image. Please try again.",
+      "saveCarePlanErrorGeneral": "Failed to save the care plan. Please try again."
     },
     "resetPageButton": "Reset Diagnosis Page"
   },
@@ -456,7 +463,15 @@
       "plantDeletedDesc": "{{plantName}} has been removed from your collection.",
       "errorSettingPrimaryPhoto": "Failed to set primary photo for {{plantName}}.",
       "errorDeletingPlant": "Failed to delete {{plantName}}.",
-      "errorProactiveReview": "An error occurred while reviewing the care plan."
+      "errorProactiveReview": "An error occurred while reviewing the care plan.",
+      "errorAddingPhoto": "Failed to add the photo. Please try again.",
+      "errorApplyingCarePlan": "Failed to apply the care plan. Please try again.",
+      "errorDeletingPhotos": "Failed to delete the selected photos. Please try again.",
+      "errorDeletingTasks": "Failed to delete the selected tasks. Please try again.",
+      "errorSavingPhotoDetails": "Failed to save photo details. Please try again.",
+      "errorSavingTask": "Failed to save the task. Please try again.",
+      "errorTogglingTask": "Failed to toggle task status. Please try again.",
+      "errorUpdatingHealth": "Failed to update plant health. Please try again."
     },
     "footer": {
       "lastUpdated": "Last updated: {{date}}"
@@ -511,15 +526,15 @@
     "addButton": "Add Task",
     "savingButton": "Saving...",
     "taskTypes": {
-        "watering": "Watering",
-        "lighting_adjustment": "Lighting Adjustment",
-        "fertilizing": "Fertilizing",
-        "pruning": "Pruning",
-        "repotting": "Repotting",
-        "pest_check": "Pest Check",
-        "soil_aeration": "Soil Aeration",
-        "dusting_leaves": "Dusting Leaves",
-        "rotate_pot": "Rotate Pot"
+      "watering": "Watering",
+      "lighting_adjustment": "Lighting Adjustment",
+      "fertilizing": "Fertilizing",
+      "pruning": "Pruning",
+      "repotting": "Repotting",
+      "pest_check": "Pest Check",
+      "soil_aeration": "Soil Aeration",
+      "dusting_leaves": "Dusting Leaves",
+      "rotate_pot": "Rotate Pot"
     }
   },
   "weeklyCareCalendar": {
@@ -654,8 +669,10 @@
       "destroyEmailMismatch": "Email confirmation failed.",
       "destroySuccessTitle": "Data Destroyed!",
       "destroySuccessDesc": "All your personal data has been removed.",
-      "destroyError": "An error occurred during data deletion."
-    }
+      "destroyError": "An error occurred during data deletion.",
+      "importError": "An error occurred while importing data. Please try again."
+    },
+    "logOutConfirmButton": "Confirm"
   },
   "loginPage": {
     "title": "Welcome Back",
@@ -731,7 +748,13 @@
     "confirmSuccessToastDescription": "Your account has been successfully confirmed. You can now log in.",
     "confirmErrorToastTitle": "Confirmation Failed",
     "confirmErrorToastDescription": "Invalid confirmation code or an error occurred. Please try again.",
-    "backToLoginLink": "Back to Login"
+    "backToLoginLink": "Back to Login",
+    "confirmationCodeLabel": "Confirmation Code",
+    "confirmationCodePlaceholder": "Enter confirmation code",
+    "noCodeLabel": "Didn't receive a code?",
+    "registerAgainLink": "Register Again",
+    "resendButton": "Resend Code",
+    "resendingButton": "Resending..."
   },
   "editPlantPage": {
     "formTitle": "Edit Plant",
@@ -740,7 +763,8 @@
     "toastPlantUpdatedTitle": "Plant Updated!",
     "toastPlantUpdatedDescription": "{{plantName}} has been updated.",
     "toastErrorFindingPlant": "Could not find plant to update.",
-    "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload)."
+    "primaryPhotoUpdatedNote": "Primary photo updated via edit form (new upload).",
+    "toastErrorSavingPlant": "Failed to save plant changes. Please try again."
   },
   "authContextToasts": {
     "loginSuccessTitle": "Login Successful!",
@@ -756,7 +780,9 @@
     "forgotPasswordSentTitle": "Code Sent",
     "forgotPasswordSentDescription": "Check your email for the verification code",
     "passwordResetSuccessTitle": "Password Reset",
-    "passwordResetSuccessDescription": "Your password has been reset. Please sign in with your new password"
+    "passwordResetSuccessDescription": "Your password has been reset. Please sign in with your new password",
+    "confirmationSuccessTitle": "Account Confirmed!",
+    "confirmationSuccessDescription": "Your account has been confirmed. You can now log in."
   },
   "authErrors": {
     "userNotFound": "Invalid username or password.",
@@ -775,7 +801,9 @@
     "codeExpired": "Verification code has expired",
     "passwordTooShort": "Password must be at least 6 characters",
     "sessionExpired": "Your session has expired. Please sign in again.",
-    "apolloUnauthorized": "You are not authorized to perform this action."
+    "apolloUnauthorized": "You are not authorized to perform this action.",
+    "userNotConfirmed": "Your account has not been confirmed. Please check your email for the confirmation code.",
+    "confirmationFailed": "Account confirmation failed. Please try again."
   },
   "networkIndicator": {
     "online": "Connected to the internet",
@@ -789,6 +817,11 @@
     "title": "Page Not Found",
     "description": "Could not find the requested resource.",
     "backToHomepage": "Return Home"
+  },
+  "plantDataContext": {
+    "plantUpdatedTitle": "Plant Updated!",
+    "plantUpdatedDescription": "Your plant has been successfully updated.",
+    "updatePlantErrorDescription": "Failed to update the plant. Please try again.",
+    "deletePhotoErrorDescription": "Failed to delete the photo. Please try again."
   }
 }
-
