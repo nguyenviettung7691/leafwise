@@ -271,7 +271,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             const isDayTime = hour >= 7 && hour < 19;
             return (
               <React.Fragment key={hour}>
-                <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 h-14 flex items-center justify-center min-w-[70px]">
+                <div className="px-1 py-0.5 border-r border-b text-xs text-muted-foreground sticky left-0 bg-card z-10 min-h-[3.5rem] flex items-center justify-center min-w-[70px]">
                   <div className="flex items-center gap-1">
                     <span>{format(new Date(0, 0, 0, hour), 'ha', { locale: dateFnsLocale })}</span>
                     {isDayTime ? <Sun size={12} className="text-yellow-500" /> : <Moon size={12} className="text-blue-400" />}
@@ -327,7 +327,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
             );
           })}
 
-          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] h-14">{t('weeklyCareCalendar.allDayLabel')}</div>
+          <div className="col-start-1 col-span-1 p-1 border-r border-b border-t text-xs font-semibold text-muted-foreground sticky left-0 bg-card z-10 flex items-center justify-center min-w-[70px] min-h-[3.5rem]">{t('weeklyCareCalendar.allDayLabel')}</div>
           {daysInWeek.map(day => {
              const allDayTasksForDay = getTasksForDay(day).filter(occurrence => {
                 const taskTimeOfDay = occurrence.originalTask.timeOfDay;
@@ -337,7 +337,7 @@ export function WeeklyCareCalendarView({ tasks, onEditTask, onDeleteTask }: Week
                 <div
                     key={`all-day-tasks-${day.toISOString()}`}
                     className={cn(
-                        "p-0.5 border-r border-b border-t min-h-[3.5rem] text-[10px] leading-tight space-y-0.5 h-14",
+                        "p-0.5 border-r border-b border-t min-h-[3.5rem] text-[10px] leading-tight space-y-0.5",
                         isToday(day) ? "bg-primary/5" : ""
                     )}
                 >
