@@ -50,7 +50,8 @@ import {
   Save, 
   CheckCircle, 
   MessageSquareWarning, 
-  Loader2 
+  Loader2,
+  XCircle 
 } from 'lucide-react';
 
 // Hooks and Utilities
@@ -224,6 +225,10 @@ export default function PlantDetailPageClient({ plantId }: { plantId?: string })
   const [proactiveReviewResult, setProactiveReviewResult] = useState<ReviewCarePlanOutput | null>(null);
   const [isLoadingProactiveReview, setIsLoadingProactiveReview] = useState(false);
   const [isApplyingProactiveReviewChanges, setIsApplyingProactiveReviewChanges] = useState(false);
+
+  const newPhotoDiagnosisAbortControllerRef = useRef<AbortController | null>(null);
+  const carePlanReviewAbortControllerRef = useRef<AbortController | null>(null);
+  const proactiveReviewAbortControllerRef = useRef<AbortController | null>(null);
 
   const currentPlantPhotos = useMemo(() => {
       return allContextPlantPhotos.filter(photo => photo.plantId === id);
@@ -407,6 +412,9 @@ useEffect(() => {
     setNewPhotoJournaled(false);
     setNewPhotoDiagnosisDialogState({open: false, isLoadingCarePlanReview: true, carePlanReviewResult: undefined, healthComparisonResult: undefined, newPhotoDiagnosisResult: undefined, newPhotoPreviewUrl: undefined});
 
+    newPhotoDiagnosisAbortControllerRef.current?.abort();
+    const newPhotoDiagnosisAbortController = new AbortController();
+    newPhotoDiagnosisAbortControllerRef.current = newPhotoDiagnosisAbortController;
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -427,7 +435,7 @@ useEffect(() => {
                 description: `Checking health for ${plant.commonName}. Current overall status: ${plant.healthCondition}. Notes: ${plant.customNotes || ''}`,
                 languageCode: language,
             };
-            const newPhotoDiagnosisResult = await diagnosePlantHealth(diagnosisInput);
+            const newPhotoDiagnosisResult = await diagnosePlantHealth(diagnosisInput, newPhotoDiagnosisAbortController.signal);
             const newPhotoDiagnosisHealthStatusKey = newPhotoDiagnosisResult.healthAssessment.status;
 
 
@@ -450,7 +458,7 @@ useEffect(() => {
                 newPhotoHealthStatus: newPhotoDiagnosisHealthStatusKey,
                 languageCode: language || undefined,
             };
-            const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput);
+            const healthComparisonResult = await comparePlantHealthAndUpdateSuggestion(healthComparisonInput, newPhotoDiagnosisAbortController.signal);
 
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
@@ -461,6 +469,10 @@ useEffect(() => {
                 isLoadingCarePlanReview: true,
                 newPhotoFile: file,
             }));
+
+            carePlanReviewAbortControllerRef.current?.abort();
+            const carePlanReviewAbortController = new AbortController();
+            carePlanReviewAbortControllerRef.current = carePlanReviewAbortController;
 
             const carePlanReviewInput: ReviewCarePlanInput = {
                 plantCommonName: plant.commonName || t('common.unknown'),
@@ -477,7 +489,7 @@ useEffect(() => {
                 })),
                 languageCode: language,
             };
-            const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput);
+            const carePlanReviewResult = await reviewAndSuggestCarePlanUpdates(carePlanReviewInput, carePlanReviewAbortController.signal);
 
             setNewPhotoDiagnosisDialogState(prevState => ({
                 ...prevState,
@@ -486,11 +498,14 @@ useEffect(() => {
             }));
 
         } catch (e: any) {
+            if (e instanceof DOMException && e.name === 'AbortError') return;
             const errorMsg = e instanceof Error ? e.message : t('plantDetail.toasts.errorDiagnosisOrPlan');
             toast({ title: t('common.error'), description: errorMsg, variant: "destructive" });
             setNewPhotoDiagnosisDialogState(prevState => ({...prevState, isLoadingCarePlanReview: false}));
         } finally {
-            setIsDiagnosingNewPhoto(false);
+            if (!newPhotoDiagnosisAbortController.signal.aborted) {
+              setIsDiagnosingNewPhoto(false);
+            }
             if (growthPhotoInputRef.current) growthPhotoInputRef.current.value = "";
         }
     };
@@ -948,6 +963,10 @@ useEffect(() => {
 
   const handleOpenProactiveReviewDialog = async () => {
     if (!plant || !user?.id) return;
+    proactiveReviewAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    proactiveReviewAbortControllerRef.current = abortController;
+
     setIsProactiveReviewDialogOpen(true);
     setIsLoadingProactiveReview(true);
     setProactiveReviewResult(null);
@@ -971,16 +990,45 @@ useEffect(() => {
         })),
         languageCode: language || undefined,
       };
-      const result = await proactiveCarePlanReview(input);
+      const result = await proactiveCarePlanReview(input, abortController.signal);
       setProactiveReviewResult(result);
     } catch (e: any) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       const errorMsg = e instanceof Error ? e.message : t('plantDetail.toasts.errorProactiveReview');
       toast({ title: t('common.error'), description: errorMsg, variant: "destructive" });
       setProactiveReviewResult(null);
     } finally {
-      setIsLoadingProactiveReview(false);
+      if (!abortController.signal.aborted) {
+        setIsLoadingProactiveReview(false);
+      }
     }
   };
+
+  const handleCancelCarePlanReview = useCallback(() => {
+    carePlanReviewAbortControllerRef.current?.abort();
+    carePlanReviewAbortControllerRef.current = null;
+    setNewPhotoDiagnosisDialogState(prevState => ({
+      ...prevState,
+      isLoadingCarePlanReview: false,
+    }));
+  }, []);
+
+  const handleCancelNewPhotoDiagnosis = useCallback(() => {
+    newPhotoDiagnosisAbortControllerRef.current?.abort();
+    newPhotoDiagnosisAbortControllerRef.current = null;
+    carePlanReviewAbortControllerRef.current?.abort();
+    carePlanReviewAbortControllerRef.current = null;
+    setIsDiagnosingNewPhoto(false);
+    setNewPhotoDiagnosisDialogState({open: false});
+  }, []);
+
+  const handleCancelProactiveReview = useCallback(() => {
+    proactiveReviewAbortControllerRef.current?.abort();
+    proactiveReviewAbortControllerRef.current = null;
+    setIsLoadingProactiveReview(false);
+    setIsProactiveReviewDialogOpen(false);
+    setProactiveReviewResult(null);
+  }, []);
 
   const handleApplyProactiveCarePlanChanges = async () => {
     if (!plant || !proactiveReviewResult) return;
@@ -1123,6 +1171,7 @@ useEffect(() => {
           onTriggerUploadFromGallery={handleTriggerUploadFromGallery}
           onTriggerTakePhoto={handleTriggerTakePhoto}
           isDiagnosingNewPhoto={isDiagnosingNewPhoto}
+          onCancelNewPhotoDiagnosis={handleCancelNewPhotoDiagnosis}
           onChartDotClick={handleChartDotClick}
           isManagingPhotos={isManagingPhotos}
           onToggleManagePhotos={toggleManagePhotosMode}
@@ -1216,9 +1265,14 @@ useEffect(() => {
                     )}
 
                     {newPhotoDiagnosisDialogState.isLoadingCarePlanReview && (
-                        <div className="flex items-center justify-center p-4">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                            <p className="text-muted-foreground">{t('plantDetail.newPhotoDialog.loadingCarePlanReview')}</p>
+                        <div className="flex flex-col items-center justify-center p-4 gap-3">
+                            <div className="flex items-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                                <p className="text-muted-foreground">{t('plantDetail.newPhotoDialog.loadingCarePlanReview')}</p>
+                            </div>
+                            <Button type="button" variant="destructive" size="sm" onClick={handleCancelCarePlanReview}>
+                                <XCircle className="mr-2 h-4 w-4" />{t('common.cancel')}
+                            </Button>
                         </div>
                     )}
 
@@ -1336,8 +1390,11 @@ useEffect(() => {
                     </DialogDescription>
                 </DialogHeader>
                 {isLoadingProactiveReview ? (
-                    <div className="flex items-center justify-center p-8 min-h-[200px]">
+                    <div className="flex flex-col items-center justify-center p-8 min-h-[200px] gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <Button type="button" variant="destructive" size="sm" onClick={handleCancelProactiveReview}>
+                            <XCircle className="mr-2 h-4 w-4" />{t('common.cancel')}
+                        </Button>
                     </div>
                 ) : proactiveReviewResult ? (
                     <div className="space-y-4 py-4">

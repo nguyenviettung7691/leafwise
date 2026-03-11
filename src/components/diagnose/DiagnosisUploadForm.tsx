@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, Stethoscope, Camera, Image as ImageIcon, UploadCloud } from 'lucide-react';
+import { Loader2, Sparkles, Stethoscope, Camera, Image as ImageIcon, UploadCloud, XCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { usePWAStandalone } from '@/hooks/usePWAStandalone';
 import { PLACEHOLDER_DATA_URI } from '@/lib/image-utils';
@@ -20,6 +20,7 @@ interface DiagnosisUploadFormProps {
   onDescriptionChange: (value: string) => void;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onSubmitDiagnosis: (event: FormEvent) => void;
+  onCancelDiagnosis: () => void;
   fileInputRef: RefObject<HTMLInputElement>;
   isFileSelected: boolean;
 }
@@ -31,6 +32,7 @@ export function DiagnosisUploadForm({
   onDescriptionChange,
   onFileChange,
   onSubmitDiagnosis,
+  onCancelDiagnosis,
   fileInputRef,
   isFileSelected,
 }: DiagnosisUploadFormProps) {
@@ -148,13 +150,20 @@ export function DiagnosisUploadForm({
             />
           </div>
 
-          <Button type="submit" disabled={isLoadingDiagnosis || !isFileSelected} className="w-full text-base py-3 mt-8">
-            {isLoadingDiagnosis ? (
-              <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.uploadForm.submitButtonLoading')}</>
-            ) : (
-              <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.uploadForm.submitButton')}</>
+          <div className="flex gap-2 mt-8">
+            <Button type="submit" disabled={isLoadingDiagnosis || !isFileSelected} className="flex-1 text-base py-3">
+              {isLoadingDiagnosis ? (
+                <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('diagnosePage.uploadForm.submitButtonLoading')}</>
+              ) : (
+                <><Sparkles className="mr-2 h-5 w-5" />{t('diagnosePage.uploadForm.submitButton')}</>
+              )}
+            </Button>
+            {isLoadingDiagnosis && (
+              <Button type="button" variant="destructive" onClick={onCancelDiagnosis} className="text-base py-3">
+                <XCircle className="mr-2 h-5 w-5" />{t('common.cancel')}
+              </Button>
             )}
-          </Button>
+          </div>
         </form>
       </CardContent>
 

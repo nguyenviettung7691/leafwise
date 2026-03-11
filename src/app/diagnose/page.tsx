@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type FormEvent, useRef } from 'react';
+import { useState, type FormEvent, useRef, useCallback } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { diagnosePlantHealth, generateDetailedCarePlan } from '@/lib/aiClient';
 import type { DiagnosePlantHealthOutput, DiagnosePlantHealthInput as DiagnoseInput, GenerateDetailedCarePlanInput, GenerateDetailedCarePlanOutput, AIGeneratedTask, Plant, PlantFormData } from '@/types';
@@ -44,6 +44,8 @@ export default function DiagnosePlantPage() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const diagnosisAbortControllerRef = useRef<AbortController | null>(null);
+  const carePlanAbortControllerRef = useRef<AbortController | null>(null);
 
   // Helper to parse AI frequency string (consistent with plants/[id]/page.tsx)
   interface ParsedFrequency {
@@ -102,6 +104,10 @@ export default function DiagnosePlantPage() {
   };
 
   const fullResetDiagnosisForm = () => {
+    diagnosisAbortControllerRef.current?.abort();
+    diagnosisAbortControllerRef.current = null;
+    carePlanAbortControllerRef.current?.abort();
+    carePlanAbortControllerRef.current = null;
     setFile(null);
     setPreviewUrl(null);
     setDescription('');
@@ -117,6 +123,18 @@ export default function DiagnosePlantPage() {
     setCarePlanMode('basic');
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const handleCancelDiagnosis = useCallback(() => {
+    diagnosisAbortControllerRef.current?.abort();
+    diagnosisAbortControllerRef.current = null;
+    setIsLoadingDiagnosis(false);
+  }, []);
+
+  const handleCancelCarePlan = useCallback(() => {
+    carePlanAbortControllerRef.current?.abort();
+    carePlanAbortControllerRef.current = null;
+    setIsLoadingCarePlan(false);
+  }, []);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     // Reset results, but not necessarily the file/preview itself yet
@@ -179,6 +197,10 @@ export default function DiagnosePlantPage() {
       return;
     }
 
+    diagnosisAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    diagnosisAbortControllerRef.current = abortController;
+
     setIsLoadingDiagnosis(true);
     setDiagnosisError(null);
     setDiagnosisResult(null);
@@ -197,7 +219,7 @@ export default function DiagnosePlantPage() {
         description,
         languageCode: language
       };
-      const result = await diagnosePlantHealth(diagnosisInput);
+      const result = await diagnosePlantHealth(diagnosisInput, abortController.signal);
       setDiagnosisResult(result);
       toast({
         title: t('diagnosePage.toasts.diagnosisCompleteTitle'),
@@ -205,11 +227,14 @@ export default function DiagnosePlantPage() {
       });
 
     } catch (e: any) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.toasts.diagnosisErrorTitle'));
       setDiagnosisError(errorMessage);
       toast({ title: t('diagnosePage.toasts.diagnosisErrorTitle'), description: errorMessage, variant: "destructive" });
     } finally {
-      setIsLoadingDiagnosis(false);
+      if (!abortController.signal.aborted) {
+        setIsLoadingDiagnosis(false);
+      }
     }
   };
 
@@ -261,6 +286,10 @@ export default function DiagnosePlantPage() {
       return;
     }
 
+    carePlanAbortControllerRef.current?.abort();
+    const abortController = new AbortController();
+    carePlanAbortControllerRef.current = abortController;
+
     setIsLoadingCarePlan(true);
     setCarePlanError(null);
     setCarePlanResult(null);
@@ -274,7 +303,7 @@ export default function DiagnosePlantPage() {
         locationClimate: locationClimate,
         languageCode: language,
       };
-      const result = await generateDetailedCarePlan(input);
+      const result = await generateDetailedCarePlan(input, abortController.signal);
       if (process.env.NODE_ENV === 'development') {
         console.log('[DEV] AI Response from Flow (DiagnosePage):', JSON.stringify(result, null, 2));
       }
@@ -282,11 +311,14 @@ export default function DiagnosePlantPage() {
       setGeneratedPlanMode(carePlanMode);
       toast({ title: t('diagnosePage.toasts.carePlanGeneratedTitle'), description: t('diagnosePage.toasts.carePlanGeneratedDesc', { mode: t(`common.${carePlanMode}`), plantName: input.plantCommonName }) });
     } catch (e: any) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
       const errorMessage = e instanceof Error ? e.message : (typeof e === 'string' ? e : t('diagnosePage.carePlanGenerator.errorAlertTitle'));
       setCarePlanError(errorMessage);
       toast({ title: t('diagnosePage.toasts.carePlanErrorTitle'), description: errorMessage, variant: "destructive" });
     } finally {
-      setIsLoadingCarePlan(false);
+      if (!abortController.signal.aborted) {
+        setIsLoadingCarePlan(false);
+      }
     }
   };
 
@@ -362,6 +394,7 @@ export default function DiagnosePlantPage() {
           onDescriptionChange={setDescription}
           onFileChange={handleFileChange}
           onSubmitDiagnosis={handleDiagnosisSubmit}
+          onCancelDiagnosis={handleCancelDiagnosis}
           fileInputRef={fileInputRef}
           isFileSelected={file !== null || previewUrl !== null}
         />
@@ -414,6 +447,7 @@ export default function DiagnosePlantPage() {
             carePlanMode={carePlanMode}
             onCarePlanModeChange={setCarePlanMode}
             onGenerateCarePlan={handleGenerateCarePlan}
+            onCancelCarePlan={handleCancelCarePlan}
             onSaveCarePlan={handleSaveCarePlan}
             lastSavedPlantId={lastSavedPlantId}
           />
