@@ -335,12 +335,20 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
           },
         });
 
+        const updatedPlant = data?.updatePlant;
+
+        if (updatedPlant) {
+          setPlantsState((prev: Plant[]) =>
+            prev.map((p) => (p.id === plantId ? { ...p, ...updatedPlant } : p))
+          );
+        }
+
         toast({
           title: t('plantDataContext.plantUpdatedTitle'),
           description: t('plantDataContext.plantUpdatedDescription'),
         });
 
-        return data?.updatePlant;
+        return updatedPlant;
       } catch (error: any) {
         console.error('Failed to update plant:', error);
         toast({
