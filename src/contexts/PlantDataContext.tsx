@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth, getValidIdToken } from './AuthContext';
 import client from '@/lib/apolloClient';
 import {
   LIST_PLANTS,
@@ -143,14 +143,12 @@ export function PlantDataProvider({ children }: { children: ReactNode }) {
       throw new Error('User not authenticated');
     }
     
-    // Token is stored in localStorage by AuthContext
-    const stored = localStorage.getItem('cognito_tokens');
-    if (!stored) {
-      throw new Error('No tokens found in storage');
+    const idToken = await getValidIdToken();
+    if (!idToken) {
+      throw new Error('No valid ID token available');
     }
     
-    const tokens = JSON.parse(stored);
-    return tokens.idToken;
+    return idToken;
   }, [user?.id]);
 
   // Update uploadImageToS3 to use credentials

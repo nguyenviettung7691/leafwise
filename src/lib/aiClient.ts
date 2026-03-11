@@ -11,23 +11,12 @@ import type {
   ReviewCarePlanOutput,
   ProactiveCarePlanReviewInput,
 } from '@/types';
+import { getValidIdToken } from '@/contexts/AuthContext';
 
 const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_URL || '';
 
-function getIdToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const stored = localStorage.getItem('cognito_tokens');
-    if (!stored) return null;
-    const tokens = JSON.parse(stored);
-    return tokens.idToken || null;
-  } catch {
-    return null;
-  }
-}
-
 async function callFlow<TInput, TOutput>(flowName: string, input: TInput, signal?: AbortSignal): Promise<TOutput> {
-  const token = getIdToken();
+  const token = await getValidIdToken();
   if (!token) {
     throw new Error('Not authenticated — no ID token found');
   }

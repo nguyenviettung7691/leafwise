@@ -95,6 +95,38 @@ function areTokensValid(): boolean {
 }
 
 /**
+ * Get a valid ID token, refreshing if necessary.
+ * This is a module-level utility that can be imported by any client
+ * (aiClient, s3Utils, useS3Image, etc.) to ensure a fresh token
+ * before making API calls.
+ *
+ * @returns A valid ID token string, or null if the user is not authenticated
+ *          or the refresh token has expired.
+ */
+export async function getValidIdToken(): Promise<string | null> {
+  let tokens = getStoredTokens();
+  if (!tokens) return null;
+
+  // If the token is still valid (with 5-min buffer), return it immediately
+  if (tokens.expiresAt - TOKEN_EXPIRY_BUFFER_MS > Date.now()) {
+    return tokens.idToken || null;
+  }
+
+  // Token needs refresh
+  if (!tokens.refreshToken) {
+    clearTokens();
+    return null;
+  }
+
+  const refreshed = await getRefreshTokenPromise(tokens.refreshToken);
+  if (!refreshed) {
+    return null;
+  }
+
+  return refreshed.idToken || null;
+}
+
+/**
  * Parse JWT payload (without verification - for client-side only)
  * Do NOT use for security-critical operations
  */
@@ -931,8 +963,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let newAvatarS3Key = user.avatarS3Key;
 
         if (updatedData.avatarFile !== undefined) {
-          const tokens = getStoredTokens();
-          const idToken = tokens?.idToken;
+          const idToken = await getValidIdToken();
 
           if (!idToken) {
             throw new Error('No ID token available for S3 operations');
