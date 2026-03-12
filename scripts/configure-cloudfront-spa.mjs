@@ -22,7 +22,7 @@
  *   - node scripts/configure-cloudfront-spa.mjs
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -81,8 +81,9 @@ writeFileSync(funcCodeFile, CF_FUNCTION_CODE, 'utf-8');
 try {
   // Try to describe the function first (it may already exist)
   try {
-    const describeOutput = execSync(
-      `aws cloudfront describe-function --name ${CF_FUNCTION_NAME} --output json`,
+    const describeOutput = execFileSync(
+      'aws',
+      ['cloudfront', 'describe-function', '--name', CF_FUNCTION_NAME, '--output', 'json'],
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
     const described = JSON.parse(describeOutput);
@@ -90,16 +91,40 @@ try {
 
     console.log(`${TAG} Updating existing CloudFront Function: ${CF_FUNCTION_NAME}`);
 
-    const updateOutput = execSync(
-      `aws cloudfront update-function --name ${CF_FUNCTION_NAME} --function-config '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}' --function-code fileb://${funcCodeFile} --if-match ${funcETag} --output json`,
+    const updateOutput = execFileSync(
+      'aws',
+      [
+        'cloudfront',
+        'update-function',
+        '--name',
+        CF_FUNCTION_NAME,
+        '--function-config',
+        '{"Comment":"URI rewrite for Next.js trailingSlash","Runtime":"cloudfront-js-2.0"}',
+        '--function-code',
+        `fileb://${funcCodeFile}`,
+        '--if-match',
+        funcETag,
+        '--output',
+        'json',
+      ],
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
     const updated = JSON.parse(updateOutput);
     const updatedETag = updated.ETag;
 
     // Publish the updated function
-    const publishOutput = execSync(
-      `aws cloudfront publish-function --name ${CF_FUNCTION_NAME} --if-match ${updatedETag} --output json`,
+    const publishOutput = execFileSync(
+      'aws',
+      [
+        'cloudfront',
+        'publish-function',
+        '--name',
+        CF_FUNCTION_NAME,
+        '--if-match',
+        updatedETag,
+        '--output',
+        'json',
+      ],
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
     );
     const published = JSON.parse(publishOutput);
