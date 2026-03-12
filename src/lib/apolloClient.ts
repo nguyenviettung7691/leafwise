@@ -8,6 +8,7 @@ import {
   Observable,
 } from '@apollo/client';
 import { ErrorLink } from '@apollo/client/link/error';
+import { RetryLink } from '@apollo/client/link/retry';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { getAppSyncConfig } from '@/lib/awsConfig';
 
@@ -164,6 +165,29 @@ const errorLink = new ErrorLink(({ error, operation, forward }) => {
 });
 
 /**
+ * Retry link that handles transient network errors with exponential backoff.
+ * This is particularly important after deployments when the AppSync endpoint
+ * may be briefly unavailable (ERR_CONNECTION_RESET, Failed to fetch).
+ *
+ * Retry strategy:
+ * - Max 5 attempts (including the initial request)
+ * - Exponential backoff starting at 500ms (500, 1000, 2000, 4000ms)
+ * - Capped at 10s max delay
+ * - Jitter enabled to avoid thundering herd on recovery
+ * - Only retries network errors (not GraphQL application errors)
+ */
+const retryLink = new RetryLink({
+  delay: {
+    initial: 500,
+    max: 10000,
+    jitter: true,
+  },
+  attempts: {
+    max: 5,
+  },
+});
+
+/**
  * HTTP link to AppSync endpoint
  * Auth is handled via Authorization header (JWT), not cookies,
  * so credentials are omitted to avoid CORS issues with AppSync's wildcard origin.
@@ -176,11 +200,12 @@ const httpLink = new HttpLink({
  * Apollo Client instance for client-side usage
  * Link chain order:
  * 1. authLink - adds token to headers
- * 2. errorLink - intercepts 401 errors and retries
- * 3. httpLink - sends the request
+ * 2. errorLink - intercepts 401 errors and retries with refreshed token
+ * 3. retryLink - retries transient network errors with exponential backoff
+ * 4. httpLink - sends the request
  */
 const client = new ApolloClient({
-  link: ApolloLink.from([authLink, errorLink, httpLink]),
+  link: ApolloLink.from([authLink, errorLink, retryLink, httpLink]),
   cache: new InMemoryCache(),
 });
 
