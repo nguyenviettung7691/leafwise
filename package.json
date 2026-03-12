@@ -67,6 +67,9 @@
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76"
   },
+  "overrides": {
+    "immutable": ">=3.8.3"
+  },
   "devDependencies": {
     "@aws-amplify/backend": "^1.18.0",
     "@aws-amplify/backend-cli": "^1.8.0",
