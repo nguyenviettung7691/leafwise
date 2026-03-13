@@ -68,7 +68,8 @@
     "zod": "^3.25.76"
   },
   "overrides": {
-    "immutable": ">=3.8.3"
+    "immutable": ">=3.8.3",
+    "minimatch": ">=10.2.3"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.18.0",
