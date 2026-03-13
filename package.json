@@ -70,6 +70,7 @@
   },
   "overrides": {
     "immutable": ">=3.8.3",
+    "minimatch": ">=10.2.3",
     "fast-xml-parser": ">=4.5.4",
     "eslint-plugin-react": {
       "eslint": "$eslint"
