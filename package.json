@@ -69,6 +69,7 @@
     "zod": "^3.25.76"
   },
   "overrides": {
+    "lodash": ">=4.17.23",
     "hono": ">=4.12.7",
     "immutable": ">=3.8.3",
     "minimatch": ">=10.2.3",
