@@ -71,6 +71,7 @@
   "overrides": {
     "lodash": ">=4.17.23",
     "hono": ">=4.12.7",
+    "handlebars": ">=4.7.9",
     "immutable": ">=3.8.3",
     "minimatch": ">=10.2.3",
     "fast-xml-parser": ">=4.5.4",
