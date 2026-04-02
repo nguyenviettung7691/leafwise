@@ -8,13 +8,15 @@
  * vulnerable.
  *
  * Vulnerability: GHSA-jmr7-xgp7-cmfj — DoS through entity expansion in
- * DOCTYPE (no expansion limit). Fixed in fast-xml-parser >= 4.5.4.
+ * DOCTYPE (no expansion limit) (CVE-2026-26278). Fixed in fast-xml-parser
+ * >= 4.5.4. Minimum safe version bumped to 4.5.5 to also cover the
+ * incomplete-fix bypass (numeric entity expansion bypassing limits).
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const MINIMUM_SAFE_VERSION = '4.5.4';
+const MINIMUM_SAFE_VERSION = '4.5.5';
 
 /**
  * Compare two semver-style version strings (e.g. "4.4.1" vs "4.5.4").
