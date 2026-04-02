@@ -1,20 +1,23 @@
 /**
- * Postinstall script to fix CVE in bundled fast-xml-parser dependencies.
+ * Postinstall script to fix CVEs in bundled fast-xml-parser dependencies.
  *
  * @aws-amplify/data-construct and @aws-amplify/graphql-api-construct ship
  * fast-xml-parser 4.4.1 as a bundled dependency (inside the package tarball).
  * npm overrides cannot replace bundled dependencies, so this script copies the
  * hoisted (patched) fast-xml-parser into every nested copy that is still
- * vulnerable.
+ * vulnerable (below 4.5.5).
  *
- * Vulnerability: GHSA-jmr7-xgp7-cmfj — DoS through entity expansion in
- * DOCTYPE (no expansion limit). Fixed in fast-xml-parser >= 4.5.4.
+ * Vulnerabilities:
+ * - GHSA-jmr7-xgp7-cmfj (CVE-2026-26278) — DoS through entity expansion in
+ *   DOCTYPE (no expansion limit). Fixed in fast-xml-parser >= 4.5.4.
+ * - CVE-2026-33036 — Numeric entity expansion bypassing all entity expansion
+ *   limits (incomplete fix for CVE-2026-26278). Fixed in fast-xml-parser >= 4.5.5.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const MINIMUM_SAFE_VERSION = '4.5.4';
+const MINIMUM_SAFE_VERSION = '4.5.5';
 
 /**
  * Compare two semver-style version strings (e.g. "4.4.1" vs "4.5.4").
