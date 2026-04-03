@@ -75,7 +75,7 @@
     "handlebars": ">=4.7.9",
     "immutable": ">=3.8.3",
     "minimatch": ">=10.2.3",
-    "fast-xml-parser": ">=4.5.5",
+    "fast-xml-parser": ">=5.5.7",
     "path-to-regexp@0.1.12": "0.1.13",
     "flatted": ">=3.4.2",
     "yaml": ">=2.8.3",
