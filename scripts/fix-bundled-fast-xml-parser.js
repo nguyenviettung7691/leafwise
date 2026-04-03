@@ -10,14 +10,21 @@
  * Vulnerabilities:
  *  - CVE-2026-26278 / GHSA-jmr7-xgp7-cmfj — DoS through entity expansion in
  *    DOCTYPE (no expansion limit). Fixed in fast-xml-parser >= 4.5.4.
- *  - CVE-2026-33036 — Numeric entity expansion bypassing all entity expansion
- *    limits (incomplete fix for CVE-2026-26278). Fixed in fast-xml-parser >= 4.5.5.
+ *  - CVE-2026-33036 / GHSA-8gc5-j5rx-235r — Numeric entity expansion bypassing
+ *    all entity expansion limits (incomplete fix for CVE-2026-26278).
+ *    Fixed in fast-xml-parser >= 4.5.5.
+ *  - GHSA-jp2q-39xq-3w4g — Entity expansion limits bypassed when set to zero
+ *    due to JavaScript falsy evaluation. Fixed in fast-xml-parser >= 5.5.7.
+ *  - GHSA-m7jm-9gc2-mpf2 — Entity encoding bypass via regex injection in
+ *    DOCTYPE entity names. Fixed in fast-xml-parser >= 4.5.4.
+ *  - GHSA-fj3w-jwp8-x2g3 — Stack overflow in XMLBuilder with preserveOrder.
+ *    Fixed in fast-xml-parser >= 4.5.4.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const MINIMUM_SAFE_VERSION = '4.5.5';
+const MINIMUM_SAFE_VERSION = '5.5.7';
 
 /**
  * Compare two semver-style version strings (e.g. "4.4.1" vs "4.5.4").
