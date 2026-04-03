@@ -5,7 +5,7 @@
   "author": "Nguyen Viet Tung <matsu-guen@proton.me>",
   "description": "LeafWise is a plant care application built with Next.js and TypeScript. It uses AWS SDK v3 (Cognito, AppSync, S3) with Amplify Gen 2 backend infrastructure, and Genkit with Google Gemini models for plant health analysis and care plan generation. Deployed as a static site on S3 + CloudFront.",
   "scripts": {
-    "postinstall": "node scripts/fix-bundled-fast-xml-parser.js && node scripts/fix-bundled-lodash.js",
+    "postinstall": "node scripts/fix-bundled-fast-xml-parser.js && node scripts/fix-bundled-lodash.js && node scripts/fix-bundled-smithy-config-resolver.js",
     "dev": "next dev --turbopack --experimental-https -p 9002",
     "ai:dev": "tsx amplify/functions/ai-flows/dev-server.ts",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
@@ -80,6 +80,7 @@
     "flatted": ">=3.4.2",
     "yaml": ">=2.8.3",
     "picomatch": ">=2.3.2",
+    "@smithy/config-resolver": ">=4.4.0",
     "@tootallnate/once": ">=3.0.1",
     "eslint-plugin-react": {
       "eslint": "$eslint"
