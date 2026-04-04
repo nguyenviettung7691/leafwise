@@ -145,15 +145,6 @@ function main() {
 
     if (!isVersionBelow(nestedPkg.version, MINIMUM_SAFE_VERSION)) continue;
 
-    // Skip major version 3.x — replacing with 4.x could break API compatibility
-    const majorVersion = parseInt(nestedPkg.version.split('.')[0], 10);
-    if (majorVersion < 4) {
-      console.log(
-        `[fix-bundled-smithy-config-resolver] Skipping ${dir} (v${nestedPkg.version} — major version ${majorVersion} incompatible with v4.x patch)`
-      );
-      continue;
-    }
-
     console.log(
       `[fix-bundled-smithy-config-resolver] Replacing ${dir} (${nestedPkg.version} → ${hoistedPkg.version})`
     );
