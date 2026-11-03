@@ -3,6 +3,11 @@
 LeafWise is a plant care application built with Next.js and TypeScript. It integrates **AWS** services via the modular **AWS SDK v3** (Cognito, AppSync, S3) and uses **Genkit** with Google's Gemini models for plant health analysis and care plan generation. Backend infrastructure is provisioned with **Amplify Gen 2 (ampx)**, but no Amplify browser SDKs are used.
 
 [![#2 in #nextjs on My Slop](https://myslop.shop/badge/leafwise.svg?type=rank)](https://myslop.shop/a/leafwise)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript 5.9](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![AWS SDK v3](https://img.shields.io/badge/AWS%20SDK-v3-232F3E?logo=amazonaws&logoColor=white)](https://aws.amazon.com/sdk-for-javascript/)
+[![Genkit](https://img.shields.io/badge/Genkit-AI-4285F4)](https://firebase.google.com/docs/genkit)
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ![Screenshot](/public/screenshot-1.png)
 
